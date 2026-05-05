@@ -61,11 +61,6 @@ class CsrActivity(db.Model):
     employees_planned = db.Column(db.Integer, nullable=True, comment="Employés impliqués (prévu)")
     start_year = db.Column(db.Integer, nullable=True, comment="Année de démarrage")
     edition = db.Column(db.Integer, nullable=True, comment="Numéro d'édition")
-    edition_year = db.Column(
-        db.Integer,
-        nullable=True,
-        comment="Année de l'édition (colonne Year du fichier consolidé CSR)",
-    )
     organizer = db.Column(db.String(255), nullable=True, comment="Organisateur (ex. HR)")
     status = db.Column(
         db.String(20), nullable=False, default="DRAFT",

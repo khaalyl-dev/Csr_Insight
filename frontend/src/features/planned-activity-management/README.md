@@ -1,6 +1,6 @@
 # planned_activity_management
 
-Planned CSR activities: list, detail, create (sidebar), edit, off-plan declaration. Aligns with backend `planned_activity_management` and `/api/csr-activities`.
+Planned CSR activities: list, detail, create (sidebar), edit, and realized activity capture from plan detail. Aligns with backend `planned_activity_management` and `/api/csr-activities`.
 
 ## Structure
 
@@ -12,6 +12,6 @@ Planned CSR activities: list, detail, create (sidebar), edit, off-plan declarati
 | `planned-activity-detail/` | Single activity view |
 | `planned-activity-edit/` | Edit form (full page or embedded) |
 | `planned-activity-create-sidebar/` | Add activity to a plan (sidebar) |
-| `off-plan-activity-sidebar/` | Off-plan / past-year draft realization flow |
+| `realized-activity-sidebar/` | Realized activity sidebar (past-year draft realization flow) |
 
 `csr-plan-management/plan-detail` imports these sidebars and edit components when viewing a plan.

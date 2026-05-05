@@ -123,9 +123,7 @@ def _realized_to_json(r: RealizedCsr, role: str = ""):
         "plan_status": plan.status if plan else None,
         "plan_editable": plan_editable,
         "realized_budget": float(r.realized_budget) if r.realized_budget is not None else None,
-        "participants": r.participants,
         "employees_actual": r.participants,
-        "total_hc": (plan.total_hc if plan and getattr(plan, "total_hc", None) is not None else r.total_hc),
         "action_impact_actual": float(r.action_impact_actual) if r.action_impact_actual is not None else None,
         "actual_action_impact": float(r.action_impact_actual) if r.action_impact_actual is not None else None,
         "action_impact_unit": r.action_impact_unit or None,
@@ -297,10 +295,9 @@ def create_realized():
     r = RealizedCsr(
         activity_id=activity_id,
         realized_budget=_num("realized_budget"),
-        participants=_int_val("employees_actual") if _int_val("employees_actual") is not None else _int_val("participants"),
+        participants=_int_val("employees_actual"),
         corporate_image_improved=data.get("corporate_image_improved"),
         incidents_number=_int_val("incidents_number"),
-        total_hc=getattr(plan_obj, "total_hc", None),
         action_impact_actual=_num("action_impact_actual"),
         action_impact_unit=_str_val("action_impact_unit"),
         is_off_plan=bool(data.get("is_off_plan")) if data.get("is_off_plan") is not None else bool(getattr(activity, "is_off_plan", False)),
@@ -397,10 +394,8 @@ def update_realized(realized_id: str):
             ), 400
 
     r.realized_budget = _num("realized_budget", r.realized_budget)
-    r.participants = _int_val("employees_actual", r.participants) if "employees_actual" in data else _int_val("participants", r.participants)
-    # total_hc is managed at annual-plan level; keep realization row aligned.
-    plan_total_hc = r.activity.plan.total_hc if r.activity and r.activity.plan else None
-    r.total_hc = plan_total_hc
+    if "employees_actual" in data:
+        r.participants = _int_val("employees_actual", r.participants)
     r.action_impact_actual = _num("action_impact_actual", r.action_impact_actual)
     r.action_impact_unit = _str_val("action_impact_unit", r.action_impact_unit)
     if "corporate_image_improved" in data:

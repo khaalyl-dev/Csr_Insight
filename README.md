@@ -6,8 +6,8 @@ Plateforme de gestion des activités de responsabilité sociétale des entrepris
 
 ## Prérequis
 
-- **Python 3.8+**
-- **Node.js 18+** et npm
+- **Python 3.10+** (recommandé : 3.12 LTS ; évitez les combinaisons Python 3.14 + `mysql-connector-python` 8.x sans mettre à jour les dépendances)
+- **Node.js 20.19+** (LTS) et **npm 10+** (le dépôt fixe aussi `packageManager` pour npm 11)
 - **MySQL 8+**
 - **Git**
 
@@ -59,7 +59,12 @@ CREATE DATABASE csr_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv\Scripts\activate
+# macOS / Linux :
+source .venv/bin/activate
+# Windows (PowerShell) : .venv\Scripts\Activate.ps1
+# Windows (cmd) : .venv\Scripts\activate.bat
+
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
@@ -96,9 +101,11 @@ Dans un **nouveau terminal** :
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm start
 ```
+
+*(En développement quotidien, `npm install` convient aussi ; pour une réinstallation propre, préférez `npm ci` avec le `package-lock.json` du dépôt.)*
 
 Le frontend est accessible sur **http://localhost:4200**.
 

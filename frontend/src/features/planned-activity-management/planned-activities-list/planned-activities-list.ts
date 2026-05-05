@@ -45,7 +45,7 @@ export class PlannedActivitiesListComponent implements OnInit {
     { key: 'impact_actual', label: 'Impact N' },
     { key: 'impact_unit', label: 'Impact Unit' },
     { key: 'organizer', label: 'Organizer' },
-    { key: 'number_external_partners', label: '# of External Partners' },
+    { key: 'external_partner_count', label: '# of External Partners' },
     { key: 'is_off_plan', label: 'Is off plan' },
   ];
 
@@ -259,7 +259,7 @@ export class PlannedActivitiesListComponent implements OnInit {
           : ((b as any)[col]?.toString().toLowerCase() ?? '');
       const numA = typeof (a as any)[col] === 'number' ? (a as any)[col] : parseFloat(valA) || 0;
       const numB = typeof (b as any)[col] === 'number' ? (b as any)[col] : parseFloat(valB) || 0;
-      if (col === 'year' || col === 'planned_budget' || col === 'start_year' || col === 'edition' || col === 'number_external_partners') {
+      if (col === 'year' || col === 'planned_budget' || col === 'start_year' || col === 'edition' || col === 'external_partner_count') {
         if (numA < numB) return dir === 'asc' ? -1 : 1;
         if (numA > numB) return dir === 'asc' ? 1 : -1;
       } else {
@@ -322,9 +322,16 @@ export class PlannedActivitiesListComponent implements OnInit {
       impact_actual: (a as any).impact_actual ?? (a as any).action_impact_target ?? '',
       impact_unit: (a as any).impact_unit ?? (a as any).action_impact_unit ?? '',
       organizer: a.organizer ?? '',
-      number_external_partners: a.number_external_partners ?? '',
+      external_partner_count: this.countExternalPartners((a as any).external_partner ?? a.external_partner_name ?? ''),
       is_off_plan: ((a as any).is_off_plan ?? false) ? 'Yes' : 'No',
     }));
+  }
+
+  private countExternalPartners(value: string): number {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0).length;
   }
 
   private formatMoney(amount: number | null | undefined): string {

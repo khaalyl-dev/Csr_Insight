@@ -916,7 +916,7 @@
     "PLACEHOLDER_OPTIONAL": "Optional",
     "PLACEHOLDER_ESTIMATION": "Estimated amount",
     "CREATING": "Creating...",
-    "SUBMIT_REALIZED_DRAFT": "Add to plan (draft)",
+    "SUBMIT_REALIZED_DRAFT": "Add CSR Report",
     "CREATE_ACTIVITY_BUTTON": "Add CSR activity",
     "FILES_SELECTED": "{{n}} file(s) ready to upload",
     "CLOSE_ARIA": "Close"

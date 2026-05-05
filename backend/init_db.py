@@ -14,12 +14,57 @@ What it does:
 5. Assigns sites to users with validation grades (level_0, level_1, level_2, level_3)
 """
 from datetime import datetime, UTC
+from pathlib import Path
+
 from sqlalchemy import text
 
 from app import create_app
 from core.db import db
 from core.permissions import ALLOWED_PERMISSION_KEYS
 from models import User, Site, UserSite, Category
+
+
+def _run_seed_activities_sql() -> None:
+    """
+    Run the re-runnable SQL seed script that creates a dedicated test plan
+    with 50 planned activities and 100 realized rows (year 2099).
+
+    This is optional and safe to call multiple times: the script cleans up
+    only its own generated rows (activity_number starting with SEED-PA-).
+    """
+    backend_root = Path(__file__).resolve().parent
+    sql_path = backend_root / "migrations" / "seed_test_activities.sql"
+    if not sql_path.is_file():
+        print("⚠ seed_test_activities.sql not found; skipping activity seeding")
+        return
+
+    raw = sql_path.read_text(encoding="utf-8")
+    statements = []
+    buf: list[str] = []
+    for line in raw.splitlines():
+        stripped = line.strip()
+        # Skip SQL comments
+        if stripped.startswith("--"):
+            continue
+        buf.append(line)
+        if stripped.endswith(";"):
+            stmt = "\n".join(buf).strip()
+            if stmt:
+                # Remove trailing semicolon for SQLAlchemy text() execution
+                if stmt.endswith(";"):
+                    stmt = stmt[:-1].strip()
+                statements.append(stmt)
+            buf = []
+    if buf:
+        stmt = "\n".join(buf).strip()
+        if stmt:
+            statements.append(stmt)
+
+    conn = db.session.connection()
+    for stmt in statements:
+        conn.execute(text(stmt))
+    db.session.commit()
+    print("✓ Seeded test activities (50 planned + 100 realized for year 2099)")
 
 
 def init_db():
@@ -211,6 +256,9 @@ def init_db():
 
         db.session.commit()
         print("✓ Site access assigned (level_0..level_3 for test users, level_1 for site users, level_3 for admin)")
+
+        # Seed test activities (50 planned + 100 realized) for a dedicated plan (year 2099)
+        _run_seed_activities_sql()
 
 
 if __name__ == "__main__":

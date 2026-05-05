@@ -45,7 +45,7 @@ export class RealizedListComponent implements OnInit {
     { key: 'action_impact_actual', label: 'Impact N' },
     { key: 'action_impact_unit', label: 'Impact Unit' },
     { key: 'organizer', label: 'Organizer' },
-    { key: 'number_external_partners', label: '# of External Partners' },
+    { key: 'external_partner_count', label: '# of External Partners' },
     { key: 'is_off_plan', label: 'Is off plan' },
   ];
 
@@ -315,9 +315,16 @@ export class RealizedListComponent implements OnInit {
       action_impact_actual: r.action_impact_actual ?? '',
       action_impact_unit: r.action_impact_unit ?? '',
       organizer: r.organizer ?? '',
-      number_external_partners: r.number_external_partners ?? '',
+      external_partner_count: this.countExternalPartners(r.external_partner_name ?? ''),
       is_off_plan: r.is_off_plan ? 'Yes' : 'No',
     }));
+  }
+
+  private countExternalPartners(value: string): number {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0).length;
   }
 
   private formatMoney(amount: number | null | undefined): string {

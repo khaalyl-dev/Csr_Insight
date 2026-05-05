@@ -36,7 +36,6 @@ class RealizedCsr(db.Model):
     corporate_image_improved = db.Column(db.Boolean, nullable=True, comment="Image corporate améliorée")
     incidents_number = db.Column(db.Integer, nullable=True, comment="Nombre d'incidents")
     contact_department = db.Column(db.String(255), nullable=True, comment="Département du contact")
-    total_hc = db.Column(db.Integer, nullable=True, comment="Effectif total du site")
     realized_budget = db.Column(db.Numeric(15, 2), nullable=True, comment="Budget réel dépensé (€)")
     action_impact_actual = db.Column(db.Numeric(15, 2), nullable=True, comment="Impact réalisé (en nombre)")
     action_impact_unit = db.Column(db.String(100), nullable=True, comment="Unité d'impact réalisée")

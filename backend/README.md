@@ -55,9 +55,12 @@ backend/
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate.bat ou Activate.ps1
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+**Python 3.10+** requis. Le fichier `requirements.txt` utilise **mysql-connector-python 9.x** pour rester compatible avec **chromadb** (RAG) sur les versions récentes de Python ; l’API utilisée par le projet reste la même.
 
 Create `.env` at `backend/` root:
 

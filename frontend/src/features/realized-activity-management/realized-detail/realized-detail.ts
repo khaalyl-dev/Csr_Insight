@@ -48,6 +48,14 @@ export class RealizedDetailComponent implements OnInit, OnDestroy {
     return `${participants}/${totalHc} (${pct}%)`;
   }
 
+  externalPartnersCount(partners?: string | null): number {
+    if (!partners) return 0;
+    return partners
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0).length;
+  }
+
   canManageRealized(): boolean {
     return !this.authStore.isValidatorLevel() && this.realized()?.plan_editable !== false;
   }

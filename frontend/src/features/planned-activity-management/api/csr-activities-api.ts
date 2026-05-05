@@ -58,6 +58,7 @@ export interface OffPlanRealizationPayload {
 
   category_id: string;
   collaboration_nature?: string | null;
+  periodicity?: string | null;
   consumed_budget?: number | null;
   action_impact_target?: number | null;
   action_impact_unit?: string | null;

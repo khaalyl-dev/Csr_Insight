@@ -284,7 +284,6 @@ def _activity_to_json(a: CsrActivity, cr_context: Optional[Dict[str, Any]] = Non
         "action_impact_duration": a.action_impact_duration or None,
         "organizer": a.organizer or None,
         "edition": a.edition,
-        "edition_year": getattr(a, "edition_year", None),
         "start_year": a.start_year,
         "employees_planned": getattr(a, "employees_planned", None),
         "planned_objectives": planned_objectives,
@@ -492,7 +491,6 @@ def create_activity():
         employees_planned=data.get("employees_planned") if isinstance(data.get("employees_planned"), int) else None,
         start_year=data.get("start_year") if isinstance(data.get("start_year"), int) else None,
         edition=data.get("edition") if isinstance(data.get("edition"), int) else None,
-        edition_year=data.get("edition_year") if isinstance(data.get("edition_year"), int) else None,
         organizer=(data.get("organizer") or "").strip() or None,
         status="DRAFT",
     )
@@ -623,7 +621,6 @@ def create_plan_realized_draft_with_realization():
         collaboration_nature = collaboration_nature[:30]
 
     edition = _int_val("edition")
-    edition_year = _int_val("edition_year")
     start_year = _int_val("start_year")
     organizer = _str_val("organizer")
 
@@ -680,7 +677,6 @@ def create_plan_realized_draft_with_realization():
         ("action_impact_target", "action_impact_target est obligatoire"),
         ("start_year", "start_year est obligatoire"),
         ("edition", "edition est obligatoire"),
-        ("participants", "participants est obligatoire"),
         ("employees_actual", "employees_actual est obligatoire"),
         ("realized_budget", "realized_budget est obligatoire"),
         ("action_impact_actual", "action_impact_actual est obligatoire"),
@@ -739,7 +735,6 @@ def create_plan_realized_draft_with_realization():
         periodicity=_str_val("periodicity"),
         organizer=organizer,
         edition=edition,
-        edition_year=edition_year,
         start_year=start_year,
         planned_budget=planned_budget if planned_budget is not None else rb,
         action_impact_target=action_impact_target,
@@ -756,10 +751,9 @@ def create_plan_realized_draft_with_realization():
     r = RealizedCsr(
         activity_id=a.id,
         realized_budget=rb,
-        participants=_int_val("employees_actual") if _int_val("employees_actual") is not None else _int_val("participants"),
+        participants=_int_val("employees_actual"),
         corporate_image_improved=_bool_val("corporate_image_improved", default=False),
         incidents_number=_int_val("incidents_number"),
-        total_hc=getattr(plan, "total_hc", None),
         action_impact_actual=_num("action_impact_actual"),
         action_impact_unit=_str_val("action_impact_unit_realized"),
         is_off_plan=False,
@@ -891,7 +885,6 @@ def create_off_plan_realization():
         collaboration_nature = collaboration_nature[:30]
 
     edition = _int_val("edition")
-    edition_year = _int_val("edition_year")
     start_year = _int_val("start_year")
     organizer = _str_val("organizer")
 
@@ -966,7 +959,6 @@ def create_off_plan_realization():
         periodicity=_str_val("periodicity"),
         organizer=organizer,
         edition=edition,
-        edition_year=edition_year,
         start_year=start_year,
         planned_budget=consumed_budget,
         action_impact_target=_num("action_impact_target"),
@@ -983,10 +975,9 @@ def create_off_plan_realization():
     r = RealizedCsr(
         activity_id=a.id,
         realized_budget=realized_budget,
-        participants=_int_val("employees_actual") if _int_val("employees_actual") is not None else _int_val("participants"),
+        participants=_int_val("employees_actual"),
         corporate_image_improved=data.get("corporate_image_improved"),
         incidents_number=_int_val("incidents_number"),
-        total_hc=getattr(plan, "total_hc", None),
         action_impact_actual=_num("action_impact_actual"),
         action_impact_unit=_str_val("action_impact_unit_realized"),
         is_off_plan=True,
@@ -1661,8 +1652,6 @@ def update_activity(activity_id: str):
         a.employees_planned = _int_val("employees_planned")
     if "edition" in data:
         a.edition = _int_val("edition")
-    if "edition_year" in data:
-        a.edition_year = _int_val("edition_year")
     if "start_year" in data:
         a.start_year = _int_val("start_year")
     if "external_partners" in data:

@@ -358,7 +358,6 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
           edition: raw.edition != null && raw.edition !== '' ? Number(raw.edition) : null,
           start_year: raw.start_year != null && raw.start_year !== '' ? Number(raw.start_year) : null,
           external_partner: raw.external_partner?.trim() || null,
-          number_external_partners: raw.number_external_partners != null && raw.number_external_partners !== '' ? Number(raw.number_external_partners) : null,
         })
       ),
       switchMap(() => {

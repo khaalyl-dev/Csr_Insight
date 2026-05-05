@@ -47,7 +47,6 @@ export class RealizedEditComponent implements OnInit {
       edition: [null as number | null],
       organizer: [''],
       external_partner: [''],
-      number_external_partners: [null as number | null],
       action_impact_target: [null as number | null],
       action_impact_unit_target: [''],
       action_impact_duration: [''],
@@ -91,7 +90,6 @@ export class RealizedEditComponent implements OnInit {
           edition: r.edition ?? null,
           organizer: r.organizer ?? '',
           external_partner: r.external_partner_name ?? '',
-          number_external_partners: r.number_external_partners ?? null,
           action_impact_target: r.action_impact_target ?? null,
           action_impact_unit_target: r.action_impact_unit_target ?? '',
           action_impact_duration: r.action_impact_duration ?? '',
@@ -141,10 +139,6 @@ export class RealizedEditComponent implements OnInit {
       edition: raw.edition != null && raw.edition !== '' ? Number(raw.edition) : null,
       start_year: raw.start_year != null && raw.start_year !== '' ? Number(raw.start_year) : null,
       external_partner: raw.external_partner?.trim() || null,
-      number_external_partners:
-        raw.number_external_partners != null && raw.number_external_partners !== ''
-          ? Number(raw.number_external_partners)
-          : null,
     };
 
     const realizedPayload = {

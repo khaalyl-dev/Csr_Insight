@@ -237,7 +237,6 @@ Table planned_activity {
   employees_planned int [null]
   start_year int [null]
   edition int [null]
-  edition_year int [null, note: 'Annee de l edition (colonne Year du fichier consolide)']
   organizer varchar [null]
   status activity_status
   created_by uuid [null]

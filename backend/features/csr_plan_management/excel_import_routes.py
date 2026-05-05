@@ -876,7 +876,6 @@ def import_excel():
                     start_year=_safe_int(row.get("start_year")),
                     organizer=_safe_str(row.get("organizer"), 255),
                     edition=_safe_int(row.get("edition")),
-                    edition_year=_row_edition_year_int(row),
                     action_impact_target=_safe_float(row.get("impact_target")),
                     action_impact_unit=_safe_str(row.get("impact_unit"), 100),
                     external_partner_id=ep.id if ep else None,
@@ -893,18 +892,15 @@ def import_excel():
                 # overwrite mode: update start_year, impact target, impact unit, external partner, count.
                 activity = existing_act
                 sy = _safe_int(row.get("start_year"))
-                ey = _row_edition_year_int(row)
                 it = _safe_float(row.get("impact_target"))
                 iu = _safe_str(row.get("impact_unit"), 100)
                 nep = _safe_int(row.get("number_external_partners"))
                 partner_names = _split_external_partners(row.get("external_partner"), nep)
                 ep_name = partner_names[0] if partner_names else None
                 effective_nep = max(nep or 0, len(partner_names)) or None
-                if sy is not None or ey is not None or it is not None or iu is not None or ep_name is not None or effective_nep is not None:
+                if sy is not None or it is not None or iu is not None or ep_name is not None or effective_nep is not None:
                     if sy is not None:
                         activity.start_year = sy
-                    if ey is not None:
-                        activity.edition_year = ey
                     if it is not None:
                         activity.action_impact_target = it
                     if iu is not None:
@@ -943,7 +939,6 @@ def import_excel():
                 if existing_rc:
                     existing_rc.realized_budget = real_budget
                     existing_rc.participants = participants
-                    existing_rc.total_hc = _safe_int(row.get("total_hc"))
                     existing_rc.action_impact_actual = impact_actual
                     existing_rc.action_impact_unit = _safe_str(row.get("impact_unit"), 100)
                 else:
@@ -952,7 +947,6 @@ def import_excel():
                         realization_date=realization_date,
                         realized_budget=real_budget,
                         participants=participants,
-                        total_hc=_safe_int(row.get("total_hc")),
                         action_impact_actual=impact_actual,
                         action_impact_unit=_safe_str(row.get("impact_unit"), 100),
                         created_by=effective_user_id,

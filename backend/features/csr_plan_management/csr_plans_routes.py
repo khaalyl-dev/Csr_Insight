@@ -646,13 +646,6 @@ def update_plan(plan_id):
             if thc_val < 0:
                 return jsonify({"message": "Le total HC doit être >= 0"}), 400
             plan.total_hc = thc_val
-        # Keep realized rows aligned with plan-level HC.
-        from models import CsrActivity, RealizedCsr
-        activity_ids_q = db.session.query(CsrActivity.id).filter(CsrActivity.plan_id == plan.id)
-        db.session.query(RealizedCsr).filter(RealizedCsr.activity_id.in_(activity_ids_q)).update(
-            {RealizedCsr.total_hc: plan.total_hc},
-            synchronize_session=False,
-        )
 
     if plan.status == "REJECTED":
         plan.rejected_comment = None
@@ -831,7 +824,7 @@ def get_plan(plan_id):
             "action_impact_unit": a.action_impact_unit or "",
             "realized_budget": float(first_real.realized_budget) if first_real and first_real.realized_budget is not None else None,
             "participants": first_real.participants if first_real else None,
-            "total_hc": plan.total_hc if getattr(plan, "total_hc", None) is not None else (first_real.total_hc if first_real else None),
+            "total_hc": getattr(plan, "total_hc", None),
             # Legacy fields retained in JSON for compatibility; underlying columns may have been removed.
             "percentage_employees": float(getattr(first_real, "percentage_employees", None)) if first_real and getattr(first_real, "percentage_employees", None) is not None else None,
             # Number of external partners is derived from the stored external partner names.

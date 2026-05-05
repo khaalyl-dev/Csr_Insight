@@ -8,7 +8,7 @@ import { AuthStore } from '@core/services/auth-store';
 import { BreadcrumbService } from '@core/services/breadcrumb.service';
 import { PlannedActivityCreateSidebarComponent } from '@features/planned-activity-management/planned-activity-create-sidebar/planned-activity-create-sidebar';
 import { PlannedActivityEditComponent } from '@features/planned-activity-management/planned-activity-edit/planned-activity-edit';
-import { OffPlanActivitySidebarComponent } from '@features/planned-activity-management/off-plan-activity-sidebar/off-plan-activity-sidebar';
+import { RealizedActivitySidebarComponent } from '@features/planned-activity-management/realized-activity-sidebar/realized-activity-sidebar';
 import { RealizedCreateSidebarComponent } from '@features/realized-activity-management/realized-create-sidebar/realized-create-sidebar';
 import { RealizedEditComponent } from '@features/realized-activity-management/realized-edit/realized-edit';
 import { RealizedCsrApi } from '@features/realized-activity-management/api/realized-csr-api';
@@ -28,7 +28,7 @@ import {
     TranslateModule,
     PlannedActivityCreateSidebarComponent,
     PlannedActivityEditComponent,
-    OffPlanActivitySidebarComponent,
+    RealizedActivitySidebarComponent,
     RealizedCreateSidebarComponent,
     RealizedEditComponent,
   ],
@@ -69,6 +69,11 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     if (!p) return null;
     const y = Number(p.year);
     return Number.isFinite(y) ? y : null;
+  }
+
+  private isPastYearPlan(): boolean {
+    const y = this.planYearValue();
+    return y != null && y < this.currentYear;
   }
 
   /** Plan is "planifié" (current or future year) → show only planned-activity columns. */
@@ -126,8 +131,6 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
   showPastYearRichCreate = signal(false);
   pastYearRichTitleKey = signal('PLANNED_ACTIVITY_CREATE.REALIZED_YEAR_DRAFT_TITLE');
   pastYearRichHintKey = signal<string | null>(null);
-  // ── Off-plan activity (bouton dédié uniquement) ──
-  showOffPlanSidebar = signal(false);
   // ── Edit planned activity sidebar ────────────────────────────────────────
   showEditActivitySidebar = signal(false);
   activityIdToEdit = signal<string | null>(null);
@@ -699,42 +702,6 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  openOffPlanSidebar(): void {
-    const p = this.plan();
-    // Off-plan activities are allowed only for current year and past years.
-    if (!p) return;
-    if (p.year > this.currentYear) return;
-    const pastYearPlan = p.year < this.currentYear;
-    // Site users: VALIDATED required for current-year plans; past-year plans allow catch-up regardless of plan status.
-    if (!this.isCorporateUser() && p.status !== 'VALIDATED' && !pastYearPlan) return;
-    this.showOffPlanSidebar.set(true);
-  }
-
-  canAddOffPlan(): boolean {
-    if (this.authStore.isValidatorLevel()) return false;
-    if (!this.canCreateActivities()) return false;
-    const p = this.plan();
-    if (!p) return false;
-    if (p.year > this.currentYear) return false;
-    if (this.isCorporateUser()) return true;
-    if (p.year < this.currentYear) return true;
-    return p.status === 'VALIDATED' && (this.isPlanPlanned || !this.canEditPlan());
-  }
-
-  closeOffPlanSidebar(): void {
-    this.showOffPlanSidebar.set(false);
-  }
-
-  onOffPlanCreated(): void {
-    this.closeOffPlanSidebar();
-    const p = this.plan();
-    if (p) {
-      this.plansApi.get(p.id).subscribe({
-        next: (updated) => this.plan.set(updated),
-      });
-    }
-  }
-
   onActivityAdded(): void {
     const p = this.plan();
     if (p) {
@@ -906,6 +873,15 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     this.closeActivityMenu();
     if (!this.canEditActivity(activityId)) return;
 
+    // Current/future plans: keep activity edit planned-only.
+    // Realized data is handled through the dedicated realization sidebar flow.
+    if (!this.isPastYearPlan()) {
+      this.activityIdToEdit.set(activityId);
+      this.showEditActivitySidebar.set(true);
+      return;
+    }
+
+    // Past-year plans: use the combined planned+realized edit path when realization exists.
     if (this.activityHasRealization(activityId)) {
       const act = this.plan()?.activities?.find((x) => x.id === activityId);
       const rid = act?.primary_realization_id?.trim();

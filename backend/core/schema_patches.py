@@ -59,16 +59,6 @@ def apply_schema_patches(db) -> None:
             _apply_patch(
                 conn,
                 "planned_activity",
-                "edition_year",
-                "ALTER TABLE planned_activity "
-                "ADD COLUMN edition_year INT NULL "
-                "COMMENT 'Année de l\\'édition (colonne Year du fichier consolidé CSR)' "
-                "AFTER edition",
-                "planned_activity.edition_year",
-            )
-            _apply_patch(
-                conn,
-                "planned_activity",
                 "off_plan_validation_mode",
                 "ALTER TABLE planned_activity "
                 "ADD COLUMN off_plan_validation_mode VARCHAR(10) NULL "
@@ -230,12 +220,34 @@ def apply_schema_patches(db) -> None:
                 except Exception:
                     pass
             try:
+                if _column_exists(conn, "planned_activity", "edition_year"):
+                    conn.execute(text("ALTER TABLE planned_activity DROP COLUMN edition_year"))
+                    conn.commit()
+                    logger.info("Applied schema patch: planned_activity.drop_edition_year")
+            except Exception as exc:
+                logger.warning("Schema patch failed (planned_activity.drop_edition_year): %s", exc)
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            try:
                 if _column_exists(conn, "realized_activity", "number_external_partners"):
                     conn.execute(text("ALTER TABLE realized_activity DROP COLUMN number_external_partners"))
                     conn.commit()
                     logger.info("Applied schema patch: realized_activity.drop_number_external_partners")
             except Exception as exc:
                 logger.warning("Schema patch failed (realized_activity.drop_number_external_partners): %s", exc)
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            try:
+                if _column_exists(conn, "realized_activity", "total_hc"):
+                    conn.execute(text("ALTER TABLE realized_activity DROP COLUMN total_hc"))
+                    conn.commit()
+                    logger.info("Applied schema patch: realized_activity.drop_total_hc")
+            except Exception as exc:
+                logger.warning("Schema patch failed (realized_activity.drop_total_hc): %s", exc)
                 try:
                     conn.rollback()
                 except Exception:
