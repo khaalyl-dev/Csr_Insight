@@ -6,8 +6,10 @@ const USER_KEY = 'auth.user';
 export interface User {
   email: string;
   role: 'site' | 'corporate';
+  level?: string | null;
   first_name?: string | null;
   last_name?: string | null;
+  permissions?: { keys?: string[] } | null;
 }
 
 /** Normalize SITE_USER / CORPORATE_USER (or legacy strings) to sidebar guards. */
@@ -84,7 +86,7 @@ export class AuthStore {
   }
 
   /** Merge into the current user and persist wherever `auth.user` is already stored. */
-  patchUser(updates: Partial<Pick<User, 'email' | 'role' | 'first_name' | 'last_name'>>): void {
+  patchUser(updates: Partial<Pick<User, 'email' | 'role' | 'level' | 'first_name' | 'last_name' | 'permissions'>>): void {
     const current = this.user();
     if (!current) return;
     const next: User = { ...current, ...updates };
@@ -99,6 +101,36 @@ export class AuthStore {
         window.localStorage.setItem(USER_KEY, json);
       }
     } catch {}
+  }
+
+  permissionKeys(): string[] {
+    const keys = this.user()?.permissions?.keys;
+    return Array.isArray(keys) ? keys : [];
+  }
+
+  hasPermission(key: string): boolean {
+    const keys = this.permissionKeys();
+    if (!keys.length) return true;
+    if (keys.includes(key)) return true;
+    const [resource, action] = key.split('.');
+    if ((action === 'approve' || action === 'reject') && keys.includes(`${resource}.validate`)) {
+      return true;
+    }
+    return false;
+  }
+
+  hasAnyPermission(keys: string[]): boolean {
+    return keys.some((k) => this.hasPermission(k));
+  }
+
+  isValidatorLevel(): boolean {
+    const lvl = (this.user()?.level || '').toLowerCase();
+    return lvl === 'level_1' || lvl === 'level_2' || lvl === 'level_3';
+  }
+
+  isCreatorLevel(): boolean {
+    const lvl = (this.user()?.level || '').toLowerCase();
+    return lvl === '' || lvl === 'level_0';
   }
 
   clearAuth(): void {

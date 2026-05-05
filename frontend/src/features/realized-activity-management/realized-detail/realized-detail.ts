@@ -8,6 +8,7 @@ import type { RealizedCsr } from '../models/realized-csr.model';
 import { RealizedEditComponent } from '../realized-edit/realized-edit';
 import { DocumentsApi } from '@features/file-management/api/documents-api';
 import type { Document } from '@features/file-management/models/document.model';
+import { AuthStore } from '@core/services/auth-store';
 
 const MONTHS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -25,6 +26,7 @@ export class RealizedDetailComponent implements OnInit, OnDestroy {
   private documentsApi = inject(DocumentsApi);
   private http = inject(HttpClient);
   private translate = inject(TranslateService);
+  private authStore = inject(AuthStore);
 
   realized = signal<RealizedCsr | null>(null);
   documents = signal<Document[]>([]);
@@ -44,6 +46,10 @@ export class RealizedDetailComponent implements OnInit, OnDestroy {
     if (!totalHc) return `${participants}/${totalHc}`;
     const pct = Math.round((participants / totalHc) * 100);
     return `${participants}/${totalHc} (${pct}%)`;
+  }
+
+  canManageRealized(): boolean {
+    return !this.authStore.isValidatorLevel() && this.realized()?.plan_editable !== false;
   }
 
   ngOnInit(): void {

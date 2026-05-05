@@ -10,8 +10,9 @@ export interface CsrPlan {
   year: number;
   validation_mode: string;
   status: PlanStatus;
-  total_budget: number | null;
-  total_realized_budget?: number | null;
+  allocated_budget: number | null;
+  total_hc?: number | null;
+  budget_consumed?: number | null;
   total_estimated_budget?: number | null;
   rejected_comment?: string | null;
   /** IDs des activités à modifier (plusieurs possibles). */
@@ -39,12 +40,14 @@ export interface CsrPlan {
 export interface CreateCsrPlanPayload {
   site_id: string;
   year: number;
-  validation_mode?: '101' | '111';
-  total_budget?: number | null;
+  validation_mode?: '101' | '111' | '211' | '311';
+  allocated_budget?: number | null;
+  total_hc?: number | null;
 }
 
 export interface UpdateCsrPlanPayload {
   year?: number;
-  validation_mode?: '101' | '111';
-  total_budget?: number | null;
+  validation_mode?: '101' | '111' | '211' | '311';
+  allocated_budget?: number | null;
+  total_hc?: number | null;
 }

@@ -47,6 +47,7 @@
         <option value="PLAN">{{ 'AUDIT_LOG.ENTITY_PLAN' | translate }}</option>
         <option value="ACTIVITY">{{ 'AUDIT_LOG.ENTITY_ACTIVITY' | translate }}</option>
         <option value="REALIZATION">{{ 'AUDIT_LOG.ENTITY_REALIZATION' | translate }}</option>
+        <option value="CHANGE_REQUEST">{{ 'AUDIT_LOG.ENTITY_CHANGE_REQUEST' | translate }}</option>
       </select>
       <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -82,6 +83,16 @@
     >
       {{ 'AUDIT_LOG.FILTER_BUTTON' | translate }}
     </button>
+    @if (canExport) {
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 flex-shrink-0 disabled:opacity-50"
+        (click)="exportCsv()"
+        [disabled]="exporting()"
+      >
+        {{ exporting() ? ('COMMON.SAVING' | translate) : ('AUDIT_LOG.EXPORT_CSV' | translate) }}
+      </button>
+    }
   </div>
 
   <p *ngIf="error()" class="mb-4 text-red-600 text-sm">{{ error() }}</p>

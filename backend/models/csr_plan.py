@@ -41,7 +41,8 @@ class CsrPlan(db.Model):
         db.String(20), nullable=False, default="DRAFT",
         comment="Statut: DRAFT, SUBMITTED, VALIDATED, REJECTED, LOCKED"
     )
-    total_budget = db.Column(db.Numeric(15, 2), nullable=True, comment="Budget total du plan (€)")
+    allocated_budget = db.Column(db.Numeric(15, 2), nullable=True, comment="Budget alloué du plan (€)")
+    total_hc = db.Column(db.Integer, nullable=True, comment="Effectif total (HC) commun aux activités du plan")
     submitted_at = db.Column(db.DateTime, nullable=True, comment="Date de soumission")
     rejected_comment = db.Column(db.Text, nullable=True, comment="Motif de rejet si status=REJECTED")
     rejected_activity_ids = db.Column(

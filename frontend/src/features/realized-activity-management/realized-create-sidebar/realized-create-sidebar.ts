@@ -40,6 +40,8 @@ export class RealizedCreateSidebarComponent implements OnInit {
   plans: CsrPlan[] = [];
   editablePlans: CsrPlan[] = [];
   activities: PlannedActivityListItem[] = [];
+  plannedObjectives: string[] = [];
+  completedObjectives = new Set<string>();
   currentYear = new Date().getFullYear();
   loading = false;
   loadingData = true;
@@ -77,6 +79,7 @@ export class RealizedCreateSidebarComponent implements OnInit {
     });
 
     this.form.get('plan_id')?.valueChanges.subscribe((id) => this.onPlanChange(id));
+    this.form.get('activity_id')?.valueChanges.subscribe((id) => this.onActivityChange(id));
 
     if (this.initialPlanId) {
       this.form.patchValue({ plan_id: this.initialPlanId });
@@ -123,6 +126,8 @@ export class RealizedCreateSidebarComponent implements OnInit {
   private onPlanChange(planId: string): void {
     this.form.patchValue({ activity_id: '' });
     this.activities = [];
+    this.plannedObjectives = [];
+    this.completedObjectives.clear();
     if (!planId) {
       this.cdr.markForCheck();
       return;
@@ -131,7 +136,7 @@ export class RealizedCreateSidebarComponent implements OnInit {
     if (pl) {
       this.form.patchValue({ year: pl.year });
     }
-    this.activitiesApi.list({ plan_id: planId }).pipe(
+    this.activitiesApi.list({ plan_id: planId, exclude_realized: true }).pipe(
       timeout(LOAD_TIMEOUT_MS),
       catchError(() => of([])),
     ).subscribe((list) => {
@@ -141,6 +146,33 @@ export class RealizedCreateSidebarComponent implements OnInit {
       }
       this.cdr.markForCheck();
     });
+  }
+
+  private onActivityChange(activityId: string): void {
+    this.plannedObjectives = [];
+    this.completedObjectives.clear();
+    if (!activityId) {
+      this.cdr.markForCheck();
+      return;
+    }
+    this.activitiesApi.get(activityId).pipe(
+      timeout(LOAD_TIMEOUT_MS),
+      catchError(() => of(null)),
+    ).subscribe((activity) => {
+      const list = Array.isArray(activity?.planned_objectives) ? activity.planned_objectives : [];
+      this.plannedObjectives = list.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
+      this.cdr.markForCheck();
+    });
+  }
+
+  isObjectiveCompleted(objective: string): boolean {
+    return this.completedObjectives.has(objective);
+  }
+
+  toggleCompletedObjective(objective: string): void {
+    if (this.completedObjectives.has(objective)) this.completedObjectives.delete(objective);
+    else this.completedObjectives.add(objective);
+    this.cdr.markForCheck();
   }
 
   onFilesSelected(event: Event): void {
@@ -187,11 +219,13 @@ export class RealizedCreateSidebarComponent implements OnInit {
       activity_id: raw.activity_id,
       realized_budget: raw.realized_budget != null && raw.realized_budget !== '' ? Number(raw.realized_budget) : null,
       participants: raw.participants != null && raw.participants !== '' ? Number(raw.participants) : null,
-      total_hc: raw.total_hc != null && raw.total_hc !== '' ? Number(raw.total_hc) : null,
       action_impact_actual: raw.action_impact_actual != null && raw.action_impact_actual !== '' ? Number(raw.action_impact_actual) : null,
       action_impact_unit: raw.action_impact_unit?.trim() || null,
       realization_date: raw.realization_date?.trim() ? raw.realization_date.substring(0, 10) : null,
       comment: raw.comment?.trim() || null,
+      completed_objectives: Array.from(this.completedObjectives),
+      employees_actual: raw.participants != null && raw.participants !== '' ? Number(raw.participants) : null,
+      contact_department: null,
       contact_name: raw.contact_name?.trim() || null,
       contact_email: raw.contact_email?.trim() || null,
     };

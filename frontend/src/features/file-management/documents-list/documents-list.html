@@ -48,7 +48,7 @@
               class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-inner">
               <i [class]="getFileIcon(doc.file_type) + ' text-lg ' + getFileIconColor(doc.file_type)"></i>
             </div>
-            <button type="button" (click)="toggleMenu(doc, $event, documentMenuOpenAbove(doc, 'pinned'))"
+            <button *ngIf="canManageDocuments()" type="button" (click)="toggleMenu(doc, $event, documentMenuOpenAbove(doc, 'pinned'))"
               class="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
               <i class="fas fa-ellipsis-vertical text-xs"></i>
             </button>
@@ -85,7 +85,7 @@
                 <i [class]="getFileIcon(doc.file_type) + ' text-sm ' + getFileIconColor(doc.file_type)"></i>
                 <span class="font-medium text-gray-800 text-sm truncate">{{ doc.file_name }}</span>
                 <i *ngIf="doc.is_pinned" class="fas fa-thumbtack text-xs text-yellow-500 ml-1"></i>
-                <button (click)="toggleMenu(doc, $event, documentMenuOpenAbove(doc, 'recent'))"
+                <button *ngIf="canManageDocuments()" (click)="toggleMenu(doc, $event, documentMenuOpenAbove(doc, 'recent'))"
                   class="ml-auto text-gray-300 hover:text-gray-500 transition flex-shrink-0 p-1 rounded hover:bg-gray-100">
                   <i class="fas fa-ellipsis"></i>
                 </button>
@@ -283,7 +283,7 @@
                     [attr.title]="'DOCUMENTS.DOWNLOAD_TITLE' | translate">
                     <i class="fas fa-download text-sm"></i>
                   </button>
-                  <button (click)="toggleMenu(doc, $event, documentMenuOpenAbove(doc, 'table'))"
+                  <button *ngIf="canManageDocuments()" (click)="toggleMenu(doc, $event, documentMenuOpenAbove(doc, 'table'))"
                     class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                     <i class="fas fa-ellipsis-vertical text-sm"></i>
                   </button>
@@ -307,7 +307,7 @@
 </div>
 
 <!-- ── Dropdown Global Fixe ───────────────────────────────────────────────── -->
-<div *ngIf="activeMenuId && activeMenuDoc"
+<div *ngIf="activeMenuId && activeMenuDoc && canManageDocuments()"
   data-documents-actions-menu
   class="fixed bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] w-44 py-1 overflow-x-hidden overflow-y-auto max-h-[min(24rem,70vh)]"
   [style.top.px]="menuPosition.top"

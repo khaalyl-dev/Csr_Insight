@@ -8,6 +8,7 @@ import re
 import shutil
 import tempfile
 from datetime import datetime, date
+from typing import Optional
 
 from flask import Blueprint, request, jsonify
 
@@ -120,6 +121,23 @@ def _resolve_external_partner_cached(name: str, partner_cache: dict, created_par
     return partner
 
 
+def _split_external_partners(raw_name: str, expected_count: int) -> list[str]:
+    """
+    Split external partners when count > 1.
+    Accepted separators in string: 'and' or '-'.
+    """
+    name = _safe_str(raw_name, 255)
+    if not name:
+        return []
+    if not expected_count or expected_count <= 1:
+        return [name]
+    parts = re.split(r"\s+(?:and|&)\s+|\s*-\s*", name, flags=re.IGNORECASE)
+    cleaned = [p.strip() for p in parts if p and p.strip()]
+    if not cleaned:
+        return [name]
+    return cleaned
+
+
 def _safe_int(val):
     if val is None or val == "":
         return None
@@ -153,6 +171,44 @@ def _safe_str(val, max_len=255):
     if not s:
         return None
     return s[:max_len] if max_len else s
+
+
+def _row_edition_year_int(row: dict) -> Optional[int]:
+    """Excel column 'Year': calendar year of the activity edition (not csr_plans.year)."""
+    if not isinstance(row, dict):
+        return None
+    for key in ("edition_year", "excel_template_year"):
+        y = row.get(key)
+        if y is not None and y != "":
+            return _safe_int(y)
+    return None
+
+
+def _plan_activity_identity_key(site: Optional[Site], plan_year: int, activity_number) -> str:
+    """
+    Stable key for "same activity line" within one annual plan.
+
+    Treats legacy numbers like "CSR 1" and composed "SITE-2027-1" / "SITE_2027_1" as the same ordinal
+    when the site code and plan year prefix matches. Different plans (different years) never share keys.
+    """
+    if activity_number is None:
+        return ""
+    compact = re.sub(r"\s+", "", str(activity_number).strip().upper())
+    if not compact:
+        return ""
+    code = (getattr(site, "code", None) or "").strip().upper() if site else ""
+    if code and plan_year:
+        for sep in ("-", "–", "_"):
+            prefix = f"{code}{sep}{plan_year}{sep}"
+            if compact.startswith(prefix):
+                compact = compact[len(prefix) :].lstrip("-–_")
+                break
+    m_csr = re.match(r"^CSR[\s\-_]*(\d+)$", compact, re.IGNORECASE)
+    if m_csr:
+        return f"n:{m_csr.group(1)}"
+    if re.match(r"^\d+$", compact):
+        return f"n:{compact}"
+    return f"t:{compact}"
 
 
 def _to_json_val(val):
@@ -218,9 +274,7 @@ def _collect_plan_keys_from_rows(rows, site_id_override, year_override, role, us
             errors.append(f"Activity {row_num}: accès refusé au site {site.name or site_id}")
             continue
         if year is None:
-            y = row.get("year")
-            if y is not None and y != "":
-                year = _safe_int(y)
+            year = _row_edition_year_int(row)
         if year is None:
             errors.append(f"Activity {row_num}: année du plan manquante")
             continue
@@ -323,13 +377,26 @@ def import_excel_preview():
                     "errors": denied_access_errors[:50],
                 }), 200
 
+        excel_distinct_edition_years = sorted(
+            {
+                y
+                for y in (_row_edition_year_int(r) for r in rows)
+                if y is not None and 2000 <= y <= 2100
+            }
+        )
         plans, errors = _collect_plan_keys_from_rows(
             rows, site_id_override, year_override, role, user_id, site_cache, known_regions, known_countries
         )
         all_errors = (row_errors or []) + (denied_access_errors or []) + (errors or [])
         # Convert rows to JSON-safe dicts for editable preview
         rows_safe = [_row_to_json_safe(r) for r in rows]
-        return jsonify({"plans": plans, "rows": rows_safe, "errors": all_errors}), 200
+        return jsonify({
+            "plans": plans,
+            "rows": rows_safe,
+            "errors": all_errors,
+            "excel_distinct_edition_years": excel_distinct_edition_years,
+            "excel_distinct_plan_years": excel_distinct_edition_years,
+        }), 200
     finally:
         if tmp_path and os.path.exists(tmp_path):
             try:
@@ -382,9 +449,7 @@ def _check_row_conflicts(rows, site_id_override, year_override, role, user_id, s
         if role in ("SITE_USER", "SITE") and not _user_can_access_site(user_id, site_id):
             continue
         if year is None:
-            y = row.get("year")
-            if y is not None and y != "":
-                year = _safe_int(y)
+            year = _row_edition_year_int(row)
         if year is None or year < 2000 or year > 2100:
             continue
         plan = CsrPlan.query.filter_by(site_id=site_id, year=year).first()
@@ -393,7 +458,13 @@ def _check_row_conflicts(rows, site_id_override, year_override, role, user_id, s
         activity_number = _safe_str(row.get("activity_number"))
         if not activity_number:
             continue
-        existing = CsrActivity.query.filter_by(plan_id=plan.id, activity_number=activity_number).first()
+        plan_site = Site.query.get(plan.site_id) if plan.site_id else site
+        ink = _plan_activity_identity_key(plan_site, plan.year, activity_number)
+        existing = None
+        for a in CsrActivity.query.filter_by(plan_id=plan.id).all():
+            if _plan_activity_identity_key(plan_site, plan.year, a.activity_number) == ink:
+                existing = a
+                break
         if existing:
             plan_key = (site_id, year)
             if plan_key not in next_per_plan:
@@ -514,7 +585,7 @@ def import_excel():
     if year_override is None:
         return jsonify({"message": "Veuillez sélectionner l'année du plan pour l'import Excel"}), 400
     # Per-plan validation modes: JSON array of { "site_id", "year", "validation_mode" }
-    validation_modes_map = {}  # (site_id, year) -> "101" or "111"
+    validation_modes_map = {}  # (site_id, year) -> "101" | "111" | "211" | "311"
     validation_modes_json = request.form.get("validation_modes")
     if validation_modes_json:
         try:
@@ -525,7 +596,7 @@ def import_excel():
                     sid = item.get("site_id")
                     y = item.get("year")
                     mode = (item.get("validation_mode") or "101").strip()
-                    if mode not in ("101", "111"):
+                    if mode not in ("101", "111", "211", "311"):
                         mode = "101"
                     if sid is not None and y is not None:
                         validation_modes_map[(str(sid), int(y))] = mode
@@ -533,7 +604,7 @@ def import_excel():
             pass
     # Fallback single mode if no per-plan mapping
     validation_mode_default = (request.form.get("validation_mode") or "101").strip()
-    if validation_mode_default not in ("101", "111"):
+    if validation_mode_default not in ("101", "111", "211", "311"):
         validation_mode_default = "101"
 
     # Optional: edited rows from preview (JSON). If provided, use these instead of parsing file.
@@ -628,7 +699,10 @@ def import_excel():
         created_cats = {}
         external_partner_cache = {}  # name_lower -> ExternalPartner
         created_partners = {}
-        activity_numbers_cache = {}  # plan_id -> {activity_number -> activity}
+        # plan_id -> identity_key -> activity (identity matches CSR N with SITE-YEAR-N within same plan)
+        activity_numbers_cache = {}
+        # plan_id -> set of persisted activity_number strings (for unique suffix generation)
+        plan_raw_activity_names = {}
         excel_seen_keys = set() if duplicate_strategy in ("delete", "ignore") else None
 
         def _unique_activity_number(base: str, used: set[str]) -> str:
@@ -682,9 +756,7 @@ def import_excel():
                 continue
 
             if year is None:
-                y = row.get("year")
-                if y is not None and y != "":
-                    year = _safe_int(y)
+                year = _row_edition_year_int(row)
             if year is None:
                 errors.append(f"Activity {row_num}: année du plan manquante")
                 continue
@@ -709,6 +781,7 @@ def import_excel():
                     plans_created.append({"site_id": site_id, "site_name": site.name, "year": year, "plan_id": plan.id})
                 plan_cache[key] = plan
             plan = plan_cache[key]
+            plan_site = Site.query.get(plan.site_id) if plan.site_id else site
 
             cat_name = row.get("category")
             if not cat_name or not str(cat_name).strip():
@@ -727,41 +800,52 @@ def import_excel():
                 errors.append(f"Activity {row_num}: titre manquant")
                 continue
 
+            row_identity = _plan_activity_identity_key(plan_site, plan.year, activity_number)
+
             # Skip duplicated keys inside the Excel file for delete/ignore modes.
-            # Key is aligned with DB unique constraint: (plan_id, activity_number).
             if excel_seen_keys is not None:
-                excel_key = (plan.id, activity_number)
+                excel_key = (plan.id, row_identity)
                 if excel_key in excel_seen_keys:
                     if duplicate_strategy == "ignore":
-                        # Keep the row but rename it (CSR 1 -> CSR 1-1, CSR 1-2, ...)
-                        used = set(activity_numbers_cache.get(plan.id, {}).keys())
-                        used.update({k[1] for k in excel_seen_keys if k and k[0] == plan.id})
+                        used = set(plan_raw_activity_names.get(plan.id, set()))
                         activity_number = _unique_activity_number(activity_number, used)
+                        row_identity = _plan_activity_identity_key(plan_site, plan.year, activity_number)
                     else:
                         continue
-                excel_seen_keys.add(excel_key)
+                excel_seen_keys.add((plan.id, row_identity))
 
             if plan.id not in activity_numbers_cache:
                 acts = CsrActivity.query.filter_by(plan_id=plan.id).all()
-                activity_numbers_cache[plan.id] = {a.activity_number: a for a in acts}
-            existing_act = activity_numbers_cache[plan.id].get(activity_number)
+                ps = Site.query.get(plan.site_id)
+                slug_map = {}
+                raw_set = set()
+                for a in acts:
+                    ak = _plan_activity_identity_key(ps, plan.year, a.activity_number)
+                    if ak not in slug_map:
+                        slug_map[ak] = a
+                    raw_set.add(a.activity_number)
+                activity_numbers_cache[plan.id] = slug_map
+                plan_raw_activity_names[plan.id] = raw_set
+
+            existing_act = activity_numbers_cache[plan.id].get(row_identity)
             if existing_act:
                 if duplicate_strategy == "ignore":
-                    # Import anyway with a unique activity_number suffix.
-                    used = set(activity_numbers_cache[plan.id].keys())
-                    used.update({k[1] for k in excel_seen_keys} if excel_seen_keys else set())
+                    used = set(plan_raw_activity_names.get(plan.id, set()))
                     activity_number = _unique_activity_number(activity_number, used)
+                    row_identity = _plan_activity_identity_key(plan_site, plan.year, activity_number)
                     existing_act = None
 
                 if duplicate_strategy == "delete":
                     # Remove existing activity so we can recreate it from the import row.
                     # First delete dependent realizations to avoid SQLAlchemy trying to NULL activity_id
                     # (activity_id is NOT NULL in realized_activity).
+                    old_slug = _plan_activity_identity_key(plan_site, plan.year, existing_act.activity_number)
                     with db.session.no_autoflush:
                         db.session.query(RealizedCsr).filter_by(activity_id=existing_act.id).delete(synchronize_session=False)
                         db.session.delete(existing_act)
                         db.session.flush()
-                    activity_numbers_cache[plan.id].pop(activity_number, None)
+                    activity_numbers_cache[plan.id].pop(old_slug, None)
+                    plan_raw_activity_names[plan.id].discard(existing_act.activity_number)
                     existing_act = None
 
             if not existing_act:
@@ -777,8 +861,10 @@ def import_excel():
                         collab = "SPONSORSHIP"
                     else:
                         collab = "OTHERS"
-                ep_name = _safe_str(row.get("external_partner"), 255)
-                ep = _resolve_external_partner_cached(ep_name, external_partner_cache, created_partners) if ep_name else None
+                nep = _safe_int(row.get("number_external_partners"))
+                partner_names = _split_external_partners(row.get("external_partner"), nep)
+                ep = _resolve_external_partner_cached(partner_names[0], external_partner_cache, created_partners) if partner_names else None
+                effective_nep = max(nep or 0, len(partner_names)) or None
                 activity = CsrActivity(
                     plan_id=plan.id,
                     category_id=category.id,
@@ -790,28 +876,35 @@ def import_excel():
                     start_year=_safe_int(row.get("start_year")),
                     organizer=_safe_str(row.get("organizer"), 255),
                     edition=_safe_int(row.get("edition")),
+                    edition_year=_row_edition_year_int(row),
                     action_impact_target=_safe_float(row.get("impact_target")),
                     action_impact_unit=_safe_str(row.get("impact_unit"), 100),
                     external_partner_id=ep.id if ep else None,
-                    number_external_partners=_safe_int(row.get("number_external_partners")),
                     created_by=effective_user_id,
                     status="DRAFT",
                 )
                 db.session.add(activity)
                 db.session.flush()
                 activities_created += 1
-                activity_numbers_cache[plan.id][activity_number] = activity
+                ink_new = _plan_activity_identity_key(plan_site, plan.year, activity.activity_number)
+                activity_numbers_cache[plan.id][ink_new] = activity
+                plan_raw_activity_names.setdefault(plan.id, set()).add(activity.activity_number)
             else:
                 # overwrite mode: update start_year, impact target, impact unit, external partner, count.
                 activity = existing_act
                 sy = _safe_int(row.get("start_year"))
+                ey = _row_edition_year_int(row)
                 it = _safe_float(row.get("impact_target"))
                 iu = _safe_str(row.get("impact_unit"), 100)
-                ep_name = _safe_str(row.get("external_partner"), 255)
                 nep = _safe_int(row.get("number_external_partners"))
-                if sy is not None or it is not None or iu is not None or ep_name is not None or nep is not None:
+                partner_names = _split_external_partners(row.get("external_partner"), nep)
+                ep_name = partner_names[0] if partner_names else None
+                effective_nep = max(nep or 0, len(partner_names)) or None
+                if sy is not None or ey is not None or it is not None or iu is not None or ep_name is not None or effective_nep is not None:
                     if sy is not None:
                         activity.start_year = sy
+                    if ey is not None:
+                        activity.edition_year = ey
                     if it is not None:
                         activity.action_impact_target = it
                     if iu is not None:
@@ -819,39 +912,55 @@ def import_excel():
                     if ep_name is not None:
                         ep = _resolve_external_partner_cached(ep_name, external_partner_cache, created_partners)
                         activity.external_partner_id = ep.id if ep else None
-                    if nep is not None:
-                        activity.number_external_partners = nep
 
-            # Optional: realization row (Actual Budget in € or Nbr of internal Participants, etc.)
+            # Optional: realization row — only when "Actual Budget in €" is set.
+            # The same Excel column as planned impact ("Action Impact In Numbers") is copied to both
+            # impact_target and impact_actual in the parser; treating impact_actual alone would create
+            # a realization for every plan row even when Actual Budget / participants are empty.
             real_budget = _safe_float(row.get("realized_budget"))
-            participants = _safe_int(row.get("participants"))
             # Realization year/month are not explicit in the current Excel template; we align with plan year
             # and use month=1 when not provided, then build a realization_date for the new model.
             real_year = _safe_int(row.get("realization_year")) or year
             real_month = _safe_int(row.get("realization_month")) or 1
-            impact_actual = _safe_float(row.get("impact_actual"))
             # percentage_employees column exists in Excel but we do not persist it,
             # because it can be recomputed from participants / total_hc in analytics.
             pe = _safe_float(row.get("percentage_employees"))
             if pe is not None and 0 < pe <= 1:
                 pe = pe * 100
-            if real_budget is not None or participants is not None or impact_actual is not None:
+            if real_budget is not None:
+                participants = _safe_int(row.get("participants"))
+                impact_actual = _safe_float(row.get("impact_actual"))
                 safe_month = min(12, max(1, real_month))
                 realization_date = date(real_year, safe_month, 1)
-                rc = RealizedCsr(
-                    activity_id=activity.id,
-                    realization_date=realization_date,
-                    realized_budget=real_budget,
-                    participants=participants,
-                    total_hc=_safe_int(row.get("total_hc")),
-                    action_impact_actual=impact_actual,
-                    action_impact_unit=_safe_str(row.get("impact_unit"), 100),
-                    created_by=effective_user_id,
+                existing_rc = (
+                    RealizedCsr.query.filter_by(
+                        activity_id=activity.id,
+                        realization_date=realization_date,
+                    )
+                    .order_by(RealizedCsr.created_at.asc())
+                    .first()
                 )
-                db.session.add(rc)
-                realized_created += 1
+                if existing_rc:
+                    existing_rc.realized_budget = real_budget
+                    existing_rc.participants = participants
+                    existing_rc.total_hc = _safe_int(row.get("total_hc"))
+                    existing_rc.action_impact_actual = impact_actual
+                    existing_rc.action_impact_unit = _safe_str(row.get("impact_unit"), 100)
+                else:
+                    rc = RealizedCsr(
+                        activity_id=activity.id,
+                        realization_date=realization_date,
+                        realized_budget=real_budget,
+                        participants=participants,
+                        total_hc=_safe_int(row.get("total_hc")),
+                        action_impact_actual=impact_actual,
+                        action_impact_unit=_safe_str(row.get("impact_unit"), 100),
+                        created_by=effective_user_id,
+                    )
+                    db.session.add(rc)
+                    realized_created += 1
 
-        # Recalculate total_budget for each plan in one query
+        # Recalculate allocated/total budget for each plan in one query
         plan_ids = [p.id for p in plan_cache.values()]
         if plan_ids:
             totals = db.session.query(CsrActivity.plan_id, db.func.coalesce(db.func.sum(CsrActivity.planned_budget), 0)).filter(
@@ -859,7 +968,8 @@ def import_excel():
             ).group_by(CsrActivity.plan_id).all()
             total_by_plan = {pid: float(t) for pid, t in totals}
             for plan in plan_cache.values():
-                plan.total_budget = total_by_plan.get(plan.id, 0)
+                budget = total_by_plan.get(plan.id, 0)
+                plan.allocated_budget = budget
 
         # Persist uploaded file as Document so user can download it
         document_site_id = site_id_override

@@ -2,158 +2,195 @@
   User detail page: back link, header card (name, email, role, status, actions),
   site assignment form (SITE_USER only), password modal.
 -->
-<div class="p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
-  <button type="button" (click)="goBack()"
-    class="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-800 transition">
-    <fa-icon [icon]="faArrowLeft"></fa-icon>
-    {{ 'USER_DETAIL.BACK_TO_LIST' | translate }}
-  </button>
+<div class="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] !mt-0"
+  (click)="goBack()" role="dialog" aria-modal="true">
+  <div class="w-full max-w-6xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden"
+    (click)="$event.stopPropagation()">
+    <div class="max-h-[85vh] overflow-y-auto">
 
-  @if (loading()) {
-    <div class="flex flex-col items-center justify-center py-16">
-      <div class="h-10 w-10 animate-spin rounded-full border-2 border-brand-900 border-t-transparent"></div>
-      <p class="mt-3 text-gray-500">{{ 'USER_DETAIL.LOADING' | translate }}</p>
-    </div>
-  } @else if (user(); as u) {
-    <div class="space-y-6">
-      <!-- Header card -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div class="p-6">
-          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <h1 class="text-2xl font-bold tracking-tight text-gray-800">{{ u.first_name }} {{ u.last_name }}</h1>
-              <p class="mt-1 text-gray-600">{{ u.email }}</p>
-              <div class="mt-3 flex flex-wrap gap-2">
-                <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-md"
-                  [class.bg-brand-100]="u.role === 'CORPORATE_USER'"
-                  [class.text-brand-900]="u.role === 'CORPORATE_USER'"
-                  [class.bg-gray-100]="u.role === 'SITE_USER'"
-                  [class.text-gray-800]="u.role === 'SITE_USER'">
-                  {{ roleLabel(u.role) }}
-                </span>
-                <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full"
-                  [class.bg-emerald-100]="u.is_active"
-                  [class.text-emerald-800]="u.is_active"
-                  [class.bg-red-100]="!u.is_active"
-                  [class.text-red-800]="!u.is_active">
-                  {{ u.is_active ? ('USER_DETAIL.ACTIVE' | translate) : ('USER_DETAIL.INACTIVE' | translate) }}
-                </span>
+    @if (loading()) {
+      <div class="bg-white flex flex-col items-center justify-center py-16">
+        <div class="h-10 w-10 animate-spin rounded-full border-2 border-brand-900 border-t-transparent"></div>
+        <p class="mt-3 text-gray-500">{{ 'USER_DETAIL.LOADING' | translate }}</p>
+      </div>
+    } @else if (user(); as u) {
+      <div class="space-y-0">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <h2 class="flex items-center gap-2 font-semibold text-gray-900">
+            <fa-icon [icon]="faUser" class="text-gray-500"></fa-icon>
+            {{ 'USER_DETAIL.USER_INFORMATION' | translate }}
+          </h2>
+          <p class="text-sm text-gray-500 mt-0.5">{{ 'USER_DETAIL.USER_INFORMATION_HINT' | translate }}</p>
+        </div>
+        <div class="px-6 py-4 border-b border-gray-100">
+          <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div class="flex items-center gap-6">
+              @if (avatarDisplayUrl()) {
+                <img [src]="avatarDisplayUrl()!" [alt]="u.first_name + ' ' + u.last_name"
+                  class="h-20 w-20 rounded-full object-cover border border-gray-200" />
+              } @else {
+                <div class="h-20 w-20 rounded-full bg-brand-100 text-brand-800 border border-brand-200 flex items-center justify-center text-xl font-semibold">
+                  {{ userInitials() }}
+                </div>
+              }
+              <div>
+                <h1 class="text-2xl font-semibold text-gray-900">{{ u.first_name }} {{ u.last_name }}</h1>
+                <p class="mt-1 text-sm text-gray-600">{{ u.email }}</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-md"
+                    [class.bg-brand-100]="u.role === 'CORPORATE_USER'"
+                    [class.text-brand-900]="u.role === 'CORPORATE_USER'"
+                    [class.bg-gray-100]="u.role === 'SITE_USER'"
+                    [class.text-gray-800]="u.role === 'SITE_USER'">
+                    {{ roleLabel(u.role) }}
+                  </span>
+                  <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full"
+                    [class.bg-emerald-100]="u.is_active"
+                    [class.text-emerald-800]="u.is_active"
+                    [class.bg-red-100]="!u.is_active"
+                    [class.text-red-800]="!u.is_active">
+                    {{ u.is_active ? ('USER_DETAIL.ACTIVE' | translate) : ('USER_DETAIL.INACTIVE' | translate) }}
+                  </span>
+                </div>
               </div>
             </div>
             <div class="flex flex-wrap gap-2">
               <button
                 (click)="toggleActive()"
                 [disabled]="actionLoading() === 'toggle'"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition"
-                [class.bg-amber-100]="u.is_active"
-                [class.text-amber-800]="u.is_active"
-                [class.hover:bg-amber-200]="u.is_active"
-                [class.bg-emerald-100]="!u.is_active"
-                [class.text-emerald-800]="!u.is_active"
-                [class.hover:bg-emerald-200]="!u.is_active">
+                class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition">
                 @if (u.is_active) {
-                  <fa-icon [icon]="faBan"></fa-icon>
                   {{ 'USER_DETAIL.DEACTIVATE' | translate }}
                 } @else {
-                  <fa-icon [icon]="faCheck"></fa-icon>
                   {{ 'USER_DETAIL.ACTIVATE' | translate }}
                 }
               </button>
               <button
                 (click)="generatePassword()"
                 [disabled]="actionLoading() === 'password'"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-brand-100 text-brand-800 rounded-lg font-medium hover:bg-brand-100 transition">
-                <fa-icon [icon]="faKey"></fa-icon>
+                class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition">
                 {{ 'USER_DETAIL.GENERATE_PASSWORD' | translate }}
               </button>
             </div>
           </div>
         </div>
-      </div>
-
-      @if (successMessage(); as msg) {
-        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm flex items-center gap-2">
-          <fa-icon [icon]="faCheck" class="text-emerald-600"></fa-icon>
-          {{ msg }}
-        </div>
-      }
-
-      @if (errorMessage(); as msg) {
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{{ msg }}</div>
-      }
-
-      @if (u.role === 'SITE_USER') {
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-            <h2 class="flex items-center gap-2 font-semibold text-gray-900">
-              <fa-icon [icon]="faBuilding" class="text-gray-500"></fa-icon>
-              {{ 'USER_DETAIL.SITE_ACCESS' | translate }}
-            </h2>
-            <p class="text-sm text-gray-500 mt-0.5">{{ 'USER_DETAIL.SITE_ACCESS_HINT' | translate }}</p>
-          </div>
-          <div [formGroup]="form" class="p-6 space-y-5">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ 'USER_DETAIL.LEVEL_LABEL' | translate }}</label>
-              <select formControlName="default_grade"
-                class="w-full max-w-xs px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-700 focus:border-brand-700 transition">
-                <option value="level_0">{{ 'USER_DETAIL.LEVEL_0' | translate }}</option>
-                <option value="level_1">{{ 'USER_DETAIL.LEVEL_1' | translate }}</option>
-              </select>
+        <div [formGroup]="profileForm">
+          <div class="px-6 py-4 grid grid-cols-[180px_1fr] gap-4 items-center border-b border-gray-100">
+            <label class="text-sm font-semibold text-gray-700">{{ 'USER_DETAIL.FIRST_NAME' | translate }}</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input formControlName="first_name" class="px-4 py-2.5 border border-gray-300 rounded-lg" />
+              <input formControlName="last_name" class="px-4 py-2.5 border border-gray-300 rounded-lg" />
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ 'USER_DETAIL.ASSIGNED_SITES' | translate }}</label>
-              <div class="flex flex-wrap gap-2">
-                @for (site of sites(); track site.id) {
-                  <label
-                    class="inline-flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition"
-                    [class.border-brand-700]="isSelected(site.id)"
-                    [class.bg-brand-100]="isSelected(site.id)"
-                    [class.border-gray-200]="!isSelected(site.id)"
-                    [class.hover:bg-gray-50]="!isSelected(site.id)">
-                    <input type="checkbox" [checked]="isSelected(site.id)" (change)="toggleSite(site.id)"
-                      class="rounded border-gray-300 text-brand-700" />
-                    <span class="text-sm">{{ site.name }} ({{ site.code }})</span>
-                  </label>
+          </div>
+          <div class="px-6 py-4 grid grid-cols-[180px_1fr] gap-4 items-center border-b border-gray-100">
+            <label class="text-sm font-semibold text-gray-700">{{ 'USER_DETAIL.EMAIL' | translate }}</label>
+            <input formControlName="email" class="px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50" readonly />
+          </div>
+          <div class="px-6 py-4 grid grid-cols-[180px_1fr] gap-4 items-center border-b border-gray-100">
+            <label class="text-sm font-semibold text-gray-700">{{ 'USERS.TABLE_LEVEL' | translate }}</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <select formControlName="role" class="px-4 py-2.5 border border-gray-300 rounded-lg">
+                <option value="SITE_USER">{{ 'USER_DETAIL.ROLE_SITE' | translate }}</option>
+                <option value="CORPORATE_USER">{{ 'USER_DETAIL.ROLE_CORPORATE' | translate }}</option>
+              </select>
+              <input formControlName="password" type="password" class="px-4 py-2.5 border border-gray-300 rounded-lg" [placeholder]="'USER_DETAIL.NEW_PASSWORD_OPTIONAL' | translate" />
+            </div>
+          </div>
+        </div>
+        @if (u.role === 'SITE_USER') {
+          <div class="border-t border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+              <h2 class="flex items-center gap-2 font-semibold text-gray-900">
+                <fa-icon [icon]="faBuilding" class="text-gray-500"></fa-icon>
+                {{ 'USER_DETAIL.SITE_ACCESS' | translate }}
+              </h2>
+              <p class="text-sm text-gray-500 mt-0.5">{{ 'USER_DETAIL.SITE_ACCESS_HINT' | translate }}</p>
+            </div>
+            <div [formGroup]="form" class="px-6 py-4 space-y-4">
+              <div class="border-b border-gray-100 pb-3">
+                <label class="block text-sm font-medium text-gray-700">{{ 'USER_DETAIL.ASSIGNED_SITES' | translate }}</label>
+              </div>
+              <div class="space-y-3">
+                @for (row of siteAccessRows(); track $index) {
+                  <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-3">
+                    <div class="md:col-span-6">
+                      <select [value]="row.site_id" (change)="updateRowSite($index, $any($event.target).value)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="">{{ 'USER_DETAIL.CHOOSE_SITE' | translate }}</option>
+                        @for (site of availableSitesForRow($index); track site.id) {
+                          <option [value]="site.id">{{ site.name }} ({{ site.code }})</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="md:col-span-5">
+                      <select [value]="row.grade" (change)="updateRowGrade($index, $any($event.target).value)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="level_0">{{ 'USER_DETAIL.GRADE_EMPLOYER' | translate }}</option>
+                        <option value="level_1">{{ 'USER_DETAIL.GRADE_MANAGER' | translate }}</option>
+                        <option value="level_2">{{ 'USER_DETAIL.GRADE_LEVEL_2' | translate }}</option>
+                        <option value="level_3">{{ 'USER_DETAIL.GRADE_LEVEL_3' | translate }}</option>
+                      </select>
+                    </div>
+                    <div class="md:col-span-1">
+                      @if ($index === 0) {
+                        <button type="button" (click)="saveSites()" [disabled]="saving()"
+                          class="w-full px-3 py-2 rounded-lg bg-brand-100 text-brand-800 text-sm font-medium hover:bg-brand-200 disabled:opacity-50 transition">
+                          {{ 'USER_DETAIL.ADD_SITE' | translate }}
+                        </button>
+                      }
+                    </div>
+                  </div>
                 }
               </div>
             </div>
-            <button (click)="saveSites()" [disabled]="saving()"
-              class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-900 hover:bg-brand-800 text-white rounded-lg font-medium disabled:opacity-50 transition">
-              {{ saving() ? ('USER_DETAIL.SAVING_ACCESS' | translate) : ('USER_DETAIL.SAVE_ACCESS' | translate) }}
-            </button>
-          </div>
 
-          @if (u.sites.length > 0) {
-            <div class="px-6 pb-6">
-              <div class="pt-4 border-t border-gray-100">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">{{ 'USER_DETAIL.CURRENT_ACCESS' | translate }}</h3>
-                <ul class="space-y-1 text-sm text-gray-600">
-                  @for (s of u.sites; track s.id) {
-                    <li class="flex items-center gap-2">
-                      <span class="w-2 h-2 rounded-full bg-brand-700"></span>
-                      {{ s.site_name }}
-                      <span class="text-xs font-medium px-1.5 py-0.5 rounded"
-                        [class.bg-slate-100]="s.grade === 'level_0'"
-                        [class.text-slate-600]="s.grade === 'level_0'"
-                        [class.bg-brand-100]="s.grade === 'level_1'"
-                        [class.text-brand-700]="s.grade === 'level_1'">
-                        {{ gradeLabel(s.grade) }}
-                      </span>
-                    </li>
-                  }
-                </ul>
+            @if (u.sites.length > 0) {
+              <div class="px-6 pb-5">
+                <div class="pt-4 border-t border-gray-100">
+                  <h3 class="text-sm font-medium text-gray-700 mb-3">{{ 'USER_DETAIL.CURRENT_ACCESS' | translate }}</h3>
+                  <div class="space-y-2">
+                    @for (s of u.sites; track s.id) {
+                      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 border border-gray-200 rounded-lg">
+                        <div class="flex items-center gap-2 text-sm text-gray-700">
+                          <span class="w-2 h-2 rounded-full bg-brand-700"></span>
+                          <span class="font-medium">{{ s.site_name }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="text-xs font-medium px-1.5 py-0.5 rounded"
+                          [class.bg-slate-100]="s.grade === 'level_0'"
+                          [class.text-slate-600]="s.grade === 'level_0'"
+                          [class.bg-brand-100]="s.grade === 'level_1'"
+                          [class.text-brand-700]="s.grade === 'level_1'">
+                          {{ gradeLabel(s.grade) }}
+                          </span>
+                          <button type="button" (click)="openRevokeSiteModal({ site_id: s.site_id, site_name: s.site_name })"
+                            class="px-2.5 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition">
+                            {{ 'USER_DETAIL.REMOVE' | translate }}
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
               </div>
-            </div>
-          }
-        </div>
-      } @else {
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <p class="text-gray-500">{{ 'USER_DETAIL.CORPORATE_ACCESS_ALL' | translate }}</p>
-        </div>
-      }
+            }
+          </div>
+        }
+
+      </div>
+    }
     </div>
-  }
-</div>
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+      <button type="button" (click)="goBack()"
+        class="px-4 py-2.5 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition">
+        {{ 'COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" (click)="saveAll()" [disabled]="actionLoading()==='profile' || saving()"
+        class="px-4 py-2.5 bg-brand-900 hover:bg-brand-800 text-white rounded-lg font-medium disabled:opacity-50 transition">
+        {{ (actionLoading()==='profile' || saving()) ? ('COMMON.SAVING' | translate) : ('COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
 
 <!-- Password modal -->
 @if (showPasswordModal()) {
@@ -182,6 +219,89 @@
         <button (click)="closePasswordModal()"
           class="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
           {{ 'COMMON.CLOSE' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+
+@if (showRevokeSiteModal()) {
+  <div class="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] !mt-0"
+    (click)="closeRevokeSiteModal()" role="dialog" aria-modal="true">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden"
+      (click)="$event.stopPropagation()">
+      <div class="px-6 py-4 border-b border-gray-100 bg-red-50">
+        <h2 class="text-lg font-semibold text-gray-900">{{ 'USER_DETAIL.REMOVE_SITE_ACCESS' | translate }}</h2>
+      </div>
+      <div class="px-6 py-4 text-sm text-gray-700">
+        {{ 'USER_DETAIL.REMOVE_SITE_ACCESS_CONFIRM' | translate }} <span class="font-semibold">{{ revokingSite()?.site_name }}</span>?
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button type="button" (click)="closeRevokeSiteModal()"
+          class="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
+          {{ 'COMMON.CANCEL' | translate }}
+        </button>
+        <button type="button" (click)="confirmRevokeSite()" [disabled]="saving()"
+          class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium disabled:opacity-50 transition">
+          {{ 'USER_DETAIL.REMOVE' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showGlobalPermissionsModal()) {
+  <div class="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] !mt-0"
+    (click)="closeGlobalPermissionsModal()" role="dialog" aria-modal="true">
+    <div class="w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden"
+      (click)="$event.stopPropagation()">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-lg font-semibold text-gray-900">{{ 'USER_DETAIL.GLOBAL_PERMISSIONS' | translate }}</h2>
+        <p class="text-xs text-gray-500 mt-1">{{ 'USER_DETAIL.GLOBAL_PERMISSIONS_APPLIES' | translate }}</p>
+      </div>
+      <div class="border-b border-gray-200 bg-gray-50 px-6 py-2.5">
+        <div class="grid grid-cols-[1fr_auto] items-center text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <span>{{ 'USER_DETAIL.ACTIONS' | translate }}</span>
+          <span>{{ 'USER_DETAIL.MEMBER' | translate }}</span>
+        </div>
+      </div>
+      <div class="max-h-[65vh] overflow-y-auto">
+        @for (cat of visiblePermissionCategories(); track cat.key) {
+          <div class="border-b border-gray-200">
+            <div class="px-6 py-3 bg-white">
+              <p class="text-base font-semibold text-gray-900">{{ cat.labelKey | translate }}</p>
+            </div>
+            @for (item of cat.items; track item.key) {
+              <label class="px-6 py-3 grid grid-cols-[1fr_auto] items-center border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
+                <span class="text-sm text-gray-800">{{ item.labelKey | translate }}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  [attr.aria-checked]="hasGlobalPermission(item.key)"
+                  (click)="toggleGlobalPermission(item.key)"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                  [class.bg-brand-900]="hasGlobalPermission(item.key)"
+                  [class.bg-gray-300]="!hasGlobalPermission(item.key)">
+                  <span
+                    class="inline-block h-5 w-5 transform rounded-full bg-white transition-transform"
+                    [class.translate-x-5]="hasGlobalPermission(item.key)"
+                    [class.translate-x-1]="!hasGlobalPermission(item.key)">
+                  </span>
+                </button>
+              </label>
+            }
+          </div>
+        }
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button type="button" (click)="closeGlobalPermissionsModal()"
+          class="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
+          {{ 'COMMON.CANCEL' | translate }}
+        </button>
+        <button type="button" (click)="savePermissions()" [disabled]="permissionSaving()"
+          class="px-4 py-2.5 bg-brand-900 hover:bg-brand-800 text-white rounded-lg font-medium disabled:opacity-50 transition">
+          {{ permissionSaving() ? ('COMMON.SAVING' | translate) : ('COMMON.SAVE' | translate) }}
         </button>
       </div>
     </div>

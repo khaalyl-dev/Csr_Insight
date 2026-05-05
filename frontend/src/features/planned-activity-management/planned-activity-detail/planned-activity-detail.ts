@@ -9,6 +9,7 @@ import type { Document } from '@features/file-management/models/document.model';
 import { BreadcrumbService } from '@core/services/breadcrumb.service';
 import { PlannedActivityEditComponent } from '../planned-activity-edit/planned-activity-edit';
 import { RealizedCreateSidebarComponent } from '@features/realized-activity-management/realized-create-sidebar/realized-create-sidebar';
+import { AuthStore } from '@core/services/auth-store';
 
 @Component({
   selector: 'app-planned-activity-detail',
@@ -25,6 +26,7 @@ export class PlannedActivityDetailComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private breadcrumb = inject(BreadcrumbService);
   private translate = inject(TranslateService);
+  private authStore = inject(AuthStore);
 
   activity = signal<PlannedActivityListItem | null>(null);
   photos = signal<Document[]>([]);
@@ -49,6 +51,21 @@ export class PlannedActivityDetailComponent implements OnInit, OnDestroy {
     return status === 'VALIDATED';
   }
 
+  canManageActivity(): boolean {
+    return !this.authStore.isValidatorLevel() && this.activity()?.plan_editable !== false;
+  }
+
+  canAddRealization(): boolean {
+    const act = this.activity();
+    return !!(
+      !this.authStore.isValidatorLevel() &&
+      act?.plan_id &&
+      !this.isPlanRealized() &&
+      this.canSubmitRealizedData() &&
+      act.plan_editable !== false
+    );
+  }
+
   activityTitle(): string {
     return this.activity()?.title || (this.isPlanRealized() ? this.translate.instant('PLANNED_ACTIVITY_DETAIL.TITLE_REALIZED') : this.translate.instant('PLANNED_ACTIVITY_DETAIL.TITLE_PLANNED'));
   }
@@ -66,6 +83,11 @@ export class PlannedActivityDetailComponent implements OnInit, OnDestroy {
       VALIDATED: 'PLAN_DETAIL.STATUS_VALIDATED',
       REJECTED: 'PLAN_DETAIL.STATUS_REJECTED',
       LOCKED: 'PLAN_DETAIL.STATUS_VALIDATED_LOCKED',
+      IN_PROGRESS: 'PLAN_DETAIL.REALIZATION_STATUS_IN_PROGRESS',
+      COMPLETED: 'PLAN_DETAIL.REALIZATION_STATUS_COMPLETED',
+      PLANNED: 'PLAN_DETAIL.REALIZATION_STATUS_PLANNED',
+      UNDER_REVIEW: 'PLAN_DETAIL.ACTIVITY_LIFECYCLE_UNDER_REVIEW',
+      CANCELLED: 'PLAN_DETAIL.ACTIVITY_STATUS_CANCELLED',
     };
     const k = keys[s];
     return k ? this.translate.instant(k) : (status || '–');

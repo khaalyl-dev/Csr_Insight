@@ -6,6 +6,7 @@ Used in dropdowns when creating activities. Create is idempotent (returns existi
 Delete: shows related activities, optionally deletes them (only if plan editable).
 """
 from datetime import datetime
+import re
 
 from flask import Blueprint, jsonify, request
 
@@ -35,6 +36,24 @@ def _get_or_create_uncategorized() -> Category:
     db.session.add(cat)
     db.session.flush()
     return cat
+
+
+def _compose_activity_number(activity: CsrActivity) -> str:
+    base = (getattr(activity, "activity_number", None) or "").strip()
+    plan = getattr(activity, "plan", None)
+    if not base or not plan or not getattr(plan, "site", None) or not getattr(plan, "year", None):
+        return base
+    site_code = (getattr(plan.site, "code", "") or "").strip().upper()
+    year = str(getattr(plan, "year", "")).strip()
+    if not site_code or not year:
+        return base
+    prefix = f"{site_code}-{year}-"
+    if base.upper().startswith(prefix):
+        return base
+    m = re.match(r"^[^-]+-\d{4}-(.+)$", base)
+    if m:
+        base = (m.group(1) or "").strip()
+    return f"{prefix}{base}"
 
 
 @bp.get("")
@@ -85,7 +104,7 @@ def get_related_activities(category_id: str):
         editable = plan and _plan_is_editable(plan)
         out.append({
             "id": a.id,
-            "activity_number": a.activity_number or "",
+            "activity_number": _compose_activity_number(a),
             "title": a.title or "",
             "plan_id": a.plan_id,
             "plan_status": plan.status if plan else None,

@@ -23,7 +23,7 @@ Les activités planifiées (CRUD, hors plan, sidebars) sont dans **`planned-acti
 
 - [ ] **CSR Plans API** – CRUD csr_plans (create, list, get, update, submit)
 - [ ] **CSR Activities API** – CRUD csr_activities, activity_kpis
-- [ ] **Plan create/edit** – Formulaire plan annuel (year, total_budget, status)
+- [ ] **Plan create/edit** – Formulaire plan annuel (year, allocated_budget, status)
 - [ ] **Activity create/edit** – Formulaire activité (title, category, budget, KPI, dates, organization_type, contract_type)
 - [ ] **Import Excel** – Import plan/activités depuis Excel
 - [ ] **Export Excel/PDF** – Export plan annuel

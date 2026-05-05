@@ -133,6 +133,22 @@ Ref: user_sites.user_id > users.id
 Ref: user_sites.site_id > sites.id
 Ref: user_sites.granted_by > users.id
 
+Table user_permissions {
+  id uuid [pk]
+  user_id uuid
+  resource varchar [note: 'plan, activity, document, ...']
+  action varchar [note: 'read, create, update, delete, validate, ...']
+  is_allowed boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (user_id, resource, action) [unique]
+  }
+}
+
+Ref: user_permissions.user_id > users.id
+
 //////////////////////////////////////////////////////
 //////////////////// CATEGORIES //////////////////////
 //////////////////////////////////////////////////////
@@ -174,7 +190,8 @@ Table csr_plans {
   year int
   validation_mode varchar [default: '101', note: '101 ou 111']
   status plan_status
-  total_budget decimal [null]
+  allocated_budget decimal [null]
+  total_hc int [null, note: 'Effectif total (HC) commun aux activités du plan']
   submitted_at timestamp [null]
   rejected_comment text [null]
   rejected_activity_ids text [null, note: 'JSON array of activity UUIDs']
@@ -183,6 +200,7 @@ Table csr_plans {
   unlock_until timestamp [null, note: 'Date limite modification après demande approuvée']
   unlock_since timestamp [null]
   created_by uuid [null]
+  submitted_by uuid [null]
   created_at timestamp
   updated_at timestamp
 
@@ -193,43 +211,42 @@ Table csr_plans {
 
 Ref: csr_plans.site_id > sites.id
 Ref: csr_plans.created_by > users.id
+Ref: csr_plans.submitted_by > users.id
 
 //////////////////////////////////////////////////////
 //////////////// CSR ACTIVITIES //////////////////////
 //////////////////////////////////////////////////////
 // Aligned with: Annual CSR Plan + Consolidated Report (Group figures)
 
-Table csr_activities {
+Table planned_activity {
   id uuid [pk]
   plan_id uuid
   category_id uuid
   external_partner_id uuid [null]
   activity_number varchar
   title varchar
+  organization varchar [null]
+  contract_type varchar [null]
   description text [null]
-  activity_type varchar [null]
-  organization organization_type
-  collaboration_nature collaboration_nature [null]
-  contract_type contract_type
+  collaboration_nature varchar [null, note: 'CHARITY_DONATION, PARTNERSHIP, SPONSORSHIP, OTHERS']
   periodicity varchar [null]
-  is_off_plan boolean [default: false]
   planned_budget decimal [null]
-  planned_volunteers int [null]
   action_impact_target decimal [null]
   action_impact_unit varchar [null]
   action_impact_duration varchar [null]
-  sustainability_description text [null]
+  employees_planned int [null]
   start_year int [null]
   edition int [null]
+  edition_year int [null, note: 'Annee de l edition (colonne Year du fichier consolide)']
   organizer varchar [null]
-  responsible_user_id uuid [null]
-  start_date date [null]
-  end_date date [null]
   status activity_status
-  kpi_value decimal [null]
-  kpi_unit varchar [null]
+  created_by uuid [null]
   created_at timestamp
   updated_at timestamp
+  unlock_until timestamp [null]
+  unlock_since timestamp [null]
+  off_plan_validation_mode varchar [null, note: '101 ou 111']
+  off_plan_validation_step int [null]
 
   indexes {
     (plan_id)
@@ -238,53 +255,72 @@ Table csr_activities {
   }
 }
 
-Ref: csr_activities.plan_id > csr_plans.id
-Ref: csr_activities.category_id > categories.id
-Ref: csr_activities.responsible_user_id > users.id
-Ref: csr_activities.external_partner_id > external_partners.id
-
-Table activity_kpis {
-  id uuid [pk]
-  activity_id uuid
-  name varchar
-  target_value decimal
-  actual_value decimal [null]
-  unit varchar
-}
-
-Ref: activity_kpis.activity_id > csr_activities.id
+Ref: planned_activity.plan_id > csr_plans.id
+Ref: planned_activity.category_id > categories.id
+Ref: planned_activity.external_partner_id > external_partners.id
+Ref: planned_activity.created_by > users.id
 
 //////////////////////////////////////////////////////
 //////////////// REALIZED CSR ////////////////////////
 //////////////////////////////////////////////////////
 // Aligned with: CSR Reporting form + Consolidated Report (Actual Budget, Participants, Impact, etc.)
 
-Table realized_csr {
+Table realized_activity {
   id uuid [pk]
   activity_id uuid
-  year int
-  month int
-  realized_budget decimal [null]
   participants int [null]
+  corporate_image_improved boolean [null]
+  incidents_number int [null]
   total_hc int [null]
-  percentage_employees decimal [null]
-  volunteer_hours decimal [null]
+  realized_budget decimal [null]
   action_impact_actual decimal [null]
   action_impact_unit varchar [null]
-  impact_description text [null]
-  organizer varchar [null]
-  number_external_partners int [null]
+  is_off_plan boolean [default: false]
+  off_plan_validation_mode varchar [null, note: '101 ou 111']
+  off_plan_validation_step int [null]
   realization_date date [null]
   comment text [null]
-  contact_department varchar [null]
   contact_name varchar [null]
   contact_email varchar [null]
+  contact_department varchar [null]
   created_by uuid [null]
+  created_at timestamp
+  updated_at timestamp
+  unlock_until timestamp [null]
+  unlock_since timestamp [null]
+  status activity_status
+}
+
+Ref: realized_activity.activity_id > planned_activity.id
+Ref: realized_activity.created_by > users.id
+
+Table csr_objectives {
+  id uuid [pk]
+  activity_id uuid
+  objective text
   created_at timestamp
 }
 
-Ref: realized_csr.activity_id > csr_activities.id
-Ref: realized_csr.created_by > users.id
+Ref: csr_objectives.activity_id > planned_activity.id
+
+Table csr_completed_objectives {
+  id uuid [pk]
+  activity_id uuid
+  objective text
+  achieved boolean [default: true]
+  created_at timestamp
+}
+
+Ref: csr_completed_objectives.activity_id > planned_activity.id
+
+Table csr_attachments {
+  id uuid [pk]
+  activity_id uuid
+  file_path text
+  uploaded_at timestamp
+}
+
+Ref: csr_attachments.activity_id > planned_activity.id
 
 //////////////////////////////////////////////////////
 //////////////// VALIDATION WORKFLOW /////////////////
@@ -311,19 +347,6 @@ Table validations {
 Ref: validations.site_id > sites.id
 Ref: validations.validated_by > users.id
 
-Table validation_steps {
-  id uuid [pk]
-  validation_id uuid
-  level int
-  validator_id uuid
-  status validation_status
-  comment text
-  validated_at timestamp [null]
-}
-
-Ref: validation_steps.validation_id > validations.id
-Ref: validation_steps.validator_id > users.id
-
 //////////////////////////////////////////////////////
 //////////////// CHANGE REQUESTS /////////////////////
 //////////////////////////////////////////////////////
@@ -339,6 +362,7 @@ Table change_requests {
   requested_by uuid
   requested_duration varchar [null, note: 'ex: 30 days']
   validation_mode varchar [null, note: '101 ou 111']
+  validation_step int [null]
   reviewed_by uuid [null]
   reviewed_at timestamp [null]
   created_at timestamp
@@ -424,28 +448,6 @@ Table notifications {
 
 Ref: notifications.user_id > users.id
 Ref: notifications.site_id > sites.id
-
-Table user_notifications {
-  id uuid [pk]
-  user_id uuid
-  notification_id uuid
-  is_read boolean
-  read_at timestamp [null]
-  created_at timestamp
-}
-
-Ref: user_notifications.notification_id > notifications.id
-Ref: user_notifications.user_id > users.id
-
-Table notification_settings {
-  id uuid [pk]
-  user_id uuid
-  site_id uuid
-  email_enabled boolean
-}
-
-Ref: notification_settings.user_id > users.id
-Ref: notification_settings.site_id > sites.id
 
 //////////////////////////////////////////////////////
 //////////////// POWER BI SNAPSHOTS //////////////////

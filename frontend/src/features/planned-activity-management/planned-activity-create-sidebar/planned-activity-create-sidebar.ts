@@ -6,7 +6,6 @@ import { catchError, finalize, of, switchMap, timeout } from 'rxjs';
 import { CsrPlansApi } from '@features/csr-plan-management/api/csr-plans-api';
 import { CsrActivitiesApi } from '../api/csr-activities-api';
 import { CategoriesApi, CATEGORY_OTHER_VALUE } from '@features/realized-activity-management/api/categories-api';
-import { DocumentsApi } from '@features/file-management/api/documents-api';
 import type { CsrPlan } from '@features/csr-plan-management/models/csr-plan.model';
 import type { Category } from '@features/realized-activity-management/api/categories-api';
 
@@ -25,7 +24,6 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
   private plansApi = inject(CsrPlansApi);
   private activitiesApi = inject(CsrActivitiesApi);
   private categoriesApi = inject(CategoriesApi);
-  private documentsApi = inject(DocumentsApi);
 
   @Input() initialPlanId: string | null = null;
   /** Année du plan (depuis la fiche plan) : permet d’afficher « plan réalisé » avant chargement de la liste. */
@@ -40,7 +38,8 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
   plan: CsrPlan | null = null;
   plansForSelection: CsrPlan[] = [];
   categories: Category[] = [];
-  selectedPhotoFiles: File[] = [];
+  plannedObjectives: string[] = [];
+  externalPartners: string[] = [];
   currentYear = new Date().getFullYear();
   loading = false;
   loadingData = true;
@@ -71,6 +70,8 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
       new_category_name: [''],
       activity_number: ['', Validators.required],
       title: ['', Validators.required],
+      organization: [''],
+      contract_type: [''],
       description: [''],
       collaboration_nature: [''],
       periodicity: [''],
@@ -78,11 +79,11 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
       action_impact_target: [null as number | null],
       action_impact_unit: [''],
       action_impact_duration: [''],
+      employees_planned: [null as number | null],
       start_year: [this.currentYear as number | null],
       edition: [null as number | null],
       organizer: [''],
       external_partner: [''],
-      number_external_partners: [null as number | null],
     });
 
     this.form.get('plan_id')?.valueChanges.subscribe((id) => this.onPlanSelected(id));
@@ -151,9 +152,9 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
     }
     const p = this.plansForSelection.find((x) => x.id === planId) ?? null;
     this.plan = p;
-    // If no start_year chosen yet, default it to the plan year (or current year).
+    // Keep start_year aligned with the selected plan year.
     const ctrl = this.form.get('start_year');
-    if (ctrl && (ctrl.value === null || ctrl.value === undefined || ctrl.value === '')) {
+    if (ctrl) {
       const y = this.plan?.year ?? this.currentYear;
       ctrl.setValue(y);
     }
@@ -175,31 +176,31 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
     ctrl?.updateValueAndValidity();
   }
 
-  onPhotosSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files?.length) {
-      this.selectedPhotoFiles.push(...Array.from(input.files));
-      input.value = '';
+  addPlannedObjective(value: string): void {
+    const raw = String(value ?? '').trim();
+    if (!raw) return;
+    if (!this.plannedObjectives.some((o) => o.toLowerCase() === raw.toLowerCase())) {
+      this.plannedObjectives.push(raw);
       this.cdr.markForCheck();
     }
   }
 
-  removePhoto(index: number): void {
-    this.selectedPhotoFiles.splice(index, 1);
+  removePlannedObjective(index: number): void {
+    this.plannedObjectives.splice(index, 1);
     this.cdr.markForCheck();
   }
 
-  private uploadActivityPhotos(siteId: string, activityId: string): void {
-    if (!this.selectedPhotoFiles.length) return;
-    this.selectedPhotoFiles.forEach((file) => {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('site_id', siteId);
-      form.append('entity_type', 'ACTIVITY');
-      form.append('entity_id', activityId);
-      this.documentsApi.upload(form).subscribe({ next: () => {}, error: () => {} });
-    });
-    this.selectedPhotoFiles = [];
+  addExternalPartner(value: string): void {
+    const raw = String(value ?? '').trim();
+    if (!raw) return;
+    if (!this.externalPartners.some((p) => p.toLowerCase() === raw.toLowerCase())) {
+      this.externalPartners.push(raw);
+      this.cdr.markForCheck();
+    }
+  }
+
+  removeExternalPartner(index: number): void {
+    this.externalPartners.splice(index, 1);
     this.cdr.markForCheck();
   }
 
@@ -215,6 +216,8 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
     this.loading = true;
     this.cdr.markForCheck();
     const raw = this.form.getRawValue();
+    this.addExternalPartner(raw.external_partner);
+    this.form.patchValue({ external_partner: '' }, { emitEvent: false });
     const plannedBudget = raw.planned_budget != null && raw.planned_budget !== '' ? Number(raw.planned_budget) : null;
 
     const categoryId$ = raw.category_id === CATEGORY_OTHER_VALUE && raw.new_category_name?.trim()
@@ -228,6 +231,8 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
           category_id: categoryId,
           activity_number: raw.activity_number.trim(),
           title: raw.title.trim(),
+          organization: raw.organization?.trim() || null,
+          contract_type: raw.contract_type?.trim() || null,
           description: raw.description?.trim() || null,
           collaboration_nature: raw.collaboration_nature?.trim() || null,
           periodicity: raw.periodicity?.trim() || null,
@@ -235,11 +240,13 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
           action_impact_target: raw.action_impact_target != null && raw.action_impact_target !== '' ? Number(raw.action_impact_target) : null,
           action_impact_unit: raw.action_impact_unit?.trim() || null,
           action_impact_duration: raw.action_impact_duration?.trim() || null,
+          employees_planned: raw.employees_planned != null && raw.employees_planned !== '' ? Number(raw.employees_planned) : null,
+          planned_objectives: [...this.plannedObjectives],
           start_year: raw.start_year != null && raw.start_year !== '' ? Number(raw.start_year) : null,
           edition: raw.edition != null && raw.edition !== '' ? Number(raw.edition) : null,
           organizer: raw.organizer?.trim() || null,
-          external_partner: raw.external_partner?.trim() || null,
-          number_external_partners: raw.number_external_partners != null && raw.number_external_partners !== '' ? Number(raw.number_external_partners) : null,
+          external_partner: this.externalPartners.length ? this.externalPartners.join(', ') : (raw.external_partner?.trim() || null),
+          external_partners: this.externalPartners.length ? [...this.externalPartners] : undefined,
         })
       ),
       finalize(() => {
@@ -247,13 +254,7 @@ export class PlannedActivityCreateSidebarComponent implements OnInit {
         this.cdr.markForCheck();
       }),
     ).subscribe({
-      next: (activity) => {
-        const siteId = this.plan?.site_id;
-        if (siteId && this.selectedPhotoFiles.length) {
-          this.uploadActivityPhotos(siteId, activity.id);
-        } else {
-          this.selectedPhotoFiles = [];
-        }
+      next: () => {
         this.created.emit();
         this.closed.emit();
       },

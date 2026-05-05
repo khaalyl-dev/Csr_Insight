@@ -39,14 +39,18 @@ export class PlanValidationComponent implements OnInit {
     if (plan.status !== 'SUBMITTED') return '';
     const step = plan.validation_step;
     const mode = plan.validation_mode || '101';
-    if (mode === '111' && step === 1) return this.translate.instant('PLAN_VALIDATION.STEP_PENDING_MANAGER');
-    if (mode === '111' && step === 2) return this.translate.instant('PLAN_VALIDATION.STEP_PENDING_CORPORATE');
+    const siteSteps = mode === '311' ? 3 : mode === '211' ? 2 : mode === '111' ? 1 : 0;
+    if (typeof step === 'number' && step > 0 && step <= siteSteps) return `Pending level ${step}`;
     if (mode === '101') return this.translate.instant('PLAN_VALIDATION.STEP_PENDING_CORPORATE_ONLY');
+    if (typeof step === 'number' && step > siteSteps) return this.translate.instant('PLAN_VALIDATION.STEP_PENDING_CORPORATE');
     return '';
   }
 
   validationModeLabel(mode: string): string {
-    return mode === '111' ? this.translate.instant('PLAN_VALIDATION.MODE_ALL') : this.translate.instant('PLAN_VALIDATION.MODE_CORPORATE_ONLY');
+    if (mode === '311') return 'Level 3';
+    if (mode === '211') return 'Level 2';
+    if (mode === '111') return 'Level 1';
+    return 'Corporate only';
   }
 
   ngOnInit(): void {

@@ -16,6 +16,7 @@
           <th class="p-4 text-left">{{ 'CHANGE_REQUEST.TYPE' | translate }}</th>
           <th class="p-4 text-left">{{ 'CHANGE_REQUEST.PLAN_YEAR' | translate }}</th>
           <th class="p-4 text-left">{{ 'CHANGE_REQUEST.REQUESTER' | translate }}</th>
+          <th class="p-4 text-left">{{ 'CHANGE_REQUEST.REVIEWED_BY' | translate }}</th>
           <th class="p-4 text-left">{{ 'CHANGE_REQUEST.JUSTIFICATION' | translate }}</th>
           <th class="p-4 text-left">{{ 'CHANGE_REQUEST.STATUS' | translate }}</th>
           <th class="p-4 text-left">{{ 'CHANGE_REQUEST.DATE' | translate }}</th>
@@ -25,7 +26,8 @@
       <tbody>
         <tr *ngFor="let r of requests()" class="border-t hover:bg-gray-50">
           <td class="p-4 align-top">
-            <span *ngIf="!isSyntheticActivityRow(r)" class="text-gray-700 text-xs font-medium uppercase tracking-wide">{{ 'CHANGE_REQUEST.TYPE_CHANGE_REQUEST' | translate }}</span>
+            <span *ngIf="!isSyntheticActivityRow(r) && !isPlanValidationRow(r)" class="text-gray-700 text-xs font-medium uppercase tracking-wide">{{ 'CHANGE_REQUEST.TYPE_CHANGE_REQUEST' | translate }}</span>
+            <span *ngIf="isPlanValidationRow(r)" class="text-gray-700 text-xs font-medium uppercase tracking-wide">{{ 'CHANGE_REQUEST.TYPE_PLAN_VALIDATION' | translate }}</span>
             <span *ngIf="isOffPlanRow(r)" class="text-gray-700 text-xs font-medium uppercase tracking-wide">{{ 'CHANGE_REQUEST.TYPE_OFF_PLAN' | translate }}</span>
             <span *ngIf="isInPlanModRow(r)" class="text-gray-700 text-xs font-medium uppercase tracking-wide">{{ 'CHANGE_REQUEST.TYPE_IN_PLAN_MOD' | translate }}</span>
           </td>
@@ -39,6 +41,15 @@
               [avatarUrl]="r.requested_by_avatar_url"
               [muted]="true" />
           </td>
+          <td class="p-4">
+            <ng-container *ngIf="r.reviewed_by_name; else noReviewer">
+              <app-user-avatar-name
+                [displayName]="r.reviewed_by_name"
+                [avatarUrl]="r.reviewed_by_avatar_url"
+                [muted]="true" />
+            </ng-container>
+            <ng-template #noReviewer>—</ng-template>
+          </td>
           <td class="p-4 text-gray-600 max-w-xs truncate" [title]="r.reason">{{ r.reason }}</td>
           <td class="p-4">
             <span [class]="r.status === 'PENDING' ? 'text-amber-600' : r.status === 'APPROVED' ? 'text-green-600' : 'text-red-600'">
@@ -48,7 +59,7 @@
           <td class="p-4 text-gray-500 whitespace-nowrap">{{ r.created_at | date:'short' }}</td>
           <td class="p-4 text-right">
             <div class="flex flex-wrap gap-3 justify-end">
-              <a *ngIf="!isSyntheticActivityRow(r) && r.id" [routerLink]="['/changes', r.id]" class="text-brand-700 hover:underline">{{ 'CHANGE_REQUEST.DETAILS' | translate }}</a>
+              <a *ngIf="!isSyntheticActivityRow(r) && !isPlanValidationRow(r) && r.id" [routerLink]="['/changes', r.id]" class="text-brand-700 hover:underline">{{ 'CHANGE_REQUEST.DETAILS' | translate }}</a>
               <a *ngIf="isSyntheticActivityRow(r) && r.activity_id" [routerLink]="['/planned-activity', r.activity_id]" [queryParams]="r.plan_year != null ? { year: r.plan_year } : {}" class="text-brand-700 hover:underline">{{ 'CHANGE_REQUEST.DETAILS' | translate }}</a>
               <a *ngIf="planDetailId(r)" [routerLink]="['/csr-plans', planDetailId(r)]" class="text-gray-600 hover:underline">{{ 'CHANGE_REQUEST.VIEW_PLAN' | translate }}</a>
             </div>

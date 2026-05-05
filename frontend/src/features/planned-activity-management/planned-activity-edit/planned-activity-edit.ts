@@ -385,7 +385,6 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
           month,
           realized_budget: r.realized_budget != null && r.realized_budget !== '' ? Number(r.realized_budget) : null,
           participants: r.participants != null && r.participants !== '' ? Number(r.participants) : null,
-          total_hc: r.total_hc != null && r.total_hc !== '' ? Number(r.total_hc) : null,
           percentage_employees:
             r.percentage_employees != null && r.percentage_employees !== '' ? Number(r.percentage_employees) : null,
           action_impact_actual: r.action_impact_actual != null && r.action_impact_actual !== '' ? Number(r.action_impact_actual) : null,

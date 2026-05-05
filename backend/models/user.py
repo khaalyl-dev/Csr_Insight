@@ -59,11 +59,77 @@ class User(db.Model):
         db.DateTime, default=db.func.now(), onupdate=db.func.now(),
         comment="Dernière mise à jour"
     )
+    permissions_rel = db.relationship(
+        "UserPermission",
+        backref="user",
+        lazy="select",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def verify_password(self, password: str) -> bool:
         """Check if the given plain-text password matches the stored hash. Returns True/False."""
         return bcrypt.checkpw(password.encode("utf-8"), self.password_hash.encode("utf-8"))
 
+    def get_permissions(self):
+        rows = [p for p in (self.permissions_rel or []) if bool(getattr(p, "is_allowed", True))]
+        if not rows:
+            return None
+        keys = sorted({f"{p.resource}.{p.action}" for p in rows if p.resource and p.action})
+        return {"keys": keys}
+
+    def set_permissions(self, permissions) -> None:
+        # Normalize incoming permission keys first.
+        keys = []
+        if isinstance(permissions, dict) and isinstance(permissions.get("keys"), list):
+            keys = [str(k).strip() for k in permissions.get("keys") if str(k).strip()]
+        elif isinstance(permissions, dict):
+            # Backward compatibility with matrix format.
+            for resource, actions in permissions.items():
+                if not isinstance(actions, dict):
+                    continue
+                for action, allowed in actions.items():
+                    if allowed:
+                        keys.append(f"{resource}.{action}")
+        uniq = sorted(set(keys))
+
+        from models.user_permission import UserPermission
+
+        # Important: for persisted users, force DELETE in DB first, then INSERT.
+        # This avoids transient unique collisions on (user_id, resource, action)
+        # when SQLAlchemy flush order inserts before relationship deletes.
+        if self.id:
+            UserPermission.query.filter_by(user_id=self.id).delete(synchronize_session=False)
+            db.session.flush()
+            if permissions is None:
+                return
+            for key in uniq:
+                if "." not in key:
+                    continue
+                resource, action = key.split(".", 1)
+                db.session.add(
+                    UserPermission(
+                        user_id=self.id,
+                        resource=resource,
+                        action=action,
+                        is_allowed=True,
+                    )
+                )
+            return
+
+        # For transient users (before first flush), relationship assignment is fine.
+        self.permissions_rel = []
+        if permissions is None:
+            return
+        self.permissions_rel = [
+            UserPermission(
+                resource=key.split(".", 1)[0],
+                action=key.split(".", 1)[1],
+                is_allowed=True,
+            )
+            for key in uniq
+            if "." in key
+        ]
     @staticmethod
     def hash_password(password: str) -> str:
         """Convert a plain-text password to a secure hash (for storing in DB, never store plain passwords)."""

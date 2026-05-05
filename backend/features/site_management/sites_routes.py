@@ -182,8 +182,8 @@ def assign_user_to_site(site_id):
             return jsonify(_user_site_to_json(existing)), 200
 
     grade = data.get("grade")
-    if grade and grade not in ("level_0", "level_1", "level_2"):
-        return jsonify({"message": "grade invalide (level_0, level_1, level_2)"}), 400
+    if grade and grade not in ("level_0", "level_1", "level_2", "level_3"):
+        return jsonify({"message": "grade invalide (level_0, level_1, level_2, level_3)"}), 400
 
     user_site = UserSite(
         user_id=data["user_id"],
@@ -214,7 +214,7 @@ def update_user_site(site_id, user_id):
     data = request.get_json()
 
     if "grade" in data:
-        if data["grade"] and data["grade"] not in ("level_0", "level_1", "level_2"):
+        if data["grade"] and data["grade"] not in ("level_0", "level_1", "level_2", "level_3"):
             return jsonify({"message": "grade invalide"}), 400
         user_site.grade = data["grade"]
 

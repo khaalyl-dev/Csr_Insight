@@ -17,6 +17,9 @@ import pandas as pd
 # Two accepted Excel templates:
 # - With "Year" + "Start year" columns (20 columns total).
 # - With "Year" removed: only "Start year" exists (19 columns total).
+#
+# Excel "Year" is the calendar year of that activity's *edition* (stored as edition_year).
+# csr_plans.year is always the plan year chosen by the user in step 1 of the import wizard.
 
 TEMPLATE_WITH_YEAR = {
     "activity_number": 0,
@@ -26,7 +29,7 @@ TEMPLATE_WITH_YEAR = {
     "title": 4,  # Activity Title/ description
     "category": 5,
     "collaboration_nature": 6,
-    "year": 7,
+    "edition_year": 7,  # Excel column "Year" — year of the edition; not csr_plans.year
     "start_year": 8,
     "edition": 9,
     "participants": 10,  # Nbr of internal Participants (used for both planned_volunteers and realized participants)
@@ -206,10 +209,17 @@ def _validate_row_values(row: dict[str, Any], row_num: int) -> list[str]:
     if row.get("edition") not in (None, "") and ed_err:
         errors.append(f"Activity {row_num}: édition invalide ({ed_err})")
 
-    # Year handling:
-    # - Plan year is selected explicitly in the import flow (not inferred from Excel columns).
-    # - The optional Excel "Year" column is ignored for validation/import.
-    # - start_year is an optional activity field (edition/history context), independent from plan year.
+    # Excel "Year" column → edition_year (year of the edition; not csr_plans.year).
+    ey_raw = row.get("edition_year")
+    if ey_raw in (None, ""):
+        ey_raw = row.get("excel_template_year")
+    ey, ey_err = _parse_int_or_error(ey_raw)
+    if ey_raw not in (None, "") and ey_err:
+        errors.append(f"Activity {row_num}: année d'édition invalide ({ey_err})")
+    if ey is not None and (ey < 1900 or ey > 2100):
+        errors.append(f"Activity {row_num}: année d'édition invalide {ey}")
+
+    # Plan year is chosen in the import UI. edition (ordinal), edition_year, and start_year are separate.
     start_year_raw = row.get("start_year")
     start_year, start_year_err = _parse_int_or_error(start_year_raw)
     if start_year_raw not in (None, "") and start_year_err:
@@ -317,6 +327,35 @@ def _val_to_python(val: Any) -> Any:
     return val
 
 
+def _rename_consecutive_duplicate_activity_numbers(rows: list[dict[str, Any]]) -> None:
+    """
+    If the same activity_number appears on consecutive rows, rename the whole run:
+      CSR 94, CSR 94 -> CSR 94.1, CSR 94.2
+      CSR 94, CSR 94, CSR 94 -> CSR 94.1, CSR 94.2, CSR 94.3
+    This prevents accidental duplicate identifiers from merged/filled Excel blocks.
+    """
+    i = 0
+    n = len(rows)
+    while i < n:
+        raw = rows[i].get("activity_number")
+        base = str(raw).strip() if raw is not None else ""
+        if not base:
+            i += 1
+            continue
+        j = i + 1
+        while j < n:
+            nxt = rows[j].get("activity_number")
+            nxt_base = str(nxt).strip() if nxt is not None else ""
+            if nxt_base.lower() != base.lower():
+                break
+            j += 1
+        run_len = j - i
+        if run_len > 1:
+            for k in range(i, j):
+                rows[k]["activity_number"] = f"{base}.{k - i + 1}"
+        i = j
+
+
 def parse_excel_rows(file_path: str) -> tuple[list[dict[str, Any]], list[str], list[str]]:
     """
     Parse Excel file using pandas DataFrame.
@@ -407,6 +446,9 @@ def parse_excel_rows(file_path: str) -> tuple[list[dict[str, Any]], list[str], l
             # Validate row values for preview.
             row_num = r_idx + 2  # 2-based excel row (header=1)
             row_errors.extend(_validate_row_values(row_data, row_num))
+
+        # Auto-disambiguate same activity numbers on consecutive lines.
+        _rename_consecutive_duplicate_activity_numbers(rows)
 
     except Exception as e:
         structure_errors.append(f"Erreur lecture Excel: {e}")

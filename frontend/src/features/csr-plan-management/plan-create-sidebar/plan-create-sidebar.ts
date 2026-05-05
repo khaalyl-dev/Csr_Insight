@@ -35,16 +35,13 @@ export class PlanCreateSidebarComponent implements OnInit {
   currentYear = new Date().getFullYear();
   loadingSites = true;
 
-  isCorporateUser(): boolean {
-    return this.authStore.userRole() === 'corporate';
-  }
-
   ngOnInit(): void {
     this.planForm = this.fb.group({
       site_id: ['', Validators.required],
       year: [new Date().getFullYear(), [Validators.required, Validators.min(2000), Validators.max(2100)]],
       validation_mode: ['101'],
-      total_budget: [null as number | null],
+      allocated_budget: [null as number | null],
+      total_hc: [null as number | null],
     });
     this.loadSites();
   }
@@ -102,12 +99,15 @@ export class PlanCreateSidebarComponent implements OnInit {
     this.loading = true;
     this.cdr.markForCheck();
     const raw = this.planForm.getRawValue();
+    const selectedMode = ['101', '111', '211', '311'].includes(String(raw.validation_mode))
+      ? (raw.validation_mode as '101' | '111' | '211' | '311')
+      : '101';
     const payload: CreateCsrPlanPayload = {
       site_id: raw.site_id,
       year: Number(raw.year),
-      // Corporate user does not choose approval mode in plan creation.
-      validation_mode: this.isCorporateUser() ? '101' : (raw.validation_mode === '111' ? '111' : '101'),
-      total_budget: raw.total_budget != null && raw.total_budget !== '' ? Number(raw.total_budget) : null,
+      validation_mode: selectedMode,
+      allocated_budget: raw.allocated_budget != null && raw.allocated_budget !== '' ? Number(raw.allocated_budget) : null,
+      total_hc: raw.total_hc != null && raw.total_hc !== '' ? Number(raw.total_hc) : null,
     };
     this.csrPlansApi.create(payload).pipe(
       finalize(() => {

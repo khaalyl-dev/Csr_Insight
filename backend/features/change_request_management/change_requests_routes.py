@@ -5,6 +5,7 @@ Change requests endpoints.
   on that site, plus matching off-plan activity rows; corporate sees all or by status.
 - Approve/Reject: corporate only. On approve, plan stays VALIDATED (verrouillé); unlock_until is set so it is temporarily editable.
 """
+import re
 from typing import Optional
 
 from flask import Blueprint, jsonify, request
@@ -49,6 +50,26 @@ def _activity_has_off_plan_realization(activity: CsrActivity) -> bool:
         .first()
         is not None
     )
+
+
+def _compose_activity_number(activity: Optional[CsrActivity]) -> str:
+    if not activity:
+        return ""
+    base = (getattr(activity, "activity_number", None) or "").strip()
+    plan = getattr(activity, "plan", None)
+    if not base or not plan or not getattr(plan, "site", None) or not getattr(plan, "year", None):
+        return base
+    site_code = (getattr(plan.site, "code", "") or "").strip().upper()
+    year = str(getattr(plan, "year", "")).strip()
+    if not site_code or not year:
+        return base
+    prefix = f"{site_code}-{year}-"
+    if base.upper().startswith(prefix):
+        return base
+    m = re.match(r"^[^-]+-\d{4}-(.+)$", base)
+    if m:
+        base = (m.group(1) or "").strip()
+    return f"{prefix}{base}"
 
 
 def _latest_off_plan_realization(activity: CsrActivity) -> Optional[RealizedCsr]:
@@ -338,7 +359,7 @@ def _pending_off_plan_corporate_item(activity: CsrActivity) -> dict:
         "plan_site_name": site.name if site else None,
         "plan_year": plan.year if plan else None,
         "year": plan.year if plan else 0,
-        "activity_number": activity.activity_number or "",
+        "activity_number": _compose_activity_number(activity),
         "activity_title": activity.title or "",
         "entity_type": "ACTIVITY",
         "entity_id": activity.id,
@@ -381,7 +402,7 @@ def _pending_off_plan_level1_item(activity: CsrActivity) -> dict:
         "plan_site_name": site.name if site else None,
         "plan_year": plan.year if plan else None,
         "year": plan.year if plan else 0,
-        "activity_number": activity.activity_number or "",
+        "activity_number": _compose_activity_number(activity),
         "activity_title": activity.title or "",
         "entity_type": "ACTIVITY",
         "entity_id": activity.id,
@@ -444,7 +465,7 @@ def _pending_in_plan_mod_level1_item(activity: CsrActivity) -> dict:
         "plan_site_name": site.name if site else None,
         "plan_year": plan.year if plan else None,
         "year": plan.year if plan else 0,
-        "activity_number": activity.activity_number or "",
+        "activity_number": _compose_activity_number(activity),
         "activity_title": activity.title or "",
         "entity_type": "ACTIVITY",
         "entity_id": activity.id,
@@ -478,7 +499,7 @@ def _pending_in_plan_mod_corporate_item(activity: CsrActivity) -> dict:
         "plan_site_name": site.name if site else None,
         "plan_year": plan.year if plan else None,
         "year": plan.year if plan else 0,
-        "activity_number": activity.activity_number or "",
+        "activity_number": _compose_activity_number(activity),
         "activity_title": activity.title or "",
         "entity_type": "ACTIVITY",
         "entity_id": activity.id,
@@ -531,7 +552,7 @@ def _off_plan_mine_list_item(activity: CsrActivity, user_id: str) -> Optional[di
         "plan_site_name": site.name if site else None,
         "plan_year": plan.year if plan else None,
         "year": plan.year if plan else 0,
-        "activity_number": activity.activity_number or "",
+        "activity_number": _compose_activity_number(activity),
         "activity_title": activity.title or "",
         "entity_type": "ACTIVITY",
         "entity_id": activity.id,
@@ -581,7 +602,7 @@ def _in_plan_mod_mine_list_item(activity: CsrActivity, requester_user_id: str) -
         "plan_site_name": site.name if site else None,
         "plan_year": plan.year if plan else None,
         "year": plan.year if plan else 0,
-        "activity_number": activity.activity_number or "",
+        "activity_number": _compose_activity_number(activity),
         "activity_title": activity.title or "",
         "entity_type": "ACTIVITY",
         "entity_id": activity.id,
@@ -837,8 +858,6 @@ def list_change_requests():
             creator_id = getattr(realized, "created_by", None) if realized else None
             if not creator_id:
                 continue
-            if not _site_requester_is_level_0_or_1(creator_id, plan.site_id):
-                continue
             row = _off_plan_mine_list_item(a, creator_id)
             if not row:
                 continue
@@ -866,8 +885,6 @@ def list_change_requests():
             rid, _ = _in_plan_mod_review_requester(a)
             if not rid:
                 continue
-            if not _site_requester_is_level_0_or_1(rid, plan.site_id):
-                continue
             row = _in_plan_mod_mine_list_item(a, rid)
             if not row:
                 continue
@@ -875,6 +892,101 @@ def list_change_requests():
                 if row["status"] != status:
                     continue
             out.append(row)
+    # My submissions log (plans + activity validation submissions) for any role.
+    if not site_pending_inbox:
+        # Plans submitted by current user.
+        plans_q = CsrPlan.query.filter(
+            CsrPlan.submitted_by == user_id,
+            CsrPlan.status.in_(("SUBMITTED", "VALIDATED", "REJECTED")),
+        )
+        if role in ("SITE_USER", "SITE"):
+            if site_allowed_ids:
+                plans_q = plans_q.filter(CsrPlan.site_id.in_(site_allowed_ids))
+            else:
+                plans_q = plans_q.filter(False)
+        plans = plans_q.all()
+        requester = User.query.get(user_id) if user_id else None
+        for p in plans:
+            plan_validations = (
+                Validation.query.filter(
+                    Validation.entity_type == "PLAN",
+                    Validation.entity_id == p.id,
+                    Validation.status.in_(("APPROVED", "REJECTED")),
+                    Validation.validated_by.isnot(None),
+                )
+                .order_by(Validation.validated_at.asc(), Validation.created_at.asc())
+                .all()
+            )
+            # 1) Submission log row.
+            submitted_row = {
+                "id": f"plan-sub-{p.id}",
+                "site_id": p.site_id,
+                "site_name": p.site.name if p.site else None,
+                "entity_type": "PLAN",
+                "entity_id": p.id,
+                "year": p.year,
+                "reason": "Plan submitted for validation",
+                "status": "SUBMITTED",
+                "requested_by": user_id,
+                "requested_by_name": f"{requester.first_name} {requester.last_name}" if requester else None,
+                "requested_by_avatar_url": user_avatar_serve_url_for_id(user_id),
+                "requested_duration": None,
+                "reviewed_by": None,
+                "reviewed_by_name": None,
+                "reviewed_by_avatar_url": None,
+                "reviewed_at": None,
+                "created_at": p.submitted_at.isoformat() if getattr(p, "submitted_at", None) else (p.updated_at.isoformat() if p.updated_at else None),
+                "validation_mode": getattr(p, "validation_mode", None),
+                "validation_step": getattr(p, "validation_step", None),
+                "plan_site_name": p.site.name if p.site else None,
+                "plan_year": p.year,
+                "plan_id": p.id,
+                "pending_item_type": "PLAN_VALIDATION",
+            }
+            if not status or submitted_row["status"] == status:
+                out.append(submitted_row)
+
+            # 2) One row per validation decision (level_1 approve, level_2 reject, ...).
+            for v in plan_validations:
+                reviewer = User.query.get(v.validated_by) if v.validated_by else None
+                grade_label = (v.grade or "").replace("_", " ").strip() or "validator"
+                step_reason = (
+                    (v.comment or "").strip()
+                    if v.status == "REJECTED"
+                    else f"{grade_label} approved plan validation"
+                )
+                decision_row = {
+                    "id": f"plan-sub-{p.id}-step-{v.id}",
+                    "site_id": p.site_id,
+                    "site_name": p.site.name if p.site else None,
+                    "entity_type": "PLAN",
+                    "entity_id": p.id,
+                    "year": p.year,
+                    "reason": step_reason or "Plan validation rejected",
+                    "status": v.status,
+                    "requested_by": user_id,
+                    "requested_by_name": f"{requester.first_name} {requester.last_name}" if requester else None,
+                    "requested_by_avatar_url": user_avatar_serve_url_for_id(user_id),
+                    "requested_duration": None,
+                    "reviewed_by": v.validated_by,
+                    "reviewed_by_name": (f"{reviewer.first_name} {reviewer.last_name}" if reviewer else None),
+                    "reviewed_by_avatar_url": user_avatar_serve_url(reviewer) if reviewer else None,
+                    "reviewed_at": v.validated_at.isoformat() if v.validated_at else None,
+                    "created_at": (
+                        v.validated_at.isoformat()
+                        if v.validated_at
+                        else (v.created_at.isoformat() if v.created_at else None)
+                    ),
+                    "validation_mode": getattr(p, "validation_mode", None),
+                    "validation_step": getattr(p, "validation_step", None),
+                    "plan_site_name": p.site.name if p.site else None,
+                    "plan_year": p.year,
+                    "plan_id": p.id,
+                    "pending_item_type": "PLAN_VALIDATION",
+                }
+                if status and decision_row["status"] != status:
+                    continue
+                out.append(decision_row)
     # Site level-1 inbox: off-plan (111 step 1) + modifications sur plan validé (111 step 1).
     if site_pending_inbox:
         # No level_1 assignment anywhere => no validation inbox entries.

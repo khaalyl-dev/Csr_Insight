@@ -45,7 +45,7 @@ backend/
 | File | Purpose |
 |------|---------|
 | **app.py** | Creates Flask app, loads config, initializes DB, registers blueprints. Runs server on port 5001. |
-| **config.py** | Reads env vars (.env): `DB_*`, `SECRET_KEY`, `MEDIA_FOLDER`. `get_media_folder()` returns upload path (default `frontend/src/media`). |
+| **config.py** | Reads env vars (.env): `DB_*`, `SECRET_KEY`, `MEDIA_FOLDER`, optional `OLLAMA_*` for the local chatbot. `get_media_folder()` returns upload path (default `frontend/src/media`). |
 | **init_db.py** | `db.create_all()` creates tables. Adds CSR categories, users, and test sites. Run once for a fresh DB. |
 
 ---
@@ -69,6 +69,14 @@ DB_PASSWORD=your_password
 DB_NAME=csr_db
 SECRET_KEY=change-me-in-production
 ```
+
+Optional — **local chatbot (Ollama)**:
+
+1. Install and start Ollama, then keep it running: `ollama serve` (default `http://127.0.0.1:11434`).
+2. Pull a model if needed: `ollama pull phi3:mini` (or any model you prefer; check with `ollama list`).
+3. In `.env`, set `OLLAMA_MODEL` to that name (defaults to `phi3:mini` if unset). Use `OLLAMA_BASE_URL` only if Ollama listens on another host/port on your LAN (must stay on localhost or a private IP; the API rejects public URLs).
+
+See `backend/.env.example` for variable names.
 
 Initialize DB:
 
@@ -108,5 +116,6 @@ python3 app.py
 | GET | /api/csr-plans | Annual CSR plans |
 | GET | /api/documents | Documents |
 | GET | /api/health | Health check |
+| POST | /api/chatbot/chat | Local Ollama chat (JWT required). Each request attaches a DB snapshot filtered by the user’s role, permissions, and sites — the model must ground answers in that snapshot. |
 
 All `/api/*` routes (except login) require: `Authorization: Bearer <token>`.

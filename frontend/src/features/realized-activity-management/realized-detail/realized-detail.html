@@ -41,15 +41,15 @@
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-900 text-white hover:opacity-90 text-sm font-medium">
             {{ 'REALIZED_DETAIL.VIEW_PLAN' | translate }}
           </a>
-          <button *ngIf="realized()!.plan_editable !== false" type="button" (click)="openEditSidebar()"
+          <button *ngIf="canManageRealized()" type="button" (click)="openEditSidebar()"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium">
             {{ 'REALIZED_DETAIL.EDIT' | translate }}
           </button>
-          <button *ngIf="realized()!.plan_editable !== false" type="button" (click)="openDeleteModal()"
+          <button *ngIf="canManageRealized()" type="button" (click)="openDeleteModal()"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-300 text-red-700 hover:bg-red-50 text-sm font-medium">
             {{ 'COMMON.DELETE' | translate }}
           </button>
-          <span *ngIf="realized()!.plan_editable === false"
+          <span *ngIf="realized()!.plan_editable === false || !canManageRealized()"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm"
             [attr.title]="'PLAN_LOCKED_TITLE' | translate">
             <i class="fas fa-lock"></i> {{ 'REALIZED_DETAIL.MODIFICATION_UNAVAILABLE' | translate }}
@@ -209,7 +209,7 @@
 </div>
 
 <!-- Delete confirmation modal -->
-<div *ngIf="showDeleteModal()"
+<div *ngIf="showDeleteModal() && canManageRealized()"
   class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 !mt-0"
   (click)="closeDeleteModal()"
   role="dialog"
@@ -238,7 +238,7 @@
 </div>
 
 <!-- Edit realized sidebar -->
-<div *ngIf="showEditSidebar() && realized()"
+<div *ngIf="showEditSidebar() && realized() && canManageRealized()"
   class="fixed inset-0 z-50 flex"
   (click)="closeEditSidebar()">
   <div class="flex-1 bg-black/40 transition-opacity" aria-hidden="true"></div>

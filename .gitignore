@@ -33,9 +33,13 @@ yarn-error.log
 # Backend-specific (Flask)
 revoked_tokens.txt
 backend/frontend/
+backend/data/chroma/
 
 # Logs
 *.log
 
 # Excel temp files
 ~$*
+
+# LaTeX — JAR PlantUML (gros binaire ; sources dans latex-pfe-template/sources/plantuml/)
+latex-pfe-template/tools/plantuml.jar

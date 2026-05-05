@@ -26,7 +26,7 @@ from features.csr_plan_management.csr_plans_routes import (
     _plan_is_editable,
     _user_can_access_site,
 )
-from features.planned_activity_management.planned_csr_routes import _activity_is_editable
+from features.planned_activity_management.planned_csr_routes import _activity_is_editable, _compose_activity_number
 
 bp = Blueprint("tasks", __name__, url_prefix="/api/tasks")
 
@@ -285,7 +285,7 @@ def list_tasks():
                 "RESUBMIT_ACTIVITY",
                 f"/planned-activity/{a.id}/edit",
                 {
-                    "activity_number": a.activity_number,
+                    "activity_number": _compose_activity_number(plan, a.activity_number),
                     "activity_title": a.title,
                     "site_name": site.name if site else None,
                     "year": plan.year,
@@ -323,7 +323,7 @@ def list_tasks():
             "EDIT_UNLOCKED_ACTIVITY",
             f"/csr-plans/{plan.id}?editActivity={a.id}",
             {
-                "activity_number": a.activity_number,
+                "activity_number": _compose_activity_number(plan, a.activity_number),
                 "activity_title": a.title,
                 "site_name": site.name if site else None,
                 "year": plan.year,

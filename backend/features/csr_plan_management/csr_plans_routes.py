@@ -6,6 +6,7 @@ import json
 
 from datetime import datetime
 import logging
+import re
 from typing import Optional, Tuple
 
 from flask import Blueprint, request, jsonify
@@ -14,8 +15,10 @@ from sqlalchemy import distinct, func
 logger = logging.getLogger(__name__)
 
 from core import db, token_required
+from core.permissions import has_permission
 from core.user_avatar import user_avatar_serve_url
 from models import CsrPlan, Site, User, UserSite, Validation, ChangeRequest
+from features.csr_plan_management.plan_visibility import csr_plans_visible_query
 from features.change_request_management.change_requests_routes import (
     _activity_has_off_plan_realization,
     _activity_has_pending_level1_validation,
@@ -32,17 +35,56 @@ from features.audit_history_management.audit_helper import (
 )
 
 bp = Blueprint("csr_plans", __name__, url_prefix="/api/csr-plans")
+VALIDATION_MODE_SITE_STEPS = {
+    "101": 0,  # corporate only
+    "111": 1,  # level_1 + corporate
+    "211": 2,  # level_1 + level_2 + corporate
+    "311": 3,  # level_1 + level_2 + level_3 + corporate
+}
+
+
+def _normalize_validation_mode(raw: Optional[str]) -> str:
+    m = str(raw if raw is not None else "101").strip()
+    return m if m in VALIDATION_MODE_SITE_STEPS else "101"
+
+
+def _plan_required_site_steps(plan: CsrPlan) -> int:
+    return VALIDATION_MODE_SITE_STEPS.get(_plan_validation_mode_str(plan), 0)
+
+
+def _require_plan_permission(action: str):
+    role = (getattr(request, "role", "") or "").upper()
+    if has_permission(getattr(request, "user_id", ""), role, "plan", action):
+        return None
+    return jsonify({"message": f"Permission refusée: plan.{action}"}), 403
 
 
 def _is_corporate(role: str) -> bool:
     return (role or "").upper() in ("CORPORATE_USER", "CORPORATE")
 
 
+def _compose_activity_number(plan: CsrPlan, raw_activity_number: Optional[str]) -> str:
+    base = (raw_activity_number or "").strip()
+    if not base:
+        return ""
+    if not plan or not getattr(plan, "site", None) or not getattr(plan, "year", None):
+        return base
+    site_code = (getattr(plan.site, "code", "") or "").strip().upper()
+    year = str(getattr(plan, "year", "")).strip()
+    if not site_code or not year:
+        return base
+    prefix = f"{site_code}-{year}-"
+    if base.upper().startswith(prefix):
+        return base
+    m = re.match(r"^[^-]+-\d{4}-(.+)$", base)
+    if m:
+        base = (m.group(1) or "").strip()
+    return f"{prefix}{base}"
+
+
 def _plan_validation_mode_str(plan: CsrPlan) -> str:
-    """Normalized plan validation mode (101 / 111); strips whitespace so DB values like ' 111 ' still match."""
-    raw = getattr(plan, "validation_mode", None)
-    m = str(raw if raw is not None else "101").strip()
-    return m if m else "101"
+    """Normalized plan validation mode."""
+    return _normalize_validation_mode(getattr(plan, "validation_mode", None))
 
 
 def _plan_validation_step_int(plan: CsrPlan) -> Optional[int]:
@@ -56,12 +98,14 @@ def _plan_validation_step_int(plan: CsrPlan) -> Optional[int]:
 
 
 def _plan_validation_grade(plan: CsrPlan) -> str:
-    """Grade (level_1 / level_2) for the current validation step."""
-    mode = _plan_validation_mode_str(plan)
+    """Validation grade for the current step (level_n or level_corporate)."""
+    site_steps = _plan_required_site_steps(plan)
     step = _plan_validation_step_int(plan)
-    if mode == "111" and step == 1:
-        return "level_1"
-    return "level_2"
+    if step is None:
+        return "level_corporate"
+    if step <= site_steps:
+        return f"level_{step}"
+    return "level_corporate"
 
 
 def _get_or_create_plan_validation(plan_id: str, site_id: str, grade: str):
@@ -100,41 +144,12 @@ def _configure_plan_validation_after_site_submit(plan: CsrPlan, user_id: str) ->
     Otherwise mode 111 stays at step 1 for a separate L1 approver.
     Mode 101: step 2, corporate only (unchanged).
     """
-    mode = _plan_validation_mode_str(plan)
-    now = datetime.utcnow()
-    if mode == "101":
-        plan.validation_step = 2
-        v2 = _get_or_create_plan_validation(plan.id, plan.site_id, "level_2")
-        _reset_plan_validation_row_pending(v2)
-        return
-    if mode == "111" and _user_has_grade(user_id, plan.site_id, "level_1"):
-        plan.validation_step = 2
-        v1 = _get_or_create_plan_validation(plan.id, plan.site_id, "level_1")
-        v1.status = "APPROVED"
-        v1.validated_by = user_id
-        v1.validated_at = now
-        v1.comment = None
-        v1.rejected_activity_ids = None
-        v2 = _get_or_create_plan_validation(plan.id, plan.site_id, "level_2")
-        _reset_plan_validation_row_pending(v2)
-        write_audit(
-            user_id,
-            plan.site_id,
-            "APPROVE",
-            "PLAN",
-            plan.id,
-            "Validation niveau 1 (Level 1) — soumission validateur niveau 1",
-        )
-        return
-    if mode == "111":
-        plan.validation_step = 1
-        v1 = _get_or_create_plan_validation(plan.id, plan.site_id, "level_1")
-        _reset_plan_validation_row_pending(v1)
-        return
-    # Unexpected mode: corporate-only flow (same as 101) so the plan is not stuck
-    plan.validation_step = 2
-    v2 = _get_or_create_plan_validation(plan.id, plan.site_id, "level_2")
-    _reset_plan_validation_row_pending(v2)
+    site_steps = _plan_required_site_steps(plan)
+    first_step = 1
+    plan.validation_step = first_step
+    first_grade = f"level_{first_step}" if site_steps > 0 else "level_corporate"
+    v = _get_or_create_plan_validation(plan.id, plan.site_id, first_grade)
+    _reset_plan_validation_row_pending(v)
 
 
 def _parse_rejected_activity_ids(plan: CsrPlan):
@@ -208,23 +223,18 @@ def _submitter_display_name(plan: CsrPlan) -> Optional[str]:
 def _plan_to_json(plan: CsrPlan):
     """Serialize plan with budget fields.
 
-    - If an explicit `plan.total_budget` is set in DB, always expose it as
-      `total_budget` (all years).
-    - If `plan.total_budget` is null:
-        * For past years, fallback to `total_realized_budget`.
-        * For current/future years, fallback to `total_estimated_budget`.
-    - `total_estimated_budget` / `total_realized_budget` are always computed from
-      activities/realizations.
+    - ``allocated_budget``: stored on the annual plan
+    - ``budget_consumed``: computed from realizations
     """
     current_year = datetime.utcnow().year
     total_estimated = _plan_total_budget_from_activities(plan)
-    total_realized_budget = _plan_total_realized_budget(plan)
-    if getattr(plan, "total_budget", None) is not None:
-        total_budget = float(plan.total_budget)
+    budget_consumed = _plan_total_realized_budget(plan)
+    if getattr(plan, "allocated_budget", None) is not None:
+        allocated_budget = float(plan.allocated_budget)
     elif plan.year < current_year:
-        total_budget = total_realized_budget
+        allocated_budget = budget_consumed
     else:
-        total_budget = total_estimated
+        allocated_budget = total_estimated
     return {
         "id": plan.id,
         "site_id": plan.site_id,
@@ -236,9 +246,10 @@ def _plan_to_json(plan: CsrPlan):
         "validation_mode": _plan_validation_mode_str(plan),
         "validation_step": getattr(plan, "validation_step", None),
         "status": plan.status,
-        "total_budget": total_budget,
+        "allocated_budget": allocated_budget,
+        "budget_consumed": budget_consumed,
+        "total_hc": getattr(plan, "total_hc", None),
         "total_estimated_budget": total_estimated,
-        "total_realized_budget": total_realized_budget,
         "submitted_at": plan.submitted_at.isoformat() if plan.submitted_at else None,
         "validated_at": plan.validated_at.isoformat() if plan.validated_at else None,
         "rejected_comment": getattr(plan, "rejected_comment", None) or None,
@@ -272,9 +283,12 @@ def _compute_can_approve(plan: CsrPlan, user_id: str, role: str) -> bool:
     if plan.status != "SUBMITTED":
         return False
     step = _plan_validation_step_int(plan)
-    mode = _plan_validation_mode_str(plan)
-    if mode == "111" and step == 1:
-        return _user_can_access_site(user_id, plan.site_id) and _user_has_grade(user_id, plan.site_id, "level_1")
+    if step is None:
+        return False
+    site_steps = _plan_required_site_steps(plan)
+    if step <= site_steps:
+        grade = f"level_{step}"
+        return _user_can_access_site(user_id, plan.site_id) and _user_has_grade(user_id, plan.site_id, grade)
     return role in ("CORPORATE_USER", "CORPORATE")
 
 
@@ -317,55 +331,39 @@ def _compute_can_approve_off_plan_activity(a, user_id: str, role: str) -> bool:
         if off_r is not None
         else getattr(a, "off_plan_validation_mode", None)
     )
-    mode = str(raw_mode or _plan_validation_mode_str(plan) or "101").strip() or "101"
-    if mode not in ("101", "111"):
-        mode = "101"
+    mode = _normalize_validation_mode(str(raw_mode or _plan_validation_mode_str(plan) or "101").strip() or "101")
     site_id = plan.site_id
     rupper = (role or "").upper()
     corp = rupper in ("CORPORATE_USER", "CORPORATE")
-
-    if mode == "111":
+    site_steps = VALIDATION_MODE_SITE_STEPS.get(mode, 0)
+    if step is None:
+        step = site_steps + 1
+    if step <= site_steps:
+        required_grade = f"level_{step}"
         if step == 1:
             return (
                 _user_can_access_site(user_id, site_id)
                 and _user_has_grade(user_id, site_id, "level_1")
                 and _activity_has_pending_level1_validation(a.id)
             )
-        if step is None:
-            v1 = Validation.query.filter_by(
-                entity_type="ACTIVITY", entity_id=a.id, grade="level_1", status="PENDING"
-            ).first()
-            if v1 is not None:
-                return _user_can_access_site(user_id, site_id) and _user_has_grade(user_id, site_id, "level_1")
-            if corp:
-                v2 = Validation.query.filter_by(
-                    entity_type="ACTIVITY", entity_id=a.id, grade="level_2", status="PENDING"
-                ).first()
-                return v2 is not None
-            return False
-        return corp
-
+        return _user_can_access_site(user_id, site_id) and _user_has_grade(user_id, site_id, required_grade)
     return corp
 
 
 @bp.get("")
 @token_required
 def list_plans():
-    """List CSR plans. Optional query: site_id, year, status. SITE_USER only sees plans of their sites."""
+    """List CSR plans. Optional query: site_id, year, status.
+    Visibility: site users and non–globally-scoped corporate users only see plans for their assigned sites;
+    corporate users with is_corporate_global see all plans."""
+    denied = _require_plan_permission("read")
+    if denied:
+        return denied
     site_id = request.args.get("site_id")
     year = request.args.get("year", type=int)
     status = request.args.get("status")
 
-    q = CsrPlan.query
-    role = (getattr(request, "role", "") or "").upper()
-
-    if role in ("SITE_USER", "SITE"):
-        # Restrict to sites the user has access to
-        user_sites = UserSite.query.filter_by(user_id=request.user_id, is_active=True).all()
-        allowed_site_ids = [us.site_id for us in user_sites]
-        if not allowed_site_ids:
-            return jsonify([]), 200
-        q = q.filter(CsrPlan.site_id.in_(allowed_site_ids))
+    q = csr_plans_visible_query(request.user_id, getattr(request, "role", "") or "")
 
     if site_id:
         q = q.filter_by(site_id=site_id)
@@ -395,6 +393,9 @@ def list_plans():
 @token_required
 def create_plan():
     """Create a new CSR plan (DRAFT). SITE_USER must have access to the chosen site."""
+    denied = _require_plan_permission("create")
+    if denied:
+        return denied
     data = request.get_json(silent=True)
     if not data:
         logger.warning("create_plan 400: body absent ou JSON invalide")
@@ -403,7 +404,7 @@ def create_plan():
     site_id = (data.get("site_id") or "").strip() if data.get("site_id") is not None else ""
     year = data.get("year")
     if not site_id:
-        logger.warning("create_plan 400: site_id manquant, body=%s", {k: v for k, v in data.items() if k != "total_budget"})
+        logger.warning("create_plan 400: site_id manquant, body=%s", {k: v for k, v in data.items() if k != "allocated_budget"})
         return jsonify({"message": "Le site est obligatoire"}), 400
     if year is None or year == "":
         logger.warning("create_plan 400: year manquant, site_id=%s", site_id)
@@ -424,22 +425,31 @@ def create_plan():
         logger.info("create_plan 400: plan déjà existant site=%s year=%s", site_id, year)
         return jsonify({"message": "Un plan existe déjà pour ce site et cette année"}), 400
 
-    validation_mode = data.get("validation_mode", "101")
-    if validation_mode not in ("101", "111"):
-        validation_mode = "101"
-    total_budget = data.get("total_budget")
-    if total_budget is not None:
+    validation_mode = _normalize_validation_mode(data.get("validation_mode", "101"))
+    allocated_budget = data.get("allocated_budget")
+    total_hc = data.get("total_hc")
+    if allocated_budget is not None:
         try:
-            total_budget = float(total_budget)
+            allocated_budget = float(allocated_budget)
         except (TypeError, ValueError):
-            total_budget = None
+            allocated_budget = None
+    if total_hc is not None and total_hc != "":
+        try:
+            total_hc = int(total_hc)
+        except (TypeError, ValueError):
+            return jsonify({"message": "Le total HC doit être un nombre entier"}), 400
+        if total_hc < 0:
+            return jsonify({"message": "Le total HC doit être >= 0"}), 400
+    else:
+        total_hc = None
 
     plan = CsrPlan(
         site_id=site_id,
         year=year,
         validation_mode=validation_mode,
         status="DRAFT",
-        total_budget=total_budget,
+        allocated_budget=allocated_budget,
+        total_hc=total_hc,
         created_by=request.user_id,
     )
     db.session.add(plan)
@@ -510,6 +520,9 @@ def _bulk_delete_plan(plan_id: str, user_id: str, role: str) -> Tuple[bool, Opti
 @token_required
 def bulk_submit_plans():
     """Soumettre plusieurs plans (DRAFT → SUBMITTED). Body: { plan_ids: string[] }."""
+    denied = _require_plan_permission("bulk_submit")
+    if denied:
+        return denied
     data = request.get_json() or {}
     plan_ids = data.get("plan_ids") or []
     if not isinstance(plan_ids, list):
@@ -541,6 +554,9 @@ def bulk_submit_plans():
 @token_required
 def bulk_delete_plans():
     """Supprimer plusieurs plans (DRAFT ou REJECTED uniquement). Body: { plan_ids: string[] }."""
+    denied = _require_plan_permission("bulk_delete")
+    if denied:
+        return denied
     data = request.get_json() or {}
     plan_ids = data.get("plan_ids") or []
     if not isinstance(plan_ids, list):
@@ -572,6 +588,9 @@ def bulk_delete_plans():
 @token_required
 def update_plan(plan_id):
     """Update a plan. Allowed only when editable (DRAFT/REJECTED and not past unlock_until)."""
+    denied = _require_plan_permission("update")
+    if denied:
+        return denied
     plan = CsrPlan.query.get(plan_id)
     if not plan:
         return jsonify({"message": "Plan introuvable"}), 404
@@ -601,14 +620,12 @@ def update_plan(plan_id):
         plan.year = year
 
     if "validation_mode" in data and data["validation_mode"] is not None:
-        mode = (data["validation_mode"] or "").strip()
-        if mode in ("101", "111"):
-            plan.validation_mode = mode
+        plan.validation_mode = _normalize_validation_mode(data["validation_mode"])
 
-    if "total_budget" in data:
-        tb = data.get("total_budget")
+    if "allocated_budget" in data:
+        tb = data.get("allocated_budget")
         if tb is None or tb == "":
-            plan.total_budget = None
+            plan.allocated_budget = None
         else:
             try:
                 tb_val = float(tb)
@@ -616,7 +633,26 @@ def update_plan(plan_id):
                 return jsonify({"message": "Le budget total doit être un nombre"}), 400
             if tb_val < 0:
                 return jsonify({"message": "Le budget total doit être >= 0"}), 400
-            plan.total_budget = tb_val
+            plan.allocated_budget = tb_val
+    if "total_hc" in data:
+        thc = data.get("total_hc")
+        if thc is None or thc == "":
+            plan.total_hc = None
+        else:
+            try:
+                thc_val = int(thc)
+            except (TypeError, ValueError):
+                return jsonify({"message": "Le total HC doit être un nombre entier"}), 400
+            if thc_val < 0:
+                return jsonify({"message": "Le total HC doit être >= 0"}), 400
+            plan.total_hc = thc_val
+        # Keep realized rows aligned with plan-level HC.
+        from models import CsrActivity, RealizedCsr
+        activity_ids_q = db.session.query(CsrActivity.id).filter(CsrActivity.plan_id == plan.id)
+        db.session.query(RealizedCsr).filter(RealizedCsr.activity_id.in_(activity_ids_q)).update(
+            {RealizedCsr.total_hc: plan.total_hc},
+            synchronize_session=False,
+        )
 
     if plan.status == "REJECTED":
         plan.rejected_comment = None
@@ -653,6 +689,9 @@ def _plan_is_editable(plan: CsrPlan, role: str = "") -> bool:
 @token_required
 def get_plan(plan_id):
     """Get plan by ID with activities. SITE_USER must have access to the plan's site. Auto-lock when unlock_until is past."""
+    denied = _require_plan_permission("read")
+    if denied:
+        return denied
     plan = CsrPlan.query.get(plan_id)
     if not plan:
         return jsonify({"message": "Plan introuvable"}), 404
@@ -770,7 +809,7 @@ def get_plan(plan_id):
         is_off_plan_activity = off_real is not None
         out["activities"].append({
             "id": a.id,
-            "activity_number": a.activity_number or "",
+            "activity_number": _compose_activity_number(plan, a.activity_number),
             "has_realization": has_realization,
             "primary_realization_id": first_real.id if first_real else None,
             "title": a.title or "",
@@ -792,11 +831,15 @@ def get_plan(plan_id):
             "action_impact_unit": a.action_impact_unit or "",
             "realized_budget": float(first_real.realized_budget) if first_real and first_real.realized_budget is not None else None,
             "participants": first_real.participants if first_real else None,
-            "total_hc": first_real.total_hc if first_real else None,
+            "total_hc": plan.total_hc if getattr(plan, "total_hc", None) is not None else (first_real.total_hc if first_real else None),
             # Legacy fields retained in JSON for compatibility; underlying columns may have been removed.
             "percentage_employees": float(getattr(first_real, "percentage_employees", None)) if first_real and getattr(first_real, "percentage_employees", None) is not None else None,
-            # Number of external partners is now stored on the planned activity row.
-            "number_external_partners": a.number_external_partners,
+            # Number of external partners is derived from the stored external partner names.
+            "number_external_partners": (
+                len([p for p in (a.external_partner.name or "").split(",") if p.strip()])
+                if a.external_partner and a.external_partner.name
+                else None
+            ),
             "action_impact_actual": float(first_real.action_impact_actual) if first_real and first_real.action_impact_actual is not None else None,
             "action_impact_unit_realized": first_real.action_impact_unit if first_real else "",
             "added_during_unlock": added_during_unlock,
@@ -815,6 +858,8 @@ def get_plan(plan_id):
                 user_id and _compute_can_approve_off_plan_activity(a, user_id, role_str)
             ),
             "can_submit_modification_review": bool(
+                has_permission(user_id, role_str, "activity", "submit_modification_review")
+                and
                 plan.status == "VALIDATED"
                 and not _plan_is_editable(plan, role_str)
                 and not is_off_plan_activity
@@ -836,6 +881,9 @@ def get_plan(plan_id):
 @token_required
 def submit_plan(plan_id):
     """Passer un plan à SUBMITTED (envoi pour validation). Accepte DRAFT, REJECTED, ou VALIDATED avec unlock_until (modifications à valider)."""
+    denied = _require_plan_permission("submit")
+    if denied:
+        return denied
     plan = CsrPlan.query.get(plan_id)
     if not plan:
         return jsonify({"message": "Plan introuvable"}), 404
@@ -858,6 +906,14 @@ def submit_plan(plan_id):
         plan.validated_at = now
         plan.unlock_until = None
         plan.validation_step = None
+        write_audit(
+            request.user_id,
+            plan.site_id,
+            "APPROVE",
+            "PLAN",
+            plan_id,
+            f"Plan {plan.year} validé",
+        )
     else:
         plan.status = "SUBMITTED"
         plan.submitted_at = now
@@ -865,6 +921,14 @@ def submit_plan(plan_id):
         # When re-submitting after change request, clear unlock_until so plan is not editable during validation
         plan.unlock_until = None
         _configure_plan_validation_after_site_submit(plan, request.user_id)
+        write_audit(
+            request.user_id,
+            plan.site_id,
+            "UPDATE",
+            "PLAN",
+            plan_id,
+            f"Soumission plan {plan.year}",
+        )
     db.session.commit()
          # ── Notification corporate ────────────────────────────────────────────
     site_name = plan.site.name if plan.site else "Site inconnu"
@@ -883,11 +947,10 @@ def submit_plan(plan_id):
 @bp.patch("/<string:plan_id>/approve")
 @token_required
 def approve_plan(plan_id):
-    """
-    Approuver un plan soumis.
-    Mode 101: Level 2 (corporate) valide directement.
-    Mode 111: Level 1 (site user grade level_1) valide d'abord, puis Level 2 (corporate) valide.
-    """
+    denied = _require_plan_permission("approve")
+    if denied:
+        return denied
+    """Approuver un plan soumis avec workflow dynamique (max 4 étapes incluant corporate)."""
     plan = CsrPlan.query.get(plan_id)
     if not plan:
         return jsonify({"message": "Plan introuvable"}), 404
@@ -896,31 +959,35 @@ def approve_plan(plan_id):
 
     role = (getattr(request, "role", "") or "").upper()
     step = _plan_validation_step_int(plan)
-    mode = _plan_validation_mode_str(plan)
+    site_steps = _plan_required_site_steps(plan)
 
     grade = _plan_validation_grade(plan)
     v = _get_or_create_plan_validation(plan_id, plan.site_id, grade)
 
-    # Mode 111 step 1: Level 1 (site user avec grade level_1) doit valider
-    if mode == "111" and step == 1:
+    if step is None:
+        return jsonify({"message": "Étape de validation invalide"}), 400
+    if step <= site_steps:
+        required_grade = f"level_{step}"
         if not _user_can_access_site(request.user_id, plan.site_id):
             return jsonify({"message": "Accès refusé"}), 403
-        if not _user_has_grade(request.user_id, plan.site_id, "level_1"):
-            return jsonify({"message": "Seul un validateur Level 1 de ce site peut approuver à cette étape"}), 403
+        if not _user_has_grade(request.user_id, plan.site_id, required_grade):
+            return jsonify({"message": f"Seul un validateur {required_grade} de ce site peut approuver à cette étape"}), 403
         v.status = "APPROVED"
         v.validated_by = request.user_id
         v.validated_at = datetime.utcnow()
-        plan.validation_step = 2
-        _get_or_create_plan_validation(plan_id, plan.site_id, "level_2")  # next step PENDING
+        next_step = step + 1
+        plan.validation_step = next_step
+        next_grade = f"level_{next_step}" if next_step <= site_steps else "level_corporate"
+        _get_or_create_plan_validation(plan_id, plan.site_id, next_grade)  # next step PENDING
         write_audit(
             request.user_id, plan.site_id, "APPROVE", "PLAN", plan_id,
-            "Validation niveau 1 (Level 1)",
+            f"Validation {required_grade}",
         )
         db.session.commit()
         emit_tasks_refresh_for_request_actor()
         return jsonify(_plan_json_with_approval_flags(plan, request.user_id, getattr(request, "role", ""))), 200
 
-    # Mode 111 step 2 ou Mode 101: Level 2 (corporate) valide
+    # Final step: corporate approves.
     if role not in ("CORPORATE_USER", "CORPORATE"):
         return jsonify({"message": "Seul un utilisateur corporate peut effectuer la validation finale"}), 403
 
@@ -953,6 +1020,9 @@ def approve_plan(plan_id):
 @token_required
 def reject_plan(plan_id):
     """Rejeter un plan soumis. Obligatoire: motif (comment). Optionnel: activity_ids (liste d'activités à modifier)."""
+    denied = _require_plan_permission("reject")
+    if denied:
+        return denied
     data = request.get_json() or {}
     motif = (data.get("comment") or data.get("motif") or "").strip()
     if not motif:
@@ -966,16 +1036,17 @@ def reject_plan(plan_id):
 
     role = (getattr(request, "role", "") or "").upper()
     step = _plan_validation_step_int(plan)
-    mode = _plan_validation_mode_str(plan)
-
-    # Mode 111 step 1: Level 1 (site user avec grade level_1) peut rejeter
-    if mode == "111" and step == 1:
+    site_steps = _plan_required_site_steps(plan)
+    if step is None:
+        return jsonify({"message": "Étape de validation invalide"}), 400
+    if step <= site_steps:
+        required_grade = f"level_{step}"
         if not _user_can_access_site(request.user_id, plan.site_id):
             return jsonify({"message": "Accès refusé"}), 403
-        if not _user_has_grade(request.user_id, plan.site_id, "level_1"):
-            return jsonify({"message": "Seul un validateur Level 1 de ce site peut rejeter à cette étape"}), 403
+        if not _user_has_grade(request.user_id, plan.site_id, required_grade):
+            return jsonify({"message": f"Seul un validateur {required_grade} de ce site peut rejeter à cette étape"}), 403
     else:
-        # Mode 111 step 2 ou Mode 101: corporate peut rejeter
+        # Final step: corporate can reject.
         if role not in ("CORPORATE_USER", "CORPORATE"):
             return jsonify({"message": "Seul un utilisateur corporate peut rejeter à cette étape"}), 403
 
@@ -1032,6 +1103,9 @@ def reject_plan(plan_id):
 @token_required
 def delete_plan(plan_id):
     """Delete a plan. Allowed only when editable (DRAFT/REJECTED and not past unlock_until)."""
+    denied = _require_plan_permission("delete")
+    if denied:
+        return denied
     plan = CsrPlan.query.get(plan_id)
     if not plan:
         return jsonify({"message": "Plan introuvable"}), 404

@@ -61,12 +61,23 @@
               class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-700 focus:border-brand-700 transition" />
           </div>
         </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+          <select formControlName="role"
+            class="w-full max-w-xs px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-700 focus:border-brand-700 transition">
+            <option value="SITE_USER">Site user</option>
+            <option value="CORPORATE_USER">Corporate user</option>
+          </select>
+        </div>
+        @if (createForm.get('role')?.value === 'SITE_USER') {
         <div class="pt-4 border-t border-gray-100">
             <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ 'USERS.LEVEL_SITE' | translate }}</label>
             <select formControlName="default_grade"
               class="w-full max-w-xs px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-700 focus:border-brand-700 transition">
               <option value="level_0">{{ 'USERS.LEVEL_0' | translate }}</option>
               <option value="level_1">{{ 'USERS.LEVEL_1' | translate }}</option>
+              <option value="level_2">{{ 'USERS.LEVEL_2' | translate }}</option>
+              <option value="level_3">{{ 'USERS.LEVEL_3' | translate }}</option>
             </select>
             <p class="text-xs text-gray-500 mt-1">{{ 'USERS.LEVEL_APPLIED_HINT' | translate }}</p>
             <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 mt-4">
@@ -91,6 +102,7 @@
               <p class="text-sm text-amber-600 mt-1">{{ 'USERS.NO_ACTIVE_SITES' | translate }}</p>
             }
           </div>
+        }
 
         <div class="flex gap-3 pt-2">
           <button type="submit"
@@ -122,7 +134,6 @@
             <tr>
               <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'USERS.TABLE_USER' | translate }}</th>
               <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'USERS.TABLE_EMAIL' | translate }}</th>
-              <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'USERS.TABLE_ROLE' | translate }}</th>
               <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'USERS.TABLE_LEVEL' | translate }}</th>
               <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'USERS.TABLE_STATUS' | translate }}</th>
               <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'USERS.TABLE_ACTIONS' | translate }}</th>
@@ -132,21 +143,12 @@
             @for (user of users(); track user.id) {
               <tr class="hover:bg-gray-50/50 transition" [class.opacity-60]="!user.is_active">
                 <td class="px-6 py-4">
-                  <a [routerLink]="['/admin/users', user.id]"
+                  <button type="button" (click)="openUserDetailModal(user)"
                     class="font-medium text-brand-700 hover:text-brand-800 hover:underline">
                     {{ user.first_name }} {{ user.last_name }}
-                  </a>
+                  </button>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-700">{{ user.email }}</td>
-                <td class="px-6 py-4">
-                  <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-md"
-                    [class.bg-brand-100]="user.role === 'CORPORATE_USER'"
-                    [class.text-brand-900]="user.role === 'CORPORATE_USER'"
-                    [class.bg-gray-100]="user.role === 'SITE_USER'"
-                    [class.text-gray-800]="user.role === 'SITE_USER'">
-                    {{ roleLabel(user.role) }}
-                  </span>
-                </td>
                 <td class="px-6 py-4 text-sm text-gray-700">
                   @if (user.role === 'SITE_USER') {
                     <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded"
@@ -157,7 +159,9 @@
                       {{ levelLabel(user.level) }}
                     </span>
                   } @else {
-                    <span class="text-gray-400">{{ 'USERS.LEVEL_NA' | translate }}</span>
+                    <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded bg-violet-100 text-violet-800">
+                      {{ 'USERS.LEVEL_CORPORATE' | translate }}
+                    </span>
                   }
                 </td>
                 <td class="px-6 py-4">
@@ -171,32 +175,14 @@
                 </td>
                 <td class="px-6 py-4 text-right">
                   <div class="flex items-center justify-end gap-2">
-                    <button
-                      (click)="toggleActive(user)"
-                      [disabled]="actionLoading() === user.id"
-                      [title]="user.is_active ? ('USERS.ACTION_DEACTIVATE' | translate) : ('USERS.ACTION_ACTIVATE' | translate)"
-                      class="p-2 rounded-lg transition"
-                      [class.text-amber-600]="user.is_active"
-                      [class.hover:bg-amber-50]="user.is_active"
-                      [class.text-emerald-600]="!user.is_active"
-                      [class.hover:bg-emerald-50]="!user.is_active">
-                      @if (user.is_active) {
-                        <fa-icon [icon]="faBan"></fa-icon>
-                      } @else {
-                        <fa-icon [icon]="faCheck"></fa-icon>
-                      }
+                    <button type="button" (click)="openPermissionsModal(user)"
+                      class="px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100 rounded-lg transition">
+                      {{ 'USERS.PERMISSIONS' | translate }}
                     </button>
-                    <button
-                      (click)="generatePassword(user)"
-                      [disabled]="actionLoading() === user.id"
-                      [title]="'USERS.ACTION_GENERATE_PASSWORD' | translate"
-                      class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-brand-700 transition">
-                      <fa-icon [icon]="faKey"></fa-icon>
-                    </button>
-                    <a [routerLink]="['/admin/users', user.id]"
+                    <button type="button" (click)="openUserDetailModal(user)"
                       class="px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100 rounded-lg transition">
                       {{ 'USERS.MANAGE' | translate }}
-                    </a>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -241,6 +227,65 @@
         <button (click)="closePasswordModal()"
           class="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
           {{ 'COMMON.CLOSE' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showUserDetailModal() && selectedUserId(); as selectedId) {
+  <app-user-detail
+    [userId]="selectedId"
+    (toast)="onUserDetailToast($event)"
+    (closed)="closeUserDetailModal(true)">
+  </app-user-detail>
+}
+
+@if (showPermissionsModal()) {
+  <div class="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] !mt-0"
+    (click)="closePermissionsModal()" role="dialog" aria-modal="true">
+    <div class="w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden"
+      (click)="$event.stopPropagation()">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-lg font-semibold text-gray-900">{{ 'USER_DETAIL.GLOBAL_PERMISSIONS' | translate }}</h2>
+        <p class="text-xs text-gray-500 mt-1">{{ selectedUserForPermissions()?.first_name }} {{ selectedUserForPermissions()?.last_name }}</p>
+      </div>
+      <div class="max-h-[65vh] overflow-y-auto">
+        @for (cat of visiblePermissionCategoriesForModal(); track cat.key) {
+          <div class="border-b border-gray-200">
+            <div class="px-6 py-3 bg-white">
+              <p class="text-base font-semibold text-gray-900">{{ cat.labelKey | translate }}</p>
+            </div>
+            @for (item of cat.items; track item.key) {
+              <label class="px-6 py-3 grid grid-cols-[1fr_auto] items-center border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
+                <span class="text-sm text-gray-800">{{ item.labelKey | translate }}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  [attr.aria-checked]="hasDraftPermission(item.key)"
+                  (click)="toggleDraftPermission(item.key)"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                  [class.bg-brand-900]="hasDraftPermission(item.key)"
+                  [class.bg-gray-300]="!hasDraftPermission(item.key)">
+                  <span
+                    class="inline-block h-5 w-5 transform rounded-full bg-white transition-transform"
+                    [class.translate-x-5]="hasDraftPermission(item.key)"
+                    [class.translate-x-1]="!hasDraftPermission(item.key)">
+                  </span>
+                </button>
+              </label>
+            }
+          </div>
+        }
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button type="button" (click)="closePermissionsModal()"
+          class="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
+          {{ 'COMMON.CANCEL' | translate }}
+        </button>
+        <button type="button" (click)="savePermissionsModal()" [disabled]="permissionSaving()"
+          class="px-4 py-2.5 bg-brand-900 hover:bg-brand-800 text-white rounded-lg font-medium disabled:opacity-50 transition">
+          {{ permissionSaving() ? ('COMMON.SAVING' | translate) : ('COMMON.SAVE' | translate) }}
         </button>
       </div>
     </div>

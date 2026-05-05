@@ -20,6 +20,9 @@ export interface NavItem {
   path: string;
   roles: ('site' | 'corporate')[];
   icon: any;
+  permissionAny?: string[];
+  requiresValidatorLevel?: boolean;
+  requiresCreatorLevel?: boolean;
 }
 
 export interface NavSection {
@@ -37,7 +40,7 @@ export const navItems: NavSection[] = [
     roles: ['site', 'corporate'],
     hideSectionLabel: true,
     items: [
-      { labelKey: 'NAV.ITEMS.DASHBOARD', path: '/dashboard', roles: ['site', 'corporate'], icon: faChartLine },
+      { labelKey: 'NAV.ITEMS.DASHBOARD', path: '/dashboard', roles: ['site', 'corporate'], icon: faChartLine, permissionAny: ['dashboard.read'] },
     ],
   },
   {
@@ -45,10 +48,10 @@ export const navItems: NavSection[] = [
     roles: ['site', 'corporate'],
     isDropdown: true,
     items: [
-      { labelKey: 'NAV.ITEMS.ANNUAL_PLANS', path: '/csr-plans', roles: ['site', 'corporate'], icon: faList },
-      { labelKey: 'NAV.ITEMS.PLANNED_ACTIVITIES', path: '/planned-activities', roles: ['site', 'corporate'], icon: faCalendarPlus },
-      { labelKey: 'NAV.ITEMS.REALIZED_ACTIVITIES', path: '/realized-csr', roles: ['site', 'corporate'], icon: faClipboardCheck },
-      { labelKey: 'NAV.ITEMS.DOCUMENTS', path: '/documents', roles: ['site', 'corporate'], icon: faFolderOpen },
+      { labelKey: 'NAV.ITEMS.ANNUAL_PLANS', path: '/csr-plans', roles: ['site', 'corporate'], icon: faList, permissionAny: ['plan.read'] },
+      { labelKey: 'NAV.ITEMS.PLANNED_ACTIVITIES', path: '/planned-activities', roles: ['site', 'corporate'], icon: faCalendarPlus, permissionAny: ['activity.read'] },
+      { labelKey: 'NAV.ITEMS.REALIZED_ACTIVITIES', path: '/realized-csr', roles: ['site', 'corporate'], icon: faClipboardCheck, permissionAny: ['realized_activity.read'] },
+      { labelKey: 'NAV.ITEMS.DOCUMENTS', path: '/documents', roles: ['site', 'corporate'], icon: faFolderOpen, permissionAny: ['document.read'] },
     ],
   },
   {
@@ -56,10 +59,10 @@ export const navItems: NavSection[] = [
     roles: ['site', 'corporate'],
     isDropdown: true,
     items: [
-      { labelKey: 'NAV.ITEMS.VALIDATE_PLANS', path: '/annual-plans/validation', roles: ['site', 'corporate'], icon: faCheckSquare },
-      { labelKey: 'NAV.ITEMS.MY_REQUESTS', path: '/changes', roles: ['site'], icon: faEnvelopeOpenText },
-      { labelKey: 'NAV.ITEMS.PENDING_REQUESTS', path: '/changes/pending', roles: ['site', 'corporate'], icon: faHourglassHalf },
-      { labelKey: 'NAV.ITEMS.CHANGE_HISTORY', path: '/changes/history', roles: ['corporate'], icon: faHistory },
+      { labelKey: 'NAV.ITEMS.VALIDATE_PLANS', path: '/annual-plans/validation', roles: ['site', 'corporate'], icon: faCheckSquare, permissionAny: ['plan.validate', 'activity.validate'], requiresValidatorLevel: true },
+      { labelKey: 'NAV.ITEMS.MY_REQUESTS', path: '/changes', roles: ['site'], icon: faEnvelopeOpenText, permissionAny: ['change_request.read'], requiresCreatorLevel: true },
+      { labelKey: 'NAV.ITEMS.PENDING_REQUESTS', path: '/changes/pending', roles: ['site', 'corporate'], icon: faHourglassHalf, permissionAny: ['change_request.review'], requiresValidatorLevel: true },
+      { labelKey: 'NAV.ITEMS.CHANGE_HISTORY', path: '/changes/history', roles: ['corporate'], icon: faHistory, permissionAny: ['change_request.history'] },
     ],
   },
   {
@@ -67,10 +70,10 @@ export const navItems: NavSection[] = [
     roles: ['corporate'],
     isDropdown: true,
     items: [
-      { labelKey: 'NAV.ITEMS.SITES', path: '/sites', roles: ['corporate'], icon: faBuilding },
-      { labelKey: 'NAV.ITEMS.CSR_CATEGORIES', path: '/categories', roles: ['corporate'], icon: faFolderTree },
-      { labelKey: 'NAV.ITEMS.USERS', path: '/admin/users', roles: ['corporate'], icon: faUser },
-      { labelKey: 'NAV.ITEMS.AUDIT_LOG', path: '/admin/audit', roles: ['corporate'], icon: faClipboardList },
+      { labelKey: 'NAV.ITEMS.SITES', path: '/sites', roles: ['corporate'], icon: faBuilding, permissionAny: ['site.read'] },
+      { labelKey: 'NAV.ITEMS.CSR_CATEGORIES', path: '/categories', roles: ['corporate'], icon: faFolderTree, permissionAny: ['category.read'] },
+      { labelKey: 'NAV.ITEMS.USERS', path: '/admin/users', roles: ['corporate'], icon: faUser, permissionAny: ['user.read'] },
+      { labelKey: 'NAV.ITEMS.AUDIT_LOG', path: '/admin/audit', roles: ['corporate'], icon: faClipboardList, permissionAny: ['audit_log.read'] },
     ],
   },
 ];

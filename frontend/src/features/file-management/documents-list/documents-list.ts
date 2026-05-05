@@ -7,6 +7,7 @@ import { UserAvatarNameComponent } from '@shared/components/user-avatar-name/use
 import { DocumentsApi } from '../api/documents-api';
 import { Document } from '../models/document.model';
 import { I18nService } from '@core/services/i18n.service';
+import { AuthStore } from '@core/services/auth-store';
 import {
   FIXED_CONTEXT_MENU_GAP,
   FIXED_CONTEXT_MENU_PAD,
@@ -26,6 +27,7 @@ export class DocumentsListComponent implements OnInit {
   private static readonly DOCUMENT_ACTIONS_MENU_HEIGHT_ESTIMATE = 200;
 
   private cdr = inject(ChangeDetectorRef);
+  private authStore = inject(AuthStore);
 
   documents = signal<Document[]>([]);
   loading = signal(true);
@@ -183,6 +185,7 @@ export class DocumentsListComponent implements OnInit {
   }
 
   toggleMenu(doc: Document, event: MouseEvent, openAbove: boolean) {
+    if (!this.canManageDocuments()) return;
     event.stopPropagation();
     if (this.activeMenuId === doc.id) {
       this.closeMenu();
@@ -229,6 +232,7 @@ export class DocumentsListComponent implements OnInit {
 
   // ── Épingler ──────────────────────────────────────────────────────────────
   togglePin(doc: Document) {
+    if (!this.canManageDocuments()) return;
     this.documentsApi.togglePin(doc.id).subscribe({
       next: (res: { is_pinned: boolean }) => {
         this.documents.update(docs =>
@@ -242,6 +246,7 @@ export class DocumentsListComponent implements OnInit {
 
   // ── Modifier ──────────────────────────────────────────────────────────────
   openEditModal(doc: Document) {
+    if (!this.canManageDocuments()) return;
     this.editingDoc = doc;
     this.editFileName = doc.file_name;
     this.editFileType = doc.file_type;
@@ -256,6 +261,7 @@ export class DocumentsListComponent implements OnInit {
   }
 
   submitEdit() {
+    if (!this.canManageDocuments()) return;
     if (!this.editingDoc || !this.editFileName.trim()) return;
     this.documentsApi.updateDocument(this.editingDoc.id, {
       file_name: this.editFileName.trim(),
@@ -276,6 +282,7 @@ export class DocumentsListComponent implements OnInit {
 
   // ── Supprimer ─────────────────────────────────────────────────────────────
   openDeleteModal(doc: Document) {
+    if (!this.canManageDocuments()) return;
     this.deletingDoc = doc;
     this.showDeleteModal = true;
     this.closeMenu();
@@ -287,6 +294,7 @@ export class DocumentsListComponent implements OnInit {
   }
 
   confirmDelete() {
+    if (!this.canManageDocuments()) return;
     if (!this.deletingDoc) return;
     this.documentsApi.deleteDocument(this.deletingDoc.id).subscribe({
       next: () => {
@@ -325,6 +333,10 @@ export class DocumentsListComponent implements OnInit {
     { bar: 'bg-yellow-500', dot: 'bg-yellow-500', text: 'text-yellow-600' },
     { bar: 'bg-red-500',    dot: 'bg-red-500',    text: 'text-red-600' },
   ];
+
+  canManageDocuments(): boolean {
+    return !this.authStore.isValidatorLevel();
+  }
 
   getColor(index: number) {
     return this.fileTypeColors[index % this.fileTypeColors.length];

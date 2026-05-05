@@ -39,7 +39,12 @@ export class Sidebar implements OnDestroy {
       .filter(section => section.roles.includes(role))
       .map(section => ({
         ...section,
-        items: section.items.filter(item => item.roles.includes(role))
+        items: section.items.filter((item) =>
+          item.roles.includes(role) &&
+          (!item.requiresValidatorLevel || role === 'corporate' || this.authStore.isValidatorLevel()) &&
+          (!item.requiresCreatorLevel || role === 'corporate' || this.authStore.isCreatorLevel()) &&
+          (item.permissionAny == null || this.authStore.hasAnyPermission(item.permissionAny))
+        )
       }))
       .filter(section => section.items.length > 0);
   });

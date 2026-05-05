@@ -6,6 +6,7 @@ the validation level for that user on that site. A corporate user with level_2 c
 A site user with level_1 can create/submit plans. is_active=False means access was revoked.
 """
 import uuid
+import json
 
 from sqlalchemy import CHAR
 
@@ -47,6 +48,26 @@ class UserSite(db.Model):
         comment="Utilisateur ayant accordé l'accès"
     )
     granted_at = db.Column(db.DateTime, nullable=True, comment="Date d'attribution")
+    access_types_json = db.Column(
+        db.Text,
+        nullable=True,
+        comment="Types d'accès accordés pour ce site (JSON array)",
+    )
 
     user = db.relationship("User", foreign_keys=[user_id])
     site = db.relationship("Site", backref=db.backref("user_sites", lazy="dynamic"))
+
+    def get_access_types(self):
+        if not self.access_types_json:
+            return []
+        try:
+            value = json.loads(self.access_types_json)
+            if isinstance(value, list):
+                return [str(v) for v in value if v is not None and str(v).strip()]
+            return []
+        except Exception:
+            return []
+
+    def set_access_types(self, access_types):
+        values = [str(v).strip() for v in (access_types or []) if v is not None and str(v).strip()]
+        self.access_types_json = json.dumps(values) if values else None

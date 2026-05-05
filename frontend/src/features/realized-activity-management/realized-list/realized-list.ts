@@ -25,6 +25,29 @@ export class RealizedListComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private authStore = inject(AuthStore);
   private cdr = inject(ChangeDetectorRef);
+  private readonly exportColumns: Array<{ key: string; label: string }> = [
+    { key: 'activity_number', label: 'Activity N' },
+    { key: 'region', label: 'Region' },
+    { key: 'country', label: 'Country' },
+    { key: 'site_name', label: 'Plant' },
+    { key: 'activity_title', label: 'Title' },
+    { key: 'activity_description', label: 'Description' },
+    { key: 'category_name', label: 'Category' },
+    { key: 'collaboration_nature', label: 'Nature of collaboration' },
+    { key: 'year', label: 'Year' },
+    { key: 'start_year', label: 'Start year' },
+    { key: 'edition', label: 'Edition' },
+    { key: 'external_partner_name', label: 'External Partner' },
+    { key: 'total_hc', label: 'Total HC' },
+    { key: 'percentage_employees', label: '% of all HC' },
+    { key: 'planned_budget', label: 'Planned Budget (EUR)' },
+    { key: 'realized_budget', label: 'Realized Budget (EUR)' },
+    { key: 'action_impact_actual', label: 'Impact N' },
+    { key: 'action_impact_unit', label: 'Impact Unit' },
+    { key: 'organizer', label: 'Organizer' },
+    { key: 'number_external_partners', label: '# of External Partners' },
+    { key: 'is_off_plan', label: 'Is off plan' },
+  ];
 
   activeMenuRealized: RealizedCsr | null = null;
   activeRequestChangeRealized: RealizedCsr | null = null;
@@ -32,6 +55,7 @@ export class RealizedListComponent implements OnInit {
 
   /** True if user can request a change for this realization (plan validated and locked, has plan_id and activity_id). */
   canRequestChange(r: RealizedCsr): boolean {
+    if (this.authStore.isValidatorLevel()) return false;
     if (this.isCorporateUser()) return false;
     return !!(
       !r.plan_editable &&
@@ -43,6 +67,14 @@ export class RealizedListComponent implements OnInit {
 
   private isCorporateUser(): boolean {
     return (this.authStore.user()?.role ?? '').toLowerCase() === 'corporate';
+  }
+
+  canManageRealized(r: RealizedCsr): boolean {
+    return !this.authStore.isValidatorLevel() && !!r.plan_editable;
+  }
+
+  canCreateRealized(): boolean {
+    return !this.authStore.isValidatorLevel();
   }
 
   @HostListener('document:click')
@@ -161,6 +193,7 @@ export class RealizedListComponent implements OnInit {
 
   list = signal<RealizedCsr[]>([]);
   loading = signal(true);
+  exporting = signal(false);
   selectedPlanId = signal<string | null>(null);
   search = signal<string>('');
 
@@ -247,6 +280,131 @@ export class RealizedListComponent implements OnInit {
   totalRecords = computed(() => this.filteredList().length);
   totalBudget = computed(() => this.filteredList().reduce((sum, r) => sum + (r.realized_budget ?? 0), 0));
 
+  exportRows(format: 'csv' | 'xlsx' | 'doc' | 'pdf'): void {
+    const rows = this.buildExportRows();
+    if (!rows.length || this.exporting()) return;
+    this.exporting.set(true);
+    try {
+      if (format === 'csv') this.exportAsCsv(rows);
+      else if (format === 'xlsx') this.exportAsXlsx(rows);
+      else if (format === 'doc') this.exportAsDoc(rows);
+      else this.exportAsPdf(rows);
+    } finally {
+      this.exporting.set(false);
+    }
+  }
+
+  private buildExportRows(): Array<Record<string, unknown>> {
+    return this.filteredList().map((r) => ({
+      activity_number: r.activity_number ?? '',
+      region: (r as any).region ?? (r as any).site_region ?? '',
+      country: (r as any).country ?? (r as any).site_country ?? '',
+      site_name: r.site_name ?? '',
+      activity_title: r.activity_title ?? '',
+      activity_description: r.activity_description ?? '',
+      category_name: r.category_name ?? '',
+      collaboration_nature: r.collaboration_nature ?? '',
+      year: this._realizationYear(r) ?? '',
+      start_year: r.start_year ?? '',
+      edition: r.edition ?? '',
+      external_partner_name: r.external_partner_name ?? '',
+      total_hc: r.total_hc ?? '',
+      percentage_employees: (r as any).percentage_employees ?? '',
+      planned_budget: this.formatMoney(r.planned_budget),
+      realized_budget: this.formatMoney(r.realized_budget),
+      action_impact_actual: r.action_impact_actual ?? '',
+      action_impact_unit: r.action_impact_unit ?? '',
+      organizer: r.organizer ?? '',
+      number_external_partners: r.number_external_partners ?? '',
+      is_off_plan: r.is_off_plan ? 'Yes' : 'No',
+    }));
+  }
+
+  private formatMoney(amount: number | null | undefined): string {
+    if (amount == null || Number.isNaN(Number(amount))) return '';
+    return Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  private exportAsCsv(rows: Array<Record<string, unknown>>): void {
+    const headers = this.exportColumns.map((c) => c.label);
+    const body = rows.map((row) =>
+      this.exportColumns.map((c) => `"${String(row[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csv = [headers.join(','), ...body].join('\n');
+    this.downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), this.exportFilename('csv'));
+  }
+
+  private exportAsXlsx(rows: Array<Record<string, unknown>>): void {
+    import('xlsx').then((XLSX) => {
+      const normalized = rows.map((row) => {
+        const out: Record<string, string | number | boolean> = {};
+        this.exportColumns.forEach((c) => (out[c.label] = (row[c.key] as string | number | boolean) ?? ''));
+        return out;
+      });
+      const worksheet = XLSX.utils.json_to_sheet(normalized);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Realized Activities');
+      XLSX.writeFile(workbook, this.exportFilename('xlsx'));
+    });
+  }
+
+  private exportAsDoc(rows: Array<Record<string, unknown>>): void {
+    const headerHtml = this.exportColumns.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
+    const bodyHtml = rows.map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`).join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Realized Activities</title></head><body><h2>Realized activities export</h2><p><strong>Generated at:</strong> ${this.escapeHtml(this.exportTimestamp())}<br><strong>Generated by:</strong> ${this.escapeHtml(this.exportUserLabel())}</p><table border="1" cellspacing="0" cellpadding="6"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
+    this.downloadBlob(new Blob([html], { type: 'application/msword' }), this.exportFilename('doc'));
+  }
+
+  private exportAsPdf(rows: Array<Record<string, unknown>>): void {
+    const headerHtml = this.exportColumns.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
+    const bodyHtml = rows.map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`).join('');
+    const title = this.exportFilename('pdf');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}h1{font-size:18px;margin:0 0 12px}.meta{font-size:12px;color:#374151;margin:0 0 12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #d1d5db;padding:6px;text-align:left}th{background:#f3f4f6}</style></head><body><h1>Realized activities export</h1><p class="meta"><strong>Generated at:</strong> ${this.escapeHtml(this.exportTimestamp())}<br><strong>Generated by:</strong> ${this.escapeHtml(this.exportUserLabel())}</p><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  private exportFilename(ext: 'csv' | 'xlsx' | 'doc' | 'pdf'): string {
+    const stamp = new Date().toISOString().slice(0, 10);
+    return `realized_activities_${stamp}.${ext}`;
+  }
+
+  private exportTimestamp(): string {
+    return new Date().toLocaleString();
+  }
+
+  private exportUserLabel(): string {
+    const u = this.authStore.user();
+    if (!u) return 'Unknown user';
+    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim();
+    if (name && u.email) return `${name} (${u.email})`;
+    if (name) return name;
+    return u.email ?? 'Unknown user';
+  }
+
+  private downloadBlob(blob: Blob, filename: string): void {
+    const link = document.createElement('a');
+    const href = URL.createObjectURL(blob);
+    link.href = href;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   showCreateSidebar = signal(false);
   initialPlanIdForSidebar: string | null = null;
 
@@ -263,6 +421,7 @@ export class RealizedListComponent implements OnInit {
   }
 
   openCreateSidebar(): void {
+    if (!this.canCreateRealized()) return;
     this.showCreateSidebar.set(true);
   }
 

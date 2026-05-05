@@ -38,7 +38,7 @@
             <td class="p-4">
               <span class="text-amber-600 font-medium">{{ validationStepLabel(plan) }}</span>
             </td>
-            <td class="p-4 text-right">{{ plan.total_budget != null ? (plan.total_budget | number:'1.0-0') + ' €' : '–' }}</td>
+            <td class="p-4 text-right">{{ plan.allocated_budget != null ? (plan.allocated_budget | number:'1.0-0') + ' €' : '–' }}</td>
             <td class="p-4">
               <div class="flex items-center justify-center gap-2">
                 <button *ngIf="plan.can_approve" type="button" (click)="openApproveConfirm(plan)"

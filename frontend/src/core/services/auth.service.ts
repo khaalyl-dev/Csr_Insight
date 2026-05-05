@@ -20,8 +20,10 @@ export class AuthService {
         const user = {
           email: res.email,
           role: mapBackendRole(res.role),
+          level: res.level ?? null,
           first_name: res.first_name ?? undefined,
           last_name: res.last_name ?? undefined,
+          permissions: res.permissions ?? null,
         };
 
         this.authStore.setAuth(res.token, user, remember);

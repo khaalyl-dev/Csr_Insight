@@ -6,6 +6,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuditApi, type AuditLogsParams } from '../api/audit-api';
 import type { AuditLog } from '../models/audit-log.model';
 import { SitesApi, type Site } from '@features/site-management/api/sites-api';
+import { AuthStore } from '@core/services/auth-store';
 
 @Component({
   selector: 'app-audit-list',
@@ -17,15 +18,18 @@ export class AuditListComponent implements OnInit {
   private auditApi = inject(AuditApi);
   private sitesApi = inject(SitesApi);
   private translate = inject(TranslateService);
+  private authStore = inject(AuthStore);
 
   logs = signal<AuditLog[]>([]);
   sites = signal<Site[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
+  exporting = signal(false);
 
   filterAction = signal<string>('');
   filterEntityType = signal<string>('');
   filterSiteId = signal<string>('');
+  canExport = this.authStore.hasPermission('audit_log.export');
 
   ngOnInit(): void {
     this.sitesApi.list(true).subscribe({
@@ -79,6 +83,7 @@ export class AuditListComponent implements OnInit {
     if (et === 'PLAN') return this.translate.instant('AUDIT_LOG.ENTITY_PLAN');
     if (et === 'ACTIVITY') return this.translate.instant('AUDIT_LOG.ENTITY_ACTIVITY');
     if (et === 'REALIZATION') return this.translate.instant('AUDIT_LOG.ENTITY_REALIZATION');
+    if (et === 'CHANGE_REQUEST') return this.translate.instant('AUDIT_LOG.ENTITY_CHANGE_REQUEST');
     return et;
   }
 
@@ -105,6 +110,10 @@ export class AuditListComponent implements OnInit {
     // Suppression plan X
     const planDeleted = d.match(/^Suppression plan (\d+)$/);
     if (planDeleted) return this.translate.instant('AUDIT_LOG.DESC_PLAN_DELETED', { year: planDeleted[1] });
+
+    // Soumission plan X
+    const planSubmitted = d.match(/^Soumission plan (\d+)$/);
+    if (planSubmitted) return this.translate.instant('AUDIT_LOG.DESC_PLAN_SUBMITTED', { year: planSubmitted[1] });
 
     // Validation niveau 1 (Level 1)
     if (d === 'Validation niveau 1 (Level 1)') return this.translate.instant('AUDIT_LOG.DESC_APPROVE_LEVEL1');
@@ -151,7 +160,53 @@ export class AuditListComponent implements OnInit {
     if (!log.entity_id) return null;
     if (log.entity_type === 'PLAN') return `/csr-plans/${log.entity_id}`;
     if (log.entity_type === 'ACTIVITY') return `/planned-activity/${log.entity_id}`;
-    if (log.entity_type === 'REALIZATION') return `/planned-activity/${log.entity_id}`;
+    if (log.entity_type === 'REALIZATION') return `/realized-csr/${log.entity_id}`;
+    if (log.entity_type === 'CHANGE_REQUEST') return `/changes/${log.entity_id}`;
     return null;
+  }
+
+  exportCsv(): void {
+    this.exporting.set(true);
+    this.error.set(null);
+    const params: AuditLogsParams = { limit: 500 };
+    const action = this.filterAction().trim();
+    if (action) params.action = action;
+    const entityType = this.filterEntityType().trim();
+    if (entityType) params.entity_type = entityType;
+    const siteId = this.filterSiteId().trim();
+    if (siteId) params.site_id = siteId;
+
+    this.auditApi.listLogs(params).subscribe({
+      next: (rows) => {
+        const header = ['Date', 'Action', 'Type', 'Site', 'User', 'Description', 'Link'];
+        const lines = rows.map((log) => [
+          log.created_at ?? '',
+          this.actionLabel(log.action),
+          this.entityTypeLabel(log.entity_type),
+          log.site_name ?? log.site_id ?? '',
+          log.user_name ?? log.user_id ?? '',
+          this.descriptionLabel(log),
+          this.entityLink(log) ?? '',
+        ]);
+        const csv = [header, ...lines]
+          .map((row) => row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+          .join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        a.href = url;
+        a.download = `audit-log-${stamp}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.exporting.set(false);
+      },
+      error: (err) => {
+        this.error.set(err?.error?.message ?? this.translate.instant('AUDIT_LOG.EXPORT_ERROR'));
+        this.exporting.set(false);
+      },
+    });
   }
 }

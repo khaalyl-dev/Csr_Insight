@@ -2,12 +2,25 @@
 Planned CSR activities (annual plan lines) — CRUD, off-plan flow, modification review.
 """
 from datetime import date, datetime
-from typing import Optional, Tuple
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Blueprint, request, jsonify
+from sqlalchemy import exists
 
 from core import db, token_required
-from models import CsrActivity, CsrPlan, UserSite, RealizedCsr, Category, ExternalPartner, Validation
+from core.permissions import has_permission
+from models import (
+    CsrActivity,
+    CsrPlan,
+    UserSite,
+    RealizedCsr,
+    Category,
+    ExternalPartner,
+    Validation,
+    CsrObjective,
+    CsrCompletedObjective,
+)
 from features.notification_management.notification_helper import notify_corporate, notify_site_users
 from features.notification_management.socketio_emit import emit_tasks_refresh_for_request_actor
 from features.audit_history_management.audit_helper import (
@@ -16,6 +29,10 @@ from features.audit_history_management.audit_helper import (
     audit_delete,
     snapshot_activity,
     write_audit,
+)
+from features.planned_activity_management.activity_effective_status import (
+    build_cr_effective_context as _build_cr_effective_context,
+    effective_planned_activity_status as _effective_planned_activity_status,
 )
 from features.csr_plan_management.csr_plans_routes import (
     _plan_validation_mode_str,
@@ -30,6 +47,26 @@ from features.change_request_management.change_requests_routes import (
 
 def _is_corporate(role: str) -> bool:
     return (role or "").upper() in ("CORPORATE_USER", "CORPORATE")
+
+
+def _compose_activity_number(plan: Optional[CsrPlan], raw_activity_number: Optional[str]) -> str:
+    """Normalize activity number to SITE-YEAR-NUMBER when site/year are known."""
+    base = (raw_activity_number or "").strip()
+    if not base:
+        return ""
+    if not plan or not getattr(plan, "site", None) or not getattr(plan, "year", None):
+        return base
+    site_code = (getattr(plan.site, "code", "") or "").strip().upper()
+    year = str(getattr(plan, "year", "")).strip()
+    if not site_code or not year:
+        return base
+    prefix = f"{site_code}-{year}-"
+    if base.upper().startswith(prefix):
+        return base
+    m = re.match(r"^[^-]+-\d{4}-(.+)$", base)
+    if m:
+        base = (m.group(1) or "").strip()
+    return f"{prefix}{base}"
 
 
 def _plan_is_editable(plan: CsrPlan, role: str = "") -> bool:
@@ -71,7 +108,15 @@ def _activity_is_editable(activity: CsrActivity, role: str = "") -> bool:
         return True
     return False
 
+
 bp = Blueprint("csr_activities", __name__, url_prefix="/api/csr-activities")
+
+
+def _require_activity_permission(action: str):
+    role = (getattr(request, "role", "") or "").upper()
+    if has_permission(getattr(request, "user_id", ""), role, "activity", action):
+        return None
+    return jsonify({"message": f"Permission refusée: activity.{action}"}), 403
 
 
 def _parse_activity_validation_step(val) -> Optional[int]:
@@ -83,9 +128,35 @@ def _parse_activity_validation_step(val) -> Optional[int]:
         return None
 
 
+def _mode_site_steps(mode: str) -> int:
+    return {"101": 0, "111": 1, "211": 2, "311": 3}.get(mode, 0)
+
+
+def _normalize_organization(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    s = str(value).strip().upper()
+    if not s:
+        return None
+    if s in ("INTERNAL", "EXTERNAL"):
+        return s
+    return None
+
+
+def _normalize_contract_type(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    s = str(value).strip().upper()
+    if not s:
+        return None
+    if s in ("ONE_SHOT", "SUCCESSIVE_PERFORMANCE"):
+        return s
+    return None
+
+
 def _activity_validation_mode_and_step(a: CsrActivity, plan: CsrPlan) -> Tuple[str, Optional[int]]:
     """
-    (mode, step) for activity validation: 101/111 and step 1=L1, 2=corporate.
+    (mode, step) for activity validation with dynamic step count.
     In-plan modification review: if columns on planned_activity are empty, use plan.validation_mode
     and infer step from pending Validation rows so mode 111 still goes to L1 first.
     """
@@ -94,25 +165,29 @@ def _activity_validation_mode_and_step(a: CsrActivity, plan: CsrPlan) -> Tuple[s
     if is_off and off_r is not None:
         mode_raw = getattr(off_r, "off_plan_validation_mode", None)
         mode = str(mode_raw if mode_raw is not None else "101").strip()
-        if mode not in ("101", "111"):
+        if mode not in ("101", "111", "211", "311"):
             mode = "101"
         step = _parse_activity_validation_step(getattr(off_r, "off_plan_validation_step", None))
         return mode, step
     mode_raw = getattr(a, "off_plan_validation_mode", None) or _plan_validation_mode_str(plan)
     mode = str(mode_raw if mode_raw is not None else "101").strip()
-    if mode not in ("101", "111"):
+    if mode not in ("101", "111", "211", "311"):
         mode = "101"
     step = _parse_activity_validation_step(getattr(a, "off_plan_validation_step", None))
-    if mode == "111" and step is None:
-        v1p = Validation.query.filter_by(
-            entity_type="ACTIVITY",
-            entity_id=a.id,
-            grade="level_1",
-            status="PENDING",
-        ).first()
-        step = 1 if v1p is not None else 2
-    elif mode == "101" and step is None:
-        step = 2
+    site_steps = _mode_site_steps(mode)
+    if step is None:
+        for s in range(1, site_steps + 1):
+            vp = Validation.query.filter_by(
+                entity_type="ACTIVITY",
+                entity_id=a.id,
+                grade=f"level_{s}",
+                status="PENDING",
+            ).first()
+            if vp is not None:
+                step = s
+                break
+        if step is None:
+            step = site_steps + 1
     return mode, step
 
 
@@ -134,26 +209,72 @@ def _get_or_create_activity_validation(activity_id: str, site_id: str, grade: st
 
 
 def _activity_validation_grade(a: CsrActivity) -> str:
-    """Grade (level_1 / level_2) for the current activity validation step (off-plan or in-plan mod)."""
+    """Grade for current activity validation step."""
     if not a.plan:
-        return "level_2"
+        return "level_corporate"
     mode, step = _activity_validation_mode_and_step(a, a.plan)
-    if mode == "111" and step == 1:
-        return "level_1"
-    return "level_2"
+    site_steps = _mode_site_steps(mode)
+    if step is not None and step <= site_steps:
+        return f"level_{step}"
+    return "level_corporate"
 
 
-def _activity_to_json(a: CsrActivity):
+def _list_text_values(raw: Any) -> List[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        out: List[str] = []
+        for v in raw:
+            s = str(v).strip()
+            if s and s.lower() not in [x.lower() for x in out]:
+                out.append(s)
+        return out
+    s = str(raw).strip()
+    return [s] if s else []
+
+
+def _replace_planned_objectives(activity_id: str, values: List[str]) -> None:
+    CsrObjective.query.filter_by(activity_id=activity_id).delete()
+    for value in values:
+        db.session.add(CsrObjective(activity_id=activity_id, objective=value))
+
+
+def _replace_completed_objectives(activity_id: str, values: List[str]) -> None:
+    CsrCompletedObjective.query.filter_by(activity_id=activity_id).delete()
+    for value in values:
+        db.session.add(CsrCompletedObjective(activity_id=activity_id, objective=value, achieved=True))
+
+
+def _activity_to_json(a: CsrActivity, cr_context: Optional[Dict[str, Any]] = None):
     off_r = _latest_off_plan_realization(a)
     is_off = off_r is not None
+    plan = getattr(a, "plan", None)
+    if plan is None and getattr(a, "plan_id", None):
+        plan = CsrPlan.query.get(a.plan_id)
+    compose_plan = getattr(a, "plan", None) or plan
+    ctx = cr_context if cr_context is not None else _build_cr_effective_context([a])
+    effective = _effective_planned_activity_status(a, plan, ctx)
+    planned_objectives = [
+        row.objective
+        for row in CsrObjective.query.filter_by(activity_id=a.id).order_by(CsrObjective.created_at.asc()).all()
+    ]
+    completed_objectives = [
+        row.objective
+        for row in CsrCompletedObjective.query.filter_by(activity_id=a.id, achieved=True)
+        .order_by(CsrCompletedObjective.created_at.asc())
+        .all()
+    ]
     return {
         "id": a.id,
         "plan_id": a.plan_id,
-        "activity_number": a.activity_number or "",
+        "activity_number": _compose_activity_number(compose_plan, a.activity_number),
         "title": a.title or "",
         "description": a.description or None,
+        "organization": getattr(a, "organization", None),
+        "contract_type": getattr(a, "contract_type", None),
         "category_id": a.category_id,
         "status": a.status,
+        "effective_status": effective,
         "is_off_plan": is_off,
         "planned_budget": float(a.planned_budget) if a.planned_budget is not None else None,
         "collaboration_nature": a.collaboration_nature or None,
@@ -163,8 +284,11 @@ def _activity_to_json(a: CsrActivity):
         "action_impact_duration": a.action_impact_duration or None,
         "organizer": a.organizer or None,
         "edition": a.edition,
+        "edition_year": getattr(a, "edition_year", None),
         "start_year": a.start_year,
-        "number_external_partners": getattr(a, "number_external_partners", None),
+        "employees_planned": getattr(a, "employees_planned", None),
+        "planned_objectives": planned_objectives,
+        "completed_objectives": completed_objectives,
         "external_partner_name": a.external_partner.name if getattr(a, "external_partner", None) else None,
         "off_plan_validation_mode": (
             getattr(off_r, "off_plan_validation_mode", None) if off_r else getattr(a, "off_plan_validation_mode", None)
@@ -175,22 +299,31 @@ def _activity_to_json(a: CsrActivity):
     }
 
 
-def _activity_to_json_with_plan(a: CsrActivity, role: str = ""):
+def _activity_to_json_with_plan(a: CsrActivity, role: str = "", cr_context: Optional[Dict[str, Any]] = None):
     """Include plan and category info for list views."""
-    out = _activity_to_json(a)
+    out = _activity_to_json(a, cr_context)
     if a.plan:
         out["site_id"] = a.plan.site_id
         out["site_name"] = a.plan.site.name if a.plan.site else None
         out["site_code"] = a.plan.site.code if a.plan.site else None
+        out["site_region"] = a.plan.site.region if a.plan.site else None
+        out["site_country"] = a.plan.site.country if a.plan.site else None
+        # Backward-friendly aliases used by some frontend exports.
+        out["region"] = out["site_region"]
+        out["country"] = out["site_country"]
         out["year"] = a.plan.year
         out["plan_status"] = a.plan.status
         out["plan_editable"] = _activity_is_editable(a, role)
+        out["total_hc"] = getattr(a.plan, "total_hc", None)
     else:
         out["site_id"] = None
         out["site_name"] = out["site_code"] = None
+        out["site_region"] = out["site_country"] = None
+        out["region"] = out["country"] = None
         out["year"] = None
         out["plan_status"] = None
         out["plan_editable"] = False
+        out["total_hc"] = None
     out["category_name"] = a.category.name if a.category else None
     return out
 
@@ -198,9 +331,15 @@ def _activity_to_json_with_plan(a: CsrActivity, role: str = ""):
 @bp.get("")
 @token_required
 def list_activities():
+    denied = _require_activity_permission("read")
+    if denied:
+        return denied
     """List CSR activities. Optional: plan_id, year, exclude_realized.
-    If exclude_realized=1 (default for list view), activities that have at least one realized_csr are excluded.
-    SITE_USER only sees activities of their sites' plans."""
+
+    exclude_realized: when true, omits activities that already have at least one ``realized_activity`` row.
+    Default: true when plan_id is absent (global planned-activities list); false when plan_id is set.
+    When plan_id is absent and exclusion is on, results are also limited to current/future plan years
+    and plans in VALIDATED status. SITE_USER only sees activities of their sites' plans."""
     plan_id = request.args.get("plan_id")
     year = request.args.get("year", type=int)
     # By default exclude realized when listing all; when plan_id is set (e.g. plan detail) include all.
@@ -216,12 +355,15 @@ def list_activities():
     )
     role = (getattr(request, "role", "") or "").upper()
 
-    if role in ("SITE_USER", "SITE"):
-        user_sites = UserSite.query.filter_by(user_id=request.user_id, is_active=True).all()
-        allowed_site_ids = [us.site_id for us in user_sites]
-        if not allowed_site_ids:
+    from features.csr_plan_management.plan_visibility import data_scope_site_ids
+
+    scope = data_scope_site_ids(request.user_id, getattr(request, "role", "") or "")
+    if scope is not None:
+        if not scope:
             return jsonify([]), 200
-        plan_ids = [p.id for p in CsrPlan.query.filter(CsrPlan.site_id.in_(allowed_site_ids)).all()]
+        plan_ids = [p.id for p in CsrPlan.query.filter(CsrPlan.site_id.in_(scope)).with_entities(CsrPlan.id).all()]
+        if not plan_ids:
+            return jsonify([]), 200
         q = q.filter(CsrActivity.plan_id.in_(plan_ids))
 
     if plan_id:
@@ -232,15 +374,18 @@ def list_activities():
         q = q.join(CsrPlan)
 
     if exclude_realized:
-        q = q.filter(~CsrActivity.id.in_(db.session.query(RealizedCsr.activity_id).distinct()))
-        # Global /planned-activities list: only activities whose annual plan is approved (VALIDATED).
-        # Draft / submitted / rejected plans stay manageable from annual-plans and plan detail (list with plan_id).
-        current_year = date.today().year
-        q = q.filter(CsrPlan.year >= current_year)
-        q = q.filter(CsrPlan.status == "VALIDATED")
+        # Hide plan lines that already have at least one realization (planned list = still to be filled).
+        has_realization = exists().where(RealizedCsr.activity_id == CsrActivity.id)
+        q = q.filter(~has_realization)
+        # Global list (no plan_id): only current/future years and validated plans (work queue).
+        if not plan_id:
+            current_year = date.today().year
+            q = q.filter(CsrPlan.year >= current_year)
+            q = q.filter(CsrPlan.status == "VALIDATED")
 
     activities = q.order_by(CsrPlan.year.desc(), CsrActivity.plan_id, CsrActivity.activity_number).all()
-    return jsonify([_activity_to_json_with_plan(a, role) for a in activities]), 200
+    cr_ctx = _build_cr_effective_context(activities)
+    return jsonify([_activity_to_json_with_plan(a, role, cr_ctx) for a in activities]), 200
 
 
 def _user_can_access_plan(user_id: str, plan_id: str, role: str) -> bool:
@@ -268,9 +413,16 @@ def _get_or_create_uncategorized():
 @token_required
 def create_activity():
     """Create a new CSR activity within a plan. When draft=true, only plan_id and title are required."""
+    denied = _require_activity_permission("create")
+    if denied:
+        return denied
     data = request.get_json()
     if not data:
         return jsonify({"message": "Données manquantes"}), 400
+    if data.get("organization") not in (None, "") and _normalize_organization(data.get("organization")) is None:
+        return jsonify({"message": "organization doit être INTERNAL ou EXTERNAL"}), 400
+    if data.get("contract_type") not in (None, "") and _normalize_contract_type(data.get("contract_type")) is None:
+        return jsonify({"message": "contract_type doit être ONE_SHOT ou SUCCESSIVE_PERFORMANCE"}), 400
 
     plan_id = data.get("plan_id")
     title = (data.get("title") or "").strip()
@@ -297,17 +449,17 @@ def create_activity():
         if not category_id:
             uncat = _get_or_create_uncategorized()
             category_id = uncat.id
-        activity_number = (data.get("activity_number") or "").strip()
+        activity_number = _compose_activity_number(plan, (data.get("activity_number") or "").strip())
         if not activity_number:
             import uuid
-            activity_number = "Brouillon-" + str(uuid.uuid4())[:8]
+            activity_number = _compose_activity_number(plan, "Brouillon-" + str(uuid.uuid4())[:8])
         existing = CsrActivity.query.filter_by(plan_id=plan_id, activity_number=activity_number).first()
         if existing:
             import uuid
-            activity_number = "Brouillon-" + str(uuid.uuid4())[:8]
+            activity_number = _compose_activity_number(plan, "Brouillon-" + str(uuid.uuid4())[:8])
     else:
         category_id = data.get("category_id")
-        activity_number = (data.get("activity_number") or "").strip()
+        activity_number = _compose_activity_number(plan, (data.get("activity_number") or "").strip())
         if not category_id or not activity_number:
             return jsonify({"message": "category_id et activity_number sont obligatoires pour une création complète"}), 400
         existing = CsrActivity.query.filter_by(plan_id=plan_id, activity_number=activity_number).first()
@@ -328,6 +480,8 @@ def create_activity():
         category_id=category_id,
         activity_number=activity_number,
         title=title,
+        organization=_normalize_organization(data.get("organization")),
+        contract_type=_normalize_contract_type(data.get("contract_type")),
         description=(data.get("description") or "").strip() or None,
         collaboration_nature=(data.get("collaboration_nature") or "").strip() or None,
         periodicity=(data.get("periodicity") or "").strip() or None,
@@ -335,13 +489,16 @@ def create_activity():
         action_impact_target=_num("action_impact_target"),
         action_impact_unit=(data.get("action_impact_unit") or "").strip() or None,
         action_impact_duration=(data.get("action_impact_duration") or "").strip() or None,
+        employees_planned=data.get("employees_planned") if isinstance(data.get("employees_planned"), int) else None,
         start_year=data.get("start_year") if isinstance(data.get("start_year"), int) else None,
         edition=data.get("edition") if isinstance(data.get("edition"), int) else None,
+        edition_year=data.get("edition_year") if isinstance(data.get("edition_year"), int) else None,
         organizer=(data.get("organizer") or "").strip() or None,
         status="DRAFT",
     )
-    # Optional external partner and number_external_partners
-    ext_name = (data.get("external_partner") or "").strip() or None
+    # Optional external partners list (or legacy single external_partner)
+    external_partners = _list_text_values(data.get("external_partners"))
+    ext_name = ", ".join(external_partners) if external_partners else (data.get("external_partner") or "").strip() or None
     if ext_name:
         key = ext_name.lower()
         ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
@@ -350,14 +507,9 @@ def create_activity():
             db.session.add(ep)
             db.session.flush()
         a.external_partner_id = ep.id
-    num_ext = data.get("number_external_partners")
-    if num_ext not in (None, ""):
-        try:
-            a.number_external_partners = int(num_ext)
-        except (TypeError, ValueError):
-            a.number_external_partners = None
     db.session.add(a)
     db.session.flush()
+    _replace_planned_objectives(a.id, _list_text_values(data.get("planned_objectives")))
     audit_create(
         user_id=request.user_id,
         site_id=plan.site_id,
@@ -374,6 +526,9 @@ def create_activity():
 @bp.post("/plan-realized-draft")
 @token_required
 def create_plan_realized_draft_with_realization():
+    denied = _require_activity_permission("create")
+    if denied:
+        return denied
     """
     Plan d'une année civile passée, modifiable : activité en DRAFT (pas hors plan) + ligne realized_csr.
     Pas de validation par activité ni notification (l'utilisateur soumet le plan entier ensuite).
@@ -381,6 +536,10 @@ def create_plan_realized_draft_with_realization():
     data = request.get_json()
     if not data:
         return jsonify({"message": "Données manquantes"}), 400
+    if data.get("organization") not in (None, "") and _normalize_organization(data.get("organization")) is None:
+        return jsonify({"message": "organization doit être INTERNAL ou EXTERNAL"}), 400
+    if data.get("contract_type") not in (None, "") and _normalize_contract_type(data.get("contract_type")) is None:
+        return jsonify({"message": "contract_type doit être ONE_SHOT ou SUCCESSIVE_PERFORMANCE"}), 400
 
     plan_id = data.get("plan_id")
     if not plan_id:
@@ -435,7 +594,7 @@ def create_plan_realized_draft_with_realization():
         s = str(v).strip().lower()
         return s in ("1", "true", "yes", "on")
 
-    activity_number = (data.get("activity_number") or "").strip()
+    activity_number = _compose_activity_number(plan, (data.get("activity_number") or "").strip())
     title = (data.get("title") or "").strip()
     if not activity_number or not title:
         return jsonify({"message": "activity_number et title sont obligatoires"}), 400
@@ -458,16 +617,24 @@ def create_plan_realized_draft_with_realization():
     if not Category.query.get(category_id):
         return jsonify({"message": "Catégorie introuvable"}), 400
 
-    include_planned_details = _bool_val("include_planned_details", default=False)
+    include_planned_details = True
     collaboration_nature = _str_val("collaboration_nature")
     if collaboration_nature and len(collaboration_nature) > 30:
         collaboration_nature = collaboration_nature[:30]
 
     edition = _int_val("edition")
+    edition_year = _int_val("edition_year")
     start_year = _int_val("start_year")
     organizer = _str_val("organizer")
 
-    external_partner_name = _str_val("external_partner")
+    raw_external_partners = data.get("external_partners")
+    external_partners = []
+    if isinstance(raw_external_partners, list):
+        for item in raw_external_partners:
+            s = str(item).strip()
+            if s and s.lower() not in [x.lower() for x in external_partners]:
+                external_partners.append(s)
+    external_partner_name = ", ".join(external_partners) if external_partners else _str_val("external_partner")
     external_partner_id = None
     if external_partner_name:
         key = external_partner_name.strip().lower()
@@ -480,6 +647,52 @@ def create_plan_realized_draft_with_realization():
 
     comment = _str_val("comment")
     contact_name = _str_val("contact_name")
+
+    # For past-year enriched creation, both planned and realized sections are mandatory.
+    required_text = [
+        ("description", "description est obligatoire"),
+        ("organization", "organization est obligatoire"),
+        ("contract_type", "contract_type est obligatoire"),
+        ("periodicity", "periodicity est obligatoire"),
+        ("collaboration_nature", "collaboration_nature est obligatoire"),
+        ("action_impact_duration", "action_impact_duration est obligatoire"),
+        ("action_impact_unit_realized", "action_impact_unit_realized est obligatoire"),
+        ("organizer", "organizer est obligatoire"),
+        ("comment", "comment est obligatoire"),
+        ("contact_name", "contact_name est obligatoire"),
+        ("contact_email", "contact_email est obligatoire"),
+        ("contact_department", "contact_department est obligatoire"),
+    ]
+    if not external_partner_name:
+        return jsonify({"message": "external_partner est obligatoire"}), 400
+    for key, err in required_text:
+        if not _str_val(key):
+            return jsonify({"message": err}), 400
+
+    consumed_budget_raw = data.get("consumed_budget")
+    planned_budget_raw = data.get("planned_budget")
+    if (consumed_budget_raw is None or consumed_budget_raw == "") and (
+        planned_budget_raw is None or planned_budget_raw == ""
+    ):
+        return jsonify({"message": "consumed_budget est obligatoire"}), 400
+
+    required_numbers = [
+        ("action_impact_target", "action_impact_target est obligatoire"),
+        ("start_year", "start_year est obligatoire"),
+        ("edition", "edition est obligatoire"),
+        ("participants", "participants est obligatoire"),
+        ("employees_actual", "employees_actual est obligatoire"),
+        ("realized_budget", "realized_budget est obligatoire"),
+        ("action_impact_actual", "action_impact_actual est obligatoire"),
+        ("incidents_number", "incidents_number est obligatoire"),
+    ]
+    for key, err in required_numbers:
+        raw_v = data.get(key)
+        if raw_v is None or raw_v == "":
+            return jsonify({"message": err}), 400
+
+    if not data.get("realization_date"):
+        return jsonify({"message": "realization_date est obligatoire"}), 400
 
     realization_date = None
     rd = data.get("realization_date")
@@ -509,8 +722,10 @@ def create_plan_realized_draft_with_realization():
             return jsonify({"message": "month doit être entre 1 et 12"}), 400
 
     rb = _num("realized_budget")
-    planned_budget = _num("planned_budget") if include_planned_details else None
-    action_impact_target = _num("action_impact_target") if include_planned_details else None
+    planned_budget = _num("consumed_budget")
+    if planned_budget is None:
+        planned_budget = _num("planned_budget")
+    action_impact_target = _num("action_impact_target")
 
     a = CsrActivity(
         plan_id=plan_id,
@@ -518,24 +733,33 @@ def create_plan_realized_draft_with_realization():
         activity_number=activity_number,
         title=title,
         description=description,
+        organization=_normalize_organization(data.get("organization")),
+        contract_type=_normalize_contract_type(data.get("contract_type")),
         collaboration_nature=collaboration_nature,
+        periodicity=_str_val("periodicity"),
         organizer=organizer,
         edition=edition,
+        edition_year=edition_year,
         start_year=start_year,
         planned_budget=planned_budget if planned_budget is not None else rb,
         action_impact_target=action_impact_target,
-        action_impact_unit=None,
+        action_impact_unit=_str_val("action_impact_unit"),
+        action_impact_duration=_str_val("action_impact_duration"),
+        employees_planned=_int_val("employees_planned"),
         external_partner_id=external_partner_id,
         status="DRAFT",
     )
     db.session.add(a)
     db.session.flush()
+    _replace_planned_objectives(a.id, _list_text_values(data.get("planned_objectives")))
 
     r = RealizedCsr(
         activity_id=a.id,
         realized_budget=rb,
-        participants=_int_val("participants"),
-        total_hc=_int_val("total_hc"),
+        participants=_int_val("employees_actual") if _int_val("employees_actual") is not None else _int_val("participants"),
+        corporate_image_improved=_bool_val("corporate_image_improved", default=False),
+        incidents_number=_int_val("incidents_number"),
+        total_hc=getattr(plan, "total_hc", None),
         action_impact_actual=_num("action_impact_actual"),
         action_impact_unit=_str_val("action_impact_unit_realized"),
         is_off_plan=False,
@@ -546,9 +770,11 @@ def create_plan_realized_draft_with_realization():
         comment=comment,
         contact_name=contact_name,
         contact_email=_str_val("contact_email"),
+        contact_department=_str_val("contact_department"),
         created_by=request.user_id,
     )
     db.session.add(r)
+    _replace_completed_objectives(a.id, _list_text_values(data.get("completed_objectives")))
 
     audit_create(
         user_id=request.user_id,
@@ -570,9 +796,16 @@ def create_plan_realized_draft_with_realization():
 @token_required
 def create_off_plan_realization():
     """Create an off-plan activity and one RealizedCsr row; notify corporate with chosen validation mode."""
+    denied = _require_activity_permission("create")
+    if denied:
+        return denied
     data = request.get_json()
     if not data:
         return jsonify({"message": "Données manquantes"}), 400
+    if data.get("organization") not in (None, "") and _normalize_organization(data.get("organization")) is None:
+        return jsonify({"message": "organization doit être INTERNAL ou EXTERNAL"}), 400
+    if data.get("contract_type") not in (None, "") and _normalize_contract_type(data.get("contract_type")) is None:
+        return jsonify({"message": "contract_type doit être ONE_SHOT ou SUCCESSIVE_PERFORMANCE"}), 400
 
     plan_id = data.get("plan_id")
     if not plan_id:
@@ -600,7 +833,7 @@ def create_off_plan_realization():
     plan_year = plan.year
 
     vm = (data.get("validation_mode") or "101").strip()
-    if vm not in ("101", "111"):
+    if vm not in ("101", "111", "211", "311"):
         vm = "101"
     mode_label = (
         "Corporate uniquement (101)"
@@ -630,7 +863,7 @@ def create_off_plan_realization():
         v = data.get(key)
         return str(v).strip() if v is not None and str(v).strip() else default
 
-    activity_number = (data.get("activity_number") or "").strip()
+    activity_number = _compose_activity_number(plan, (data.get("activity_number") or "").strip())
     title = (data.get("title") or "").strip()
     if not activity_number or not title:
         return jsonify({"message": "activity_number et title sont obligatoires"}), 400
@@ -658,10 +891,18 @@ def create_off_plan_realization():
         collaboration_nature = collaboration_nature[:30]
 
     edition = _int_val("edition")
+    edition_year = _int_val("edition_year")
     start_year = _int_val("start_year")
     organizer = _str_val("organizer")
 
-    external_partner_name = _str_val("external_partner")
+    raw_external_partners = data.get("external_partners")
+    external_partners = []
+    if isinstance(raw_external_partners, list):
+        for item in raw_external_partners:
+            s = str(item).strip()
+            if s and s.lower() not in [x.lower() for x in external_partners]:
+                external_partners.append(s)
+    external_partner_name = ", ".join(external_partners) if external_partners else _str_val("external_partner")
     external_partner_id = None
     if external_partner_name:
         key = external_partner_name.strip().lower()
@@ -703,49 +944,68 @@ def create_off_plan_realization():
         if month < 1 or month > 12:
             return jsonify({"message": "month doit être entre 1 et 12"}), 400
 
+    consumed_budget = _num("consumed_budget")
+    if consumed_budget is None:
+        consumed_budget = _num("planned_budget")
+    realized_budget = _num("realized_budget")
+    if is_past_plan_year:
+        if consumed_budget is None:
+            return jsonify({"message": "consumed_budget est obligatoire pour un plan d'année passée"}), 400
+        if realized_budget is None:
+            return jsonify({"message": "realized_budget est obligatoire pour un plan d'année passée"}), 400
+
     a = CsrActivity(
         plan_id=plan_id,
         category_id=category_id,
         activity_number=activity_number,
         title=title,
         description=description,
+        organization=_normalize_organization(data.get("organization")),
+        contract_type=_normalize_contract_type(data.get("contract_type")),
         collaboration_nature=collaboration_nature,
+        periodicity=_str_val("periodicity"),
         organizer=organizer,
         edition=edition,
+        edition_year=edition_year,
         start_year=start_year,
-        planned_budget=None,
-        action_impact_target=None,
-        action_impact_unit=None,
+        planned_budget=consumed_budget,
+        action_impact_target=_num("action_impact_target"),
+        action_impact_unit=_str_val("action_impact_unit"),
+        action_impact_duration=_str_val("action_impact_duration"),
+        employees_planned=_int_val("employees_planned"),
         external_partner_id=external_partner_id,
         status="VALIDATED" if corporate_submit else "SUBMITTED",
     )
     db.session.add(a)
     db.session.flush()
+    _replace_planned_objectives(a.id, _list_text_values(data.get("planned_objectives")))
 
     r = RealizedCsr(
         activity_id=a.id,
-        realized_budget=_num("realized_budget"),
-        participants=_int_val("participants"),
-        total_hc=_int_val("total_hc"),
+        realized_budget=realized_budget,
+        participants=_int_val("employees_actual") if _int_val("employees_actual") is not None else _int_val("participants"),
+        corporate_image_improved=data.get("corporate_image_improved"),
+        incidents_number=_int_val("incidents_number"),
+        total_hc=getattr(plan, "total_hc", None),
         action_impact_actual=_num("action_impact_actual"),
         action_impact_unit=_str_val("action_impact_unit_realized"),
         is_off_plan=True,
         off_plan_validation_mode=None if corporate_submit else vm,
-        off_plan_validation_step=None if corporate_submit else (1 if vm == "111" else 2),
+        off_plan_validation_step=None if corporate_submit else (_mode_site_steps(vm) + 1 if _mode_site_steps(vm) == 0 else 1),
         status="VALIDATED" if corporate_submit else "SUBMITTED",
         realization_date=realization_date,
         comment=comment,
         contact_name=contact_name,
         contact_email=_str_val("contact_email"),
+        contact_department=_str_val("contact_department"),
         created_by=request.user_id,
     )
     db.session.add(r)
+    _replace_completed_objectives(a.id, _list_text_values(data.get("completed_objectives")))
 
     if not corporate_submit:
-        if vm == "111":
-            _get_or_create_activity_validation(a.id, plan.site_id, "level_1")
-        else:
-            _get_or_create_activity_validation(a.id, plan.site_id, "level_2")
+        first_grade = "level_1" if _mode_site_steps(vm) > 0 else "level_corporate"
+        _get_or_create_activity_validation(a.id, plan.site_id, first_grade)
 
     audit_create(
         user_id=request.user_id,
@@ -807,6 +1067,9 @@ def create_off_plan_realization():
 @token_required
 def submit_activity_modification_review(activity_id: str):
     """Après déverrouillage d'une activité seule (plan validé, pas unlock plan) : envoyer les changements pour validation (101/111)."""
+    denied = _require_activity_permission("submit_modification_review")
+    if denied:
+        return denied
     a = CsrActivity.query.get(activity_id)
     if not a:
         return jsonify({"message": "Activité introuvable"}), 404
@@ -830,7 +1093,7 @@ def submit_activity_modification_review(activity_id: str):
 
     role = (getattr(request, "role", "") or "").upper()
     vm = _plan_validation_mode_str(plan)
-    if vm not in ("101", "111"):
+    if vm not in ("101", "111", "211", "311"):
         vm = "101"
     if _is_corporate(role):
         a.off_plan_validation_mode = None
@@ -838,17 +1101,15 @@ def submit_activity_modification_review(activity_id: str):
         a.status = "VALIDATED"
     else:
         a.off_plan_validation_mode = vm
-        a.off_plan_validation_step = 1 if vm == "111" else 2
+        a.off_plan_validation_step = (_mode_site_steps(vm) + 1) if _mode_site_steps(vm) == 0 else 1
         a.status = "SUBMITTED"
     a.unlock_until = None
     a.unlock_since = None
 
     if not _is_corporate(role):
         Validation.query.filter_by(entity_type="ACTIVITY", entity_id=activity_id).delete(synchronize_session=False)
-        if vm == "111":
-            _get_or_create_activity_validation(a.id, plan.site_id, "level_1")
-        else:
-            _get_or_create_activity_validation(a.id, plan.site_id, "level_2")
+        first_grade = "level_1" if _mode_site_steps(vm) > 0 else "level_corporate"
+        _get_or_create_activity_validation(a.id, plan.site_id, first_grade)
 
     write_audit(
         request.user_id,
@@ -906,6 +1167,9 @@ def submit_activity_modification_review(activity_id: str):
 @bp.patch("/<string:activity_id>/approve")
 @token_required
 def approve_off_plan_activity(activity_id: str):
+    denied = _require_activity_permission("approve")
+    if denied:
+        return denied
     """
     Approuver une activité hors plan soumise, ou une modification d'activité sur plan validé (SUBMITTED).
     Mode 101: corporate valide (étape 2).
@@ -933,23 +1197,29 @@ def approve_off_plan_activity(activity_id: str):
     grade = _activity_validation_grade(a)
     v = _get_or_create_activity_validation(a.id, plan.site_id, grade)
 
-    if mode == "111" and step == 1:
+    site_steps = _mode_site_steps(mode)
+    if step is None:
+        return jsonify({"message": "Étape de validation invalide"}), 400
+    if step <= site_steps:
+        required_grade = f"level_{step}"
         if not _user_can_access_site(request.user_id, plan.site_id):
             return jsonify({"message": "Accès refusé"}), 403
-        if not _user_has_grade(request.user_id, plan.site_id, "level_1"):
-            return jsonify({"message": "Seul un validateur niveau 1 de ce site peut approuver à cette étape"}), 403
+        if not _user_has_grade(request.user_id, plan.site_id, required_grade):
+            return jsonify({"message": f"Seul un validateur {required_grade} de ce site peut approuver à cette étape"}), 403
         v.status = "APPROVED"
         v.validated_by = request.user_id
         v.validated_at = datetime.utcnow()
+        next_step = step + 1
         if off_r is not None:
-            off_r.off_plan_validation_step = 2
+            off_r.off_plan_validation_step = next_step
         else:
-            a.off_plan_validation_step = 2
-        _get_or_create_activity_validation(a.id, plan.site_id, "level_2")
+            a.off_plan_validation_step = next_step
+        next_grade = f"level_{next_step}" if next_step <= site_steps else "level_corporate"
+        _get_or_create_activity_validation(a.id, plan.site_id, next_grade)
         audit_msg = (
-            "Validation niveau 1 modification activité (plan validé)"
+            f"Validation {required_grade} modification activité (plan validé)"
             if in_plan_mod_review
-            else "Validation niveau 1 activité hors plan"
+            else f"Validation {required_grade} activité hors plan"
         )
         write_audit(request.user_id, plan.site_id, "APPROVE", "ACTIVITY", activity_id, audit_msg)
         db.session.commit()
@@ -1034,6 +1304,9 @@ def approve_off_plan_activity(activity_id: str):
 @token_required
 def reject_off_plan_activity(activity_id: str):
     """Rejeter une activité hors plan soumise (motif obligatoire)."""
+    denied = _require_activity_permission("reject")
+    if denied:
+        return denied
     data = request.get_json() or {}
     motif = (data.get("comment") or data.get("motif") or "").strip()
     if not motif:
@@ -1058,11 +1331,15 @@ def reject_off_plan_activity(activity_id: str):
     off_r = _latest_off_plan_realization(a) if is_off else None
     mode, step = _activity_validation_mode_and_step(a, plan)
 
-    if mode == "111" and step == 1:
+    site_steps = _mode_site_steps(mode)
+    if step is None:
+        return jsonify({"message": "Étape de validation invalide"}), 400
+    if step <= site_steps:
+        required_grade = f"level_{step}"
         if not _user_can_access_site(request.user_id, plan.site_id):
             return jsonify({"message": "Accès refusé"}), 403
-        if not _user_has_grade(request.user_id, plan.site_id, "level_1"):
-            return jsonify({"message": "Seul un validateur niveau 1 de ce site peut rejeter à cette étape"}), 403
+        if not _user_has_grade(request.user_id, plan.site_id, required_grade):
+            return jsonify({"message": f"Seul un validateur {required_grade} de ce site peut rejeter à cette étape"}), 403
     else:
         if role not in ("CORPORATE_USER", "CORPORATE"):
             return jsonify({"message": "Seul un utilisateur corporate peut rejeter à cette étape"}), 403
@@ -1134,6 +1411,9 @@ def reject_off_plan_activity(activity_id: str):
 @token_required
 def resubmit_off_plan_activity(activity_id: str):
     """Après rejet : renvoyer en validation (activité hors plan ou modification sur plan validé)."""
+    denied = _require_activity_permission("resubmit")
+    if denied:
+        return denied
     data = request.get_json() or {}
     a = CsrActivity.query.get(activity_id)
     if not a:
@@ -1162,7 +1442,7 @@ def resubmit_off_plan_activity(activity_id: str):
         or default_vm
     )
     vm = str(raw_vm or "101").strip()
-    if vm not in ("101", "111"):
+    if vm not in ("101", "111", "211", "311"):
         vm = "101"
     role = (getattr(request, "role", "") or "").upper()
     if _is_corporate(role):
@@ -1177,20 +1457,18 @@ def resubmit_off_plan_activity(activity_id: str):
     else:
         if off_r is not None:
             off_r.off_plan_validation_mode = vm
-            off_r.off_plan_validation_step = 1 if vm == "111" else 2
+            off_r.off_plan_validation_step = (_mode_site_steps(vm) + 1) if _mode_site_steps(vm) == 0 else 1
             off_r.status = "SUBMITTED"
         else:
             a.off_plan_validation_mode = vm
-            a.off_plan_validation_step = 1 if vm == "111" else 2
+            a.off_plan_validation_step = (_mode_site_steps(vm) + 1) if _mode_site_steps(vm) == 0 else 1
         a.status = "SUBMITTED"
 
         Validation.query.filter_by(entity_type="ACTIVITY", entity_id=activity_id).delete(
             synchronize_session=False
         )
-        if vm == "111":
-            _get_or_create_activity_validation(a.id, plan.site_id, "level_1")
-        else:
-            _get_or_create_activity_validation(a.id, plan.site_id, "level_2")
+        first_grade = "level_1" if _mode_site_steps(vm) > 0 else "level_corporate"
+        _get_or_create_activity_validation(a.id, plan.site_id, first_grade)
 
     audit_desc = (
         "Renvoi modification activité (plan validé) pour validation"
@@ -1277,6 +1555,9 @@ def resubmit_off_plan_activity(activity_id: str):
 @token_required
 def get_activity(activity_id: str):
     """Get a single CSR activity by id (for edit). SITE_USER only if plan's site is allowed."""
+    denied = _require_activity_permission("read")
+    if denied:
+        return denied
     from sqlalchemy.orm import joinedload
     a = (
         CsrActivity.query.options(
@@ -1302,6 +1583,9 @@ def _activity_site_id(a: CsrActivity):
 @token_required
 def update_activity(activity_id: str):
     """Update a CSR activity. SITE_USER only if plan's site is allowed. Plan must not be VALIDATED (locked)."""
+    denied = _require_activity_permission("update")
+    if denied:
+        return denied
     a = CsrActivity.query.get(activity_id)
     if not a:
         return jsonify({"message": "Activité introuvable"}), 404
@@ -1315,8 +1599,13 @@ def update_activity(activity_id: str):
         return jsonify({"message": "Données manquantes"}), 400
 
     category_id = data.get("category_id")
-    activity_number = (data.get("activity_number") or "").strip()
+    activity_number = _compose_activity_number(a.plan, (data.get("activity_number") or "").strip())
     title = (data.get("title") or "").strip()
+    if "organization" in data and _normalize_organization(data.get("organization")) is None:
+        return jsonify({"message": "organization doit être INTERNAL ou EXTERNAL"}), 400
+    if "contract_type" in data and _normalize_contract_type(data.get("contract_type")) is None:
+        return jsonify({"message": "contract_type doit être ONE_SHOT ou SUCCESSIVE_PERFORMANCE"}), 400
+
     if not category_id or not activity_number or not title:
         return jsonify({"message": "category_id, activity_number et title sont obligatoires"}), 400
 
@@ -1351,6 +1640,10 @@ def update_activity(activity_id: str):
     a.activity_number = activity_number
     a.title = title
     a.description = (data.get("description") or "").strip() or None
+    if "organization" in data:
+        a.organization = _normalize_organization(data.get("organization"))
+    if "contract_type" in data:
+        a.contract_type = _normalize_contract_type(data.get("contract_type"))
     a.planned_budget = _num("planned_budget")
     if "collaboration_nature" in data:
         a.collaboration_nature = _str_val("collaboration_nature")
@@ -1364,12 +1657,27 @@ def update_activity(activity_id: str):
         a.action_impact_unit = _str_val("action_impact_unit")
     if "action_impact_duration" in data:
         a.action_impact_duration = _str_val("action_impact_duration")
+    if "employees_planned" in data:
+        a.employees_planned = _int_val("employees_planned")
     if "edition" in data:
         a.edition = _int_val("edition")
+    if "edition_year" in data:
+        a.edition_year = _int_val("edition_year")
     if "start_year" in data:
         a.start_year = _int_val("start_year")
-    if "number_external_partners" in data:
-        a.number_external_partners = _int_val("number_external_partners")
+    if "external_partners" in data:
+        partners = _list_text_values(data.get("external_partners"))
+        if partners:
+            combined = ", ".join(partners)
+            key = combined.strip().lower()
+            ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
+            if not ep:
+                ep = ExternalPartner(name=combined, type="OTHER")
+                db.session.add(ep)
+                db.session.flush()
+            a.external_partner_id = ep.id
+        else:
+            a.external_partner_id = None
     if "external_partner" in data:
         ext_name = _str_val("external_partner")
         if ext_name:
@@ -1382,6 +1690,8 @@ def update_activity(activity_id: str):
             a.external_partner_id = ep.id
         else:
             a.external_partner_id = None
+    if "planned_objectives" in data:
+        _replace_planned_objectives(a.id, _list_text_values(data.get("planned_objectives")))
     audit_update(
         user_id=request.user_id,
         site_id=_activity_site_id(a),
@@ -1400,6 +1710,9 @@ def update_activity(activity_id: str):
 @token_required
 def delete_activity(activity_id: str):
     """Delete a CSR activity. SITE_USER only if plan's site is allowed. Plan must not be VALIDATED (locked)."""
+    denied = _require_activity_permission("delete")
+    if denied:
+        return denied
     a = CsrActivity.query.get(activity_id)
     if not a:
         return jsonify({"message": "Activité introuvable"}), 404

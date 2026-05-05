@@ -30,7 +30,9 @@ export class ChangeRequestsListComponent implements OnInit {
   statusLabel(s: string): string {
     const keyMap: Record<string, string> = {
       PENDING: 'CHANGE_REQUEST.STATUS_PENDING',
+      SUBMITTED: 'CHANGE_REQUEST.STATUS_PENDING',
       APPROVED: 'CHANGE_REQUEST.STATUS_APPROVED',
+      VALIDATED: 'CHANGE_REQUEST.STATUS_APPROVED',
       REJECTED: 'CHANGE_REQUEST.STATUS_REJECTED',
     };
     const key = keyMap[s];
@@ -47,6 +49,10 @@ export class ChangeRequestsListComponent implements OnInit {
 
   isSyntheticActivityRow(r: ChangeRequestWithDocs): boolean {
     return this.isOffPlanRow(r) || this.isInPlanModRow(r);
+  }
+
+  isPlanValidationRow(r: ChangeRequestWithDocs): boolean {
+    return r.pending_item_type === 'PLAN_VALIDATION';
   }
 
   /** Plan detail route id (plan UUID), not activity id. */

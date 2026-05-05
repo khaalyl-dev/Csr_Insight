@@ -47,12 +47,6 @@
             <span class="text-base leading-none font-medium" aria-hidden="true">+</span>
             {{ 'PLAN_DETAIL.ADD_ACTIVITY' | translate }}
           </button>
-          <button *ngIf="canAddOffPlan()"
-            type="button" (click)="openOffPlanSidebar()"
-            class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-900 hover:opacity-90 active:opacity-95 shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-900 focus:ring-offset-2">
-            <span class="text-base leading-none font-medium" aria-hidden="true">+</span>
-            {{ 'PLAN_DETAIL.ADD_OFF_PLAN_ACTIVITY' | translate }}
-          </button>
         </div>
       </div>
       <div *ngIf="plan()!.status === 'REJECTED' && plan()!.rejected_comment" class="mt-4 p-4 bg-red-50 rounded-xl text-red-700 text-sm space-y-1">
@@ -224,7 +218,7 @@
 
       <div *ngIf="canEditActivity(activityMenuId()!) || canShowSubmitDataForActivity(activityMenuId())" class="border-t border-gray-100 my-1"></div>
 
-      <button *ngIf="canEditActivity(activityMenuId()!)" (click)="deleteActivity(activityMenuId()!)"
+      <button *ngIf="canDeleteActivity(activityMenuId()!)" (click)="deleteActivity(activityMenuId()!)"
         class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
         <i class="fas fa-trash w-4 text-center"></i>
         Supprimer
@@ -274,7 +268,7 @@
         <table *ngIf="isPlanPlanned" class="w-full text-sm min-w-[1590px] border-collapse [&_th]:align-top [&_td]:align-top">
           <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
-              <th class="p-2 pl-3 text-left min-w-[3.25rem] max-w-[4.75rem] w-16 whitespace-nowrap">N°</th>
+              <th class="p-2 pl-3 text-left min-w-[5rem] w-24 whitespace-nowrap">N°</th>
               <th class="p-3 text-center whitespace-nowrap min-w-[9rem]">{{ 'PLAN_DETAIL.REALIZATION_COL' | translate }}</th>
               <th class="p-3 text-left whitespace-nowrap min-w-[5rem]">{{ 'PLAN_DETAIL.REGION' | translate }}</th>
               <th class="p-3 text-left whitespace-nowrap min-w-[5rem]">{{ 'PLAN_DETAIL.COUNTRY' | translate }}</th>
@@ -306,7 +300,7 @@
                 'hover:bg-gray-100': !offPlanAwaitingValidation(a) && !offPlanRejected(a)
               }"
               [attr.title]="activityRowTooltip(a) || null">
-              <td class="p-2 pl-3 font-medium min-w-[3.25rem] max-w-[4.75rem] w-16 whitespace-nowrap text-[13px] tabular-nums">
+              <td class="p-2 pl-3 font-medium min-w-[5rem] w-24 whitespace-nowrap text-[13px] tabular-nums">
                 {{ a.activity_number }}
               </td>
               <td class="p-3 text-center align-middle min-w-[9rem]" (click)="$event.stopPropagation()">
@@ -371,7 +365,7 @@
         <table *ngIf="!isPlanPlanned" class="w-full text-sm min-w-[2550px] border-collapse [&_th]:align-top [&_td]:align-top">
           <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
-              <th class="p-2 pl-3 text-left min-w-[3.25rem] max-w-[4.75rem] w-16 whitespace-nowrap">N°</th>
+              <th class="p-2 pl-3 text-left min-w-[5rem] w-24 whitespace-nowrap">N°</th>
               <th class="p-3 text-center whitespace-nowrap min-w-[9rem]">{{ 'PLAN_DETAIL.REALIZATION_COL' | translate }}</th>
               <th class="p-3 text-left whitespace-nowrap min-w-[5rem]">{{ 'PLAN_DETAIL.REGION' | translate }}</th>
               <th class="p-3 text-left whitespace-nowrap min-w-[5rem]">{{ 'PLAN_DETAIL.COUNTRY' | translate }}</th>
@@ -410,7 +404,7 @@
                 'hover:bg-gray-100': !offPlanAwaitingValidation(a) && !offPlanRejected(a)
               }"
               [attr.title]="activityRowTooltip(a) || null">
-              <td class="p-2 pl-3 font-medium min-w-[3.25rem] max-w-[4.75rem] w-16 whitespace-nowrap text-[13px] tabular-nums">
+              <td class="p-2 pl-3 font-medium min-w-[5rem] w-24 whitespace-nowrap text-[13px] tabular-nums">
                 {{ a.activity_number }}
               </td>
               <td class="p-3 text-center align-middle min-w-[9rem]" (click)="$event.stopPropagation()">

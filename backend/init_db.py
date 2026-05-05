@@ -9,15 +9,16 @@ What it does:
 1. Drops all existing tables
 2. Creates all tables (users, sites, categories, etc.)
 2. Adds default CSR categories (Environment, Social, Gouvernance, etc.)
-3. Adds sample users (admin@test.com, user@test.com, john@example.com, user@level0.com, user@level1.com)
+3. Adds sample users (admin@test.com, user@test.com, john@example.com, user@level0.com, user@level1.com, user@level2.com, user@level3.com)
 4. Adds sample sites (Tianjin, Durrango, etc.)
-5. Assigns sites to users with validation grades (level_0, level_1, level_2)
+5. Assigns sites to users with validation grades (level_0, level_1, level_2, level_3)
 """
-from datetime import datetime
+from datetime import datetime, UTC
 from sqlalchemy import text
 
 from app import create_app
 from core.db import db
+from core.permissions import ALLOWED_PERMISSION_KEYS
 from models import User, Site, UserSite, Category
 
 
@@ -59,6 +60,8 @@ def init_db():
             {"email": "john@example.com", "password": "john123", "role": "SITE_USER", "first_name": "John", "last_name": "Doe"},
             {"email": "user@level0.com", "password": "password123", "role": "SITE_USER", "first_name": "Level", "last_name": "Zero"},
             {"email": "user@level1.com", "password": "password123", "role": "SITE_USER", "first_name": "Level", "last_name": "One"},
+            {"email": "user@level2.com", "password": "password123", "role": "SITE_USER", "first_name": "Level", "last_name": "Two"},
+            {"email": "user@level3.com", "password": "password123", "role": "SITE_USER", "first_name": "Level", "last_name": "Three"},
         ]
         added = 0
         for u in sample_users:
@@ -71,9 +74,28 @@ def init_db():
                 first_name=u["first_name"],
                 last_name=u["last_name"],
             )
+            if u["role"] == "CORPORATE_USER" and u["email"] == "admin@test.com":
+                user.is_corporate_global = True
+            # Seed explicit full permissions for corporate users in user_permissions table.
+            if u["role"] == "CORPORATE_USER":
+                user.set_permissions({"keys": sorted(ALLOWED_PERMISSION_KEYS)})
             db.session.add(user)
             added += 1
         db.session.commit()
+
+        # Ensure existing corporate users also have explicit default permissions seeded.
+        corporate_users = User.query.filter_by(role="CORPORATE_USER").all()
+        updated_permissions = 0
+        for cu in corporate_users:
+            current = cu.get_permissions() or {}
+            keys = current.get("keys") if isinstance(current, dict) else None
+            if not keys:
+                cu.set_permissions({"keys": sorted(ALLOWED_PERMISSION_KEYS)})
+                updated_permissions += 1
+        if updated_permissions:
+            db.session.commit()
+            print(f"✓ Seeded default permissions for {updated_permissions} corporate user(s)")
+
         if added:
             print(f"✓ Added {added} user(s)")
         else:
@@ -136,13 +158,13 @@ def init_db():
                         is_active=True,
                         grade="level_1",
                         granted_by=admin_user.id if admin_user else None,
-                        granted_at=datetime.utcnow(),
+                        granted_at=datetime.now(UTC),
                     )
                     db.session.add(us)
                 else:
                     existing.grade = "level_1"
 
-        # Assign admin (corporate) to first site with level_2 for validation reference
+        # Assign admin (corporate) to first site with level_3 for validation reference
         if admin_user:
             first_site = Site.query.order_by(Site.code).first()
             if first_site:
@@ -152,13 +174,13 @@ def init_db():
                         user_id=admin_user.id,
                         site_id=first_site.id,
                         is_active=True,
-                        grade="level_2",
+                        grade="level_3",
                         granted_by=admin_user.id,
-                        granted_at=datetime.utcnow(),
+                        granted_at=datetime.now(UTC),
                     )
                     db.session.add(us)
                 else:
-                    admin_us.grade = "level_2"
+                    admin_us.grade = "level_3"
 
         # Assign dedicated test users to the same site with different levels
         first_site = Site.query.order_by(Site.code).first()
@@ -166,6 +188,8 @@ def init_db():
             level_test_users = [
                 ("user@level0.com", "level_0"),
                 ("user@level1.com", "level_1"),
+                ("user@level2.com", "level_2"),
+                ("user@level3.com", "level_3"),
             ]
             for email, grade in level_test_users:
                 u = User.query.filter_by(email=email).first()
@@ -179,14 +203,14 @@ def init_db():
                         is_active=True,
                         grade=grade,
                         granted_by=admin_user.id if admin_user else None,
-                        granted_at=datetime.utcnow(),
+                        granted_at=datetime.now(UTC),
                     )
                     db.session.add(us)
                 else:
                     existing.grade = grade
 
         db.session.commit()
-        print("✓ Site access assigned (level_0/level_1 for test users, level_1 for site users, level_2 for admin)")
+        print("✓ Site access assigned (level_0..level_3 for test users, level_1 for site users, level_3 for admin)")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import { Routes } from '@angular/router';
 import { Login } from '@features/user-management/login/login';
 import { Dashboard } from '@features/dashboard-analytics/dashboard/dashboard';
 import { MainLayout } from '@shared/layouts/main-layout/main-layout';
-import { authGuard, roleGuard } from '@core/guards/auth.guard';
+import { authGuard, roleGuard, permissionGuard, validatorLevelGuard } from '@core/guards/auth.guard';
 import { AnnualPlansComponent } from '@features/csr-plan-management/annual-plans/annual-plans';
 import { SitesListComponent } from '@features/site-management/sites-list/sites-list';
 import { UsersListComponent } from '@features/user-management/users-list/users-list';
@@ -43,31 +43,31 @@ export const routes: Routes = [
       { path: 'dashboard', component: Dashboard },
       { path: 'dashboard/corporate', component: Dashboard, canActivate: [roleGuard(['corporate'])] },
       { path: 'dashboard/site', component: Dashboard, canActivate: [roleGuard(['site'])] },
-      { path: 'csr-plans', component: AnnualPlansComponent },
-      { path: 'csr-plans/:id', component: PlanDetailComponent },
+      { path: 'csr-plans', component: AnnualPlansComponent, canActivate: [permissionGuard(['plan.read'])] },
+      { path: 'csr-plans/:id', component: PlanDetailComponent, canActivate: [permissionGuard(['plan.read'])] },
       { path: 'csr-plans/:id/edit', component: PlanEditComponent },
-      { path: 'annual-plans/validation', component: PlanValidationComponent },
-      { path: 'planned-activities', component: PlannedActivitiesListComponent },
+      { path: 'annual-plans/validation', component: PlanValidationComponent, canActivate: [validatorLevelGuard, permissionGuard(['plan.validate', 'activity.validate'])] },
+      { path: 'planned-activities', component: PlannedActivitiesListComponent, canActivate: [permissionGuard(['activity.read'])] },
       { path: 'planned-activity/:id/edit', component: PlannedActivityEditComponent },
-      { path: 'planned-activity/:id', component: PlannedActivityDetailComponent },
-      { path: 'realized-csr', component: RealizedListComponent },
+      { path: 'planned-activity/:id', component: PlannedActivityDetailComponent, canActivate: [permissionGuard(['activity.read'])] },
+      { path: 'realized-csr', component: RealizedListComponent, canActivate: [permissionGuard(['realized_activity.read'])] },
       { path: 'realized-csr/:id/edit', component: RealizedEditComponent },
       { path: 'realized-csr/:id', component: RealizedDetailComponent },
-      { path: 'sites', component: SitesListComponent, canActivate: [roleGuard(['corporate'])] },
-      { path: 'categories', component: CategoriesListComponent, canActivate: [roleGuard(['corporate'])] },
+      { path: 'sites', component: SitesListComponent, canActivate: [roleGuard(['corporate']), permissionGuard(['site.read'])] },
+      { path: 'categories', component: CategoriesListComponent, canActivate: [roleGuard(['corporate']), permissionGuard(['category.read'])] },
       { path: 'sites/create', component: SiteFormComponent, canActivate: [roleGuard(['corporate'])] },
       { path: 'sites/edit/:id', component: EditSiteComponent, canActivate: [roleGuard(['corporate'])] },
-      { path: 'admin/users', component: UsersListComponent, canActivate: [roleGuard(['corporate'])] },
-      { path: 'admin/users/:id', component: UserDetailComponent, canActivate: [roleGuard(['corporate'])] },
+      { path: 'admin/users', component: UsersListComponent, canActivate: [roleGuard(['corporate']), permissionGuard(['user.read'])] },
+      { path: 'admin/users/:id', component: UserDetailComponent, canActivate: [roleGuard(['corporate']), permissionGuard(['user.read'])] },
       { path: 'account/profile', component: ProfileSettingsComponent },
       {path: 'sites/:id/users', component: SiteUsersComponent},
-      { path: 'documents', component: DocumentsListComponent },
-      { path: 'changes', component: ChangeRequestsListComponent },
-      { path: 'changes/create', component: ChangeRequestCreateComponent },
-      { path: 'changes/pending', component: ChangeRequestsPendingComponent, canActivate: [roleGuard(['site', 'corporate'])] },
-      { path: 'changes/history', component: ChangeRequestsHistoryComponent, canActivate: [roleGuard(['corporate'])] },
+      { path: 'documents', component: DocumentsListComponent, canActivate: [permissionGuard(['document.read'])] },
+      { path: 'changes', component: ChangeRequestsListComponent, canActivate: [permissionGuard(['change_request.read'])] },
+      { path: 'changes/create', component: ChangeRequestCreateComponent, canActivate: [permissionGuard(['change_request.create'])] },
+      { path: 'changes/pending', component: ChangeRequestsPendingComponent, canActivate: [roleGuard(['site', 'corporate']), validatorLevelGuard, permissionGuard(['change_request.review'])] },
+      { path: 'changes/history', component: ChangeRequestsHistoryComponent, canActivate: [roleGuard(['corporate']), permissionGuard(['change_request.history'])] },
       { path: 'changes/:id', component: ChangeRequestDetailComponent },
-      { path: 'admin/audit', component: AuditListComponent, canActivate: [roleGuard(['corporate'])] },
+      { path: 'admin/audit', component: AuditListComponent, canActivate: [roleGuard(['corporate']), permissionGuard(['audit_log.read'])] },
 
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

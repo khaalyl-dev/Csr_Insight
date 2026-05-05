@@ -150,7 +150,6 @@ export class RealizedEditComponent implements OnInit {
     const realizedPayload = {
       realized_budget: raw.realized_budget != null && raw.realized_budget !== '' ? Number(raw.realized_budget) : null,
       participants: raw.participants != null && raw.participants !== '' ? Number(raw.participants) : null,
-      total_hc: raw.total_hc != null && raw.total_hc !== '' ? Number(raw.total_hc) : null,
       action_impact_actual: raw.action_impact_actual != null && raw.action_impact_actual !== '' ? Number(raw.action_impact_actual) : null,
       action_impact_unit: raw.action_impact_unit?.trim() || null,
       realization_date: raw.realization_date?.trim() ? raw.realization_date.substring(0, 10) : null,

@@ -25,6 +25,8 @@ export interface CreateCsrActivityPayload {
   draft?: boolean;
   category_id?: string;
   activity_number?: string;
+  organization?: string | null;
+  contract_type?: string | null;
   description?: string | null;
   collaboration_nature?: string | null;
   periodicity?: string | null;
@@ -32,11 +34,14 @@ export interface CreateCsrActivityPayload {
   action_impact_target?: number | null;
   action_impact_unit?: string | null;
   action_impact_duration?: string | null;
+  employees_planned?: number | null;
+  planned_objectives?: string[];
   start_year?: number | null;
   edition?: number | null;
+  edition_year?: number | null;
   organizer?: string | null;
   external_partner?: string | null;
-  number_external_partners?: number | null;
+  external_partners?: string[];
 }
 
 /** Off-plan create: activity + realized row; year/month optional (backend defaults to plan year + current month). */
@@ -47,15 +52,23 @@ export interface OffPlanRealizationPayload {
   include_planned_details?: boolean;
   activity_number: string;
   title: string;
+  organization?: string | null;
+  contract_type?: string | null;
   description?: string | null;
 
   category_id: string;
   collaboration_nature?: string | null;
-  planned_budget?: number | null;
+  consumed_budget?: number | null;
   action_impact_target?: number | null;
+  action_impact_unit?: string | null;
+  action_impact_duration?: string | null;
+  employees_planned?: number | null;
+  planned_objectives?: string[];
   start_year?: number | null;
   edition?: number | null;
+  edition_year?: number | null;
   external_partner?: string | null;
+  external_partners?: string[];
 
   /** Defaults on server if omitted. */
   year?: number;
@@ -63,15 +76,17 @@ export interface OffPlanRealizationPayload {
 
   realized_budget?: number | null;
   participants?: number | null;
+  employees_actual?: number | null;
   total_hc?: number | null;
-  percentage_employees?: number | null;
   action_impact_actual?: number | null;
   action_impact_unit_realized?: string | null;
   organizer?: string | null;
-  number_external_partners?: number | null;
   /** ISO date string YYYY-MM-DD for realized_csr.realization_date */
   realization_date?: string | null;
   comment?: string | null;
+  completed_objectives?: string[];
+  corporate_image_improved?: boolean | null;
+  incidents_number?: number | null;
   contact_department?: string | null;
   contact_name?: string | null;
   contact_email?: string | null;
@@ -89,10 +104,12 @@ export class CsrActivitiesApi {
   constructor(private http: HttpClient) {}
 
   /** List with optional plan_id and year. Backend returns site_name, year, category_name for list view. */
-  list(params?: { plan_id?: string; year?: number }): Observable<PlannedActivityListItem[]> {
+  list(params?: { plan_id?: string; year?: number; exclude_realized?: boolean }): Observable<PlannedActivityListItem[]> {
     let httpParams = new HttpParams();
     if (params?.plan_id) httpParams = httpParams.set('plan_id', params.plan_id);
     if (params?.year != null) httpParams = httpParams.set('year', params.year.toString());
+    if (params?.exclude_realized === true) httpParams = httpParams.set('exclude_realized', '1');
+    if (params?.exclude_realized === false) httpParams = httpParams.set('exclude_realized', '0');
     return this.http.get<PlannedActivityListItem[]>(`${this.apiUrl}/csr-activities`, { params: httpParams });
   }
 
@@ -156,6 +173,8 @@ export interface UpdateCsrActivityPayload {
   category_id: string;
   activity_number: string;
   title: string;
+  organization?: string | null;
+  contract_type?: string | null;
   description?: string | null;
   collaboration_nature?: string | null;
   periodicity?: string | null;
@@ -163,9 +182,11 @@ export interface UpdateCsrActivityPayload {
   action_impact_target?: number | null;
   action_impact_unit?: string | null;
   action_impact_duration?: string | null;
+  employees_planned?: number | null;
+  planned_objectives?: string[];
   organizer?: string | null;
   edition?: number | null;
+  edition_year?: number | null;
   start_year?: number | null;
   external_partner?: string | null;
-  number_external_partners?: number | null;
 }

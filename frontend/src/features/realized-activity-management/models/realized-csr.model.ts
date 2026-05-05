@@ -19,7 +19,6 @@ export interface RealizedCsr {
   action_impact_duration?: string | null;
   organizer?: string | null;
   external_partner_name?: string | null;
-  number_external_partners?: number | null;
   plan_id?: string | null;
   site_name?: string | null;
   /** When false, plan is locked; user must submit a change request to edit/delete this realization. */
@@ -27,13 +26,20 @@ export interface RealizedCsr {
   plan_status?: string | null;
   realized_budget: number | null;
   participants: number | null;
+  employees_actual?: number | null;
   total_hc: number | null;
   action_impact_actual: number | null;
   action_impact_unit: string | null;
+  actual_action_impact?: number | null;
+  corporate_image_improved?: boolean | null;
+  incidents_number?: number | null;
+  planned_objectives?: string[];
+  completed_objectives?: string[];
   realization_date: string | null;
   comment: string | null;
   contact_name: string | null;
   contact_email: string | null;
+  contact_department?: string | null;
   created_by: string | null;
   created_at: string | null;
   updated_at?: string | null;
@@ -49,11 +55,16 @@ export interface CreateRealizedCsrPayload {
   activity_id: string;
   realized_budget?: number | null;
   participants?: number | null;
+  employees_actual?: number | null;
   total_hc?: number | null;
   action_impact_actual?: number | null;
   action_impact_unit?: string | null;
   realization_date?: string | null;
   comment?: string | null;
+  completed_objectives?: string[];
+  corporate_image_improved?: boolean | null;
+  incidents_number?: number | null;
   contact_name?: string | null;
   contact_email?: string | null;
+  contact_department?: string | null;
 }

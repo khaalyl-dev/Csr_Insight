@@ -6,17 +6,24 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export type AccessAction = 'create' | 'read' | 'update' | 'delete' | 'approve' | 'reject';
+export type AccessResource = 'plan' | 'activity';
+export type UserAccessMatrix = Record<AccessResource, Record<AccessAction, boolean>>;
+export type UserPermissionPayload = UserAccessMatrix | { keys: string[] } | null;
+
 /** User base model from backend */
 export interface User {
   id: string;
   first_name: string;
   last_name: string;
   email: string;
+  avatar_url?: string | null;
   role: string;
   is_active: boolean;
   created_at: string | null;
   /** level_0 | level_1 from site assignments (SITE_USER only) */
   level?: string | null;
+  permissions?: UserPermissionPayload;
 }
 
 /** User with site assignments (from GET /api/users/:id) */
@@ -30,6 +37,7 @@ export interface UserSiteAccess {
   site_id: string;
   site_name: string;
   grade?: string | null;
+  access_types?: string[];
   granted_at: string | null;
 }
 
@@ -39,13 +47,20 @@ export interface CreateUserPayload {
   password: string;
   first_name: string;
   last_name: string;
+  role?: 'SITE_USER' | 'CORPORATE_USER';
+  permissions?: UserPermissionPayload;
 }
 
 /** Payload for POST /api/users/:id/sites - replaces site assignment */
 export interface AssignSitesPayload {
   site_ids: string[];
-  /** Optional: level_0 | level_1 applied to all assigned sites */
-  default_grade?: 'level_0' | 'level_1' | null;
+  /** Optional: level_0 | level_1 | level_2 | level_3 applied to all assigned sites */
+  default_grade?: 'level_0' | 'level_1' | 'level_2' | 'level_3' | null;
+  site_accesses?: Array<{
+    site_id: string;
+    grade?: 'level_0' | 'level_1' | 'level_2' | 'level_3' | null;
+    access_types?: string[];
+  }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -88,4 +103,5 @@ export class UsersApi {
   resetPassword(userId: string): Observable<{ password: string; message: string }> {
     return this.http.post<{ password: string; message: string }>(`${this.apiUrl}/users/${userId}/reset-password`, {});
   }
+
 }

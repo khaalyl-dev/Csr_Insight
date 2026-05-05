@@ -71,6 +71,23 @@
             </svg>
           </div>
         </div>
+        <div class="relative w-[180px] flex-shrink-0">
+          <select
+            class="pl-3 pr-9 py-2.5 w-full bg-gray-100 border-0 rounded-xl text-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-all appearance-none cursor-pointer hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            [disabled]="exporting() || filteredList().length === 0"
+            (change)="exportRows($any($event.target).value); $any($event.target).value='';">
+            <option value="">{{ 'PLANNED_ACTIVITIES.EXPORT' | translate }}</option>
+            <option value="xlsx">{{ 'PLANNED_ACTIVITIES.EXPORT_XLSX' | translate }}</option>
+            <option value="csv">{{ 'PLANNED_ACTIVITIES.EXPORT_CSV' | translate }}</option>
+            <option value="doc">{{ 'PLANNED_ACTIVITIES.EXPORT_DOC' | translate }}</option>
+            <option value="pdf">{{ 'PLANNED_ACTIVITIES.EXPORT_PDF' | translate }}</option>
+          </select>
+          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
     <div *ngIf="loading()" class="p-8 text-center text-gray-500">{{ 'PLANNED_ACTIVITIES.LOADING' | translate }}</div>
@@ -152,7 +169,7 @@
           <td class="p-4 align-middle text-gray-700">{{ a.start_year != null ? a.start_year : '–' }}</td>
           <td class="p-4 align-middle text-gray-700">{{ a.edition != null ? a.edition : '–' }}</td>
           <td class="p-4 align-middle text-gray-700">{{ a.organizer ?? '–' }}</td>
-          <td class="p-4 align-middle text-gray-700">{{ a.status ?? '–' }}</td>
+          <td class="p-4 align-middle text-gray-700">{{ activityDisplayStatus(a) }}</td>
           <td class="p-4 align-middle text-center" (click)="$event.stopPropagation()">
             <a [routerLink]="['/csr-plans', a.plan_id]" class="text-brand-700 hover:text-brand-800 font-medium text-sm">{{ 'PLAN_DETAIL.VIEW_PLAN' | translate }}</a>
           </td>
@@ -229,19 +246,19 @@
     <i class="fas fa-lock-open text-brand-700 w-4 text-center"></i>
     {{ 'CHANGE_REQUEST.REQUEST_ACTIVITY_CHANGE' | translate }}
   </button>
-  <div *ngIf="canRequestChange(activeMenuActivity!) && (activeMenuActivity!.plan_editable !== false || (activeMenuActivity!.plan_id && !isPastPlanYear(activeMenuActivity!)))" class="border-t border-gray-100 my-1"></div>
-  <button *ngIf="activeMenuActivity!.plan_editable !== false" (click)="goToEdit(activeMenuActivity!)"
+  <div *ngIf="canRequestChange(activeMenuActivity!) && (canManageActivity(activeMenuActivity!) || canAddRealization(activeMenuActivity!))" class="border-t border-gray-100 my-1"></div>
+  <button *ngIf="canManageActivity(activeMenuActivity!)" (click)="goToEdit(activeMenuActivity!)"
     class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
     <i class="fas fa-pen text-green-500 w-4 text-center"></i>
     {{ 'COMMON.EDIT' | translate }}
   </button>
-  <button *ngIf="activeMenuActivity!.plan_id && !isPastPlanYear(activeMenuActivity!)" (click)="openAddRealization(activeMenuActivity!)"
+  <button *ngIf="canAddRealization(activeMenuActivity!)" (click)="openAddRealization(activeMenuActivity!)"
     class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
     <i class="fas fa-clipboard-check text-amber-600 w-4 text-center"></i>
     {{ 'PLANNED_ACTIVITIES.ADD_REALIZATION' | translate }}
   </button>
-  <div *ngIf="activeMenuActivity!.plan_editable !== false" class="border-t border-gray-100 my-1"></div>
-  <button *ngIf="activeMenuActivity!.plan_editable !== false" (click)="deleteFromMenu(activeMenuActivity!)"
+  <div *ngIf="canManageActivity(activeMenuActivity!)" class="border-t border-gray-100 my-1"></div>
+  <button *ngIf="canManageActivity(activeMenuActivity!)" (click)="deleteFromMenu(activeMenuActivity!)"
     class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
     <i class="fas fa-trash w-4 text-center"></i>
     {{ 'COMMON.DELETE' | translate }}

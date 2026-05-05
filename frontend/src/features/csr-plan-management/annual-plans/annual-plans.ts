@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthStore } from '@core/services/auth-store';
-import { CsrPlansApi } from '../api/csr-plans-api';
+import { CsrPlansApi, CsrPlanDetail } from '../api/csr-plans-api';
 import type { ImportConflict, ImportPreviewPlan, ImportPreviewRow } from '../api/csr-plans-api';
 import type { CsrPlan } from '../models/csr-plan.model';
 import { I18nService } from '@core/services/i18n.service';
@@ -16,7 +16,7 @@ import {
   scheduleFixedContextMenuPosition,
 } from '@core/utils/fixed-context-menu';
 
-export type PlanWithMode = ImportPreviewPlan & { validation_mode: '101' | '111' };
+export type PlanWithMode = ImportPreviewPlan & { validation_mode: '101' | '111' | '211' | '311' };
 
 type ImportDuplicateGroup = {
   kind: 'excel' | 'db';
@@ -55,6 +55,16 @@ export class AnnualPlansComponent implements OnInit {
   private router = inject(Router);
   private i18n = inject(I18nService);
   private cdr = inject(ChangeDetectorRef);
+  private readonly exportColumns: Array<{ key: string; label: string }> = [
+    { key: 'site_name', label: 'Site' },
+    { key: 'country', label: 'Country' },
+    { key: 'year', label: 'Year' },
+    { key: 'status', label: 'Status' },
+    { key: 'validation_mode', label: 'Mode' },
+    { key: 'activities_count', label: 'Activities' },
+    { key: 'allocated_budget', label: 'Allocated budget (EUR)' },
+    { key: 'created_at', label: 'Created at' },
+  ];
 
   // ── Menu 3 points (like document action) ─────────────────────────────────
   activeMenuPlan: CsrPlan | null = null;
@@ -70,6 +80,18 @@ export class AnnualPlansComponent implements OnInit {
   confirmMessage = signal<string>('');
   confirmButtonLabel = signal<string>('');
   private confirmAction: (() => void) | null = null;
+  menuActionLoading = signal<string | null>(null);
+
+  // Same validation popups as annual-plans/validation screen
+  approveConfirmOpen = signal(false);
+  planToApprove = signal<CsrPlan | null>(null);
+  showRejectModal = signal(false);
+  planToReject = signal<CsrPlan | null>(null);
+  planDetailForReject = signal<CsrPlanDetail | null>(null);
+  rejectComment = signal('');
+  rejectActivityIds = signal<string[]>([]);
+  rejectModalError = signal('');
+  rejectModalLoading = signal(false);
 
   openConfirm(options: { title?: string; message: string; confirmLabel?: string; onConfirm: () => void }): void {
     this.confirmTitle.set(options.title ?? this.i18n.t('COMMON.CONFIRM'));
@@ -97,6 +119,129 @@ export class AnnualPlansComponent implements OnInit {
     else if (value === 'delete') this.bulkDelete();
   }
 
+  exportPlans(format: 'csv' | 'xlsx' | 'doc' | 'pdf'): void {
+    const rows = this.buildExportRows();
+    if (!rows.length || this.exporting()) return;
+    this.exporting.set(true);
+    try {
+      if (format === 'csv') this.exportAsCsv(rows);
+      else if (format === 'xlsx') this.exportAsXlsx(rows);
+      else if (format === 'doc') this.exportAsDoc(rows);
+      else this.exportAsPdf(rows);
+    } finally {
+      this.exporting.set(false);
+    }
+  }
+
+  private buildExportRows(): Array<Record<string, string | number>> {
+    const sourcePlans = this.selectedPlans().length ? this.selectedPlans() : this.filteredPlans();
+    return sourcePlans.map((plan) => ({
+      site_name: plan.site_name ?? plan.site_code ?? plan.site_id ?? '',
+      country: plan.site_country ?? '',
+      year: plan.year ?? '',
+      status: this.getStatusLabel(plan),
+      validation_mode: this.validationModeLabel(plan.validation_mode),
+      activities_count: plan.activities_count ?? 0,
+      allocated_budget: this.formatMoney(plan.allocated_budget),
+      created_at: plan.created_at ? new Date(plan.created_at).toLocaleDateString() : '',
+    }));
+  }
+
+  private formatMoney(amount: number | null | undefined): string {
+    if (amount == null || Number.isNaN(Number(amount))) return '0';
+    return Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  private exportAsCsv(rows: Array<Record<string, string | number>>): void {
+    const headers = this.exportColumns.map((c) => c.label);
+    const body = rows.map((row) =>
+      this.exportColumns.map((c) => `"${String(row[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csv = [headers.join(','), ...body].join('\n');
+    this.downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), this.exportFilename('csv'));
+  }
+
+  private exportAsXlsx(rows: Array<Record<string, string | number>>): void {
+    import('xlsx').then((XLSX) => {
+      const normalized = rows.map((row) => {
+        const out: Record<string, string | number> = {};
+        this.exportColumns.forEach((c) => {
+          out[c.label] = row[c.key] ?? '';
+        });
+        return out;
+      });
+      const worksheet = XLSX.utils.json_to_sheet(normalized);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Annual Plans');
+      XLSX.writeFile(workbook, this.exportFilename('xlsx'));
+    });
+  }
+
+  private exportAsDoc(rows: Array<Record<string, string | number>>): void {
+    const headerHtml = this.exportColumns.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
+    const bodyHtml = rows
+      .map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`)
+      .join('');
+    const exportedAt = this.escapeHtml(this.exportTimestamp());
+    const exportedBy = this.escapeHtml(this.exportUserLabel());
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Annual Plans</title></head><body><h2>Annual plans export</h2><p><strong>Generated at:</strong> ${exportedAt}<br><strong>Generated by:</strong> ${exportedBy}</p><table border="1" cellspacing="0" cellpadding="6"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
+    this.downloadBlob(new Blob([html], { type: 'application/msword' }), this.exportFilename('doc'));
+  }
+
+  private exportAsPdf(rows: Array<Record<string, string | number>>): void {
+    const headerHtml = this.exportColumns.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
+    const bodyHtml = rows
+      .map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`)
+      .join('');
+    const title = this.exportFilename('pdf');
+    const exportedAt = this.escapeHtml(this.exportTimestamp());
+    const exportedBy = this.escapeHtml(this.exportUserLabel());
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}h1{font-size:18px;margin:0 0 12px}.meta{font-size:12px;color:#374151;margin:0 0 12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #d1d5db;padding:6px;text-align:left}th{background:#f3f4f6}</style></head><body><h1>Annual plans export</h1><p class="meta"><strong>Generated at:</strong> ${exportedAt}<br><strong>Generated by:</strong> ${exportedBy}</p><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  private exportFilename(ext: 'csv' | 'xlsx' | 'doc' | 'pdf'): string {
+    const stamp = new Date().toISOString().slice(0, 10);
+    return `annual_plans_${stamp}.${ext}`;
+  }
+
+  private exportTimestamp(): string {
+    return new Date().toLocaleString();
+  }
+
+  private exportUserLabel(): string {
+    const u = this.user();
+    if (!u) return 'Unknown user';
+    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim();
+    if (name && u.email) return `${name} (${u.email})`;
+    if (name) return name;
+    return u.email ?? 'Unknown user';
+  }
+
+  private downloadBlob(blob: Blob, filename: string): void {
+    const link = document.createElement('a');
+    const href = URL.createObjectURL(blob);
+    link.href = href;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   isAuthenticated = this.authStore.isAuthenticated;
   user = this.authStore.user;
 
@@ -104,8 +249,29 @@ export class AnnualPlansComponent implements OnInit {
     return this.user()?.role === 'corporate';
   }
 
+  canSubmitPlans(): boolean {
+    return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('plan.submit');
+  }
+
+  canCreatePlans(): boolean {
+    return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('plan.create');
+  }
+
+  canUpdatePlans(): boolean {
+    return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('plan.update');
+  }
+
+  canDeletePlans(): boolean {
+    return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('plan.delete');
+  }
+
+  canImportPlansFromExcel(): boolean {
+    return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('plan.upload_excel');
+  }
+
   plans = signal<CsrPlan[]>([]);
   loading = signal(true);
+  exporting = signal(false);
   selectedYear = signal<number | null>(null);
   selectedStatus = signal<string>('');
   search = signal<string>('');
@@ -115,11 +281,19 @@ export class AnnualPlansComponent implements OnInit {
   sortColumn = signal<string>('year');
   sortDirection = signal<'asc' | 'desc'>('desc');
 
-  /** True if plan matches the selected status filter (including Validé vs Verrouillé). */
+  /** True if plan matches the selected status filter (validated locked vs unlocked uses dates — not translated labels). */
   planMatchesStatus(plan: CsrPlan, status: string): boolean {
     if (!status) return true;
-    if (status === 'VALIDATED_LOCKED') return plan.status === 'VALIDATED' && this.getStatusLabel(plan) === 'Validé';
-    if (status === 'VALIDATED_OPEN') return plan.status === 'VALIDATED' && this.getStatusLabel(plan) === 'Verrouillé';
+    if (status === 'VALIDATED_LOCKED') {
+      if (plan.status !== 'VALIDATED') return false;
+      const u = plan?.unlock_until;
+      return !(u && new Date(u) > new Date());
+    }
+    if (status === 'VALIDATED_OPEN') {
+      if (plan.status !== 'VALIDATED') return false;
+      const u = plan?.unlock_until;
+      return !!(u && new Date(u) > new Date());
+    }
     return plan.status === status;
   }
 
@@ -133,7 +307,9 @@ export class AnnualPlansComponent implements OnInit {
     const filtered = list.filter(plan => {
       if (planFilter === 'planned' && (plan.year == null || plan.year < currentYear || plan.year > currentYear + 1)) return false;
       if (planFilter === 'realized' && (plan.year == null || plan.year >= currentYear)) return false;
-      return (!year || plan.year === year) &&
+      const planYear = plan.year != null ? Number(plan.year) : NaN;
+      const yearOk = !year || (Number.isFinite(planYear) && planYear === year) || plan.year === year;
+      return yearOk &&
         this.planMatchesStatus(plan, status) &&
         (!q ||
           (plan.site_name ?? '').toLowerCase().includes(q) ||
@@ -165,7 +341,7 @@ export class AnnualPlansComponent implements OnInit {
       const valB = (b as any)[col]?.toString().toLowerCase() ?? '';
       const numA = typeof (a as any)[col] === 'number' ? (a as any)[col] : parseFloat(valA) || 0;
       const numB = typeof (b as any)[col] === 'number' ? (b as any)[col] : parseFloat(valB) || 0;
-      if (col === 'year' || col === 'total_budget' || col === 'total_realized_budget' || col === 'activities_count') {
+      if (col === 'year' || col === 'allocated_budget' || col === 'activities_count') {
         if (numA < numB) return dir === 'asc' ? -1 : 1;
         if (numA > numB) return dir === 'asc' ? 1 : -1;
       } else {
@@ -226,7 +402,7 @@ export class AnnualPlansComponent implements OnInit {
   submittedPlans = computed(() => this.plans().filter(p => p.status === 'SUBMITTED').length);
   approvedPlans = computed(() => this.plans().filter(p => p.status === 'VALIDATED').length);
   totalBudget = computed(() =>
-    this.plans().reduce((sum, p) => sum + (p.total_budget ?? 0), 0)
+    this.plans().reduce((sum, p) => sum + (p.allocated_budget ?? 0), 0)
   );
 
   selectedCount = computed(() => this.selectedPlanIds().size);
@@ -234,10 +410,20 @@ export class AnnualPlansComponent implements OnInit {
     const ids = this.selectedPlanIds();
     return this.filteredPlans().filter(p => ids.has(p.id));
   });
-  canBulkSubmit = computed(() => this.selectedPlans().some(p => p.status === 'DRAFT' || p.status === 'REJECTED'));
-  canBulkDelete = computed(() => this.selectedPlans().some(p => this.isCorporateUser() || p.status === 'DRAFT' || p.status === 'REJECTED'));
-  selectedSubmittableIds = computed(() => this.selectedPlans().filter(p => this.isCorporateUser() || p.status === 'DRAFT' || p.status === 'REJECTED').map(p => p.id));
-  selectedDeletableIds = computed(() => this.selectedPlans().filter(p => this.isCorporateUser() || p.status === 'DRAFT' || p.status === 'REJECTED').map(p => p.id));
+  canBulkSubmit = computed(() => this.canSubmitPlans() && this.selectedPlans().some(p => p.status === 'DRAFT' || p.status === 'REJECTED'));
+  canBulkDelete = computed(() => this.canDeletePlans() && this.selectedPlans().some(p => this.isCorporateUser() || p.status === 'DRAFT' || p.status === 'REJECTED'));
+  selectedSubmittableIds = computed(() => {
+    if (!this.canSubmitPlans()) return [];
+    return this.selectedPlans()
+      .filter(p => this.isCorporateUser() || p.status === 'DRAFT' || p.status === 'REJECTED')
+      .map(p => p.id);
+  });
+  selectedDeletableIds = computed(() => {
+    if (!this.canDeletePlans()) return [];
+    return this.selectedPlans()
+      .filter(p => this.isCorporateUser() || p.status === 'DRAFT' || p.status === 'REJECTED')
+      .map(p => p.id);
+  });
   isAllFilteredSelected = computed(() => {
     const list = this.filteredPlans();
     const ids = this.selectedPlanIds();
@@ -355,6 +541,7 @@ export class AnnualPlansComponent implements OnInit {
   /** True if plan can be submitted for validation (DRAFT/REJECTED or VALIDATED with unlock_until in future). */
   canSubmitFromList(plan: CsrPlan): boolean {
     if (!plan) return false;
+    if (!this.canSubmitPlans()) return false;
     if (plan.status === 'DRAFT') return true;
     if (plan.status === 'REJECTED') return true;
     if (plan.status === 'VALIDATED') {
@@ -367,6 +554,7 @@ export class AnnualPlansComponent implements OnInit {
   /** True if plan can be edited (DRAFT, REJECTED, or VALIDATED with unlock_until in future). */
   isPlanEditable(plan: CsrPlan): boolean {
     if (!plan) return false;
+    if (!this.canUpdatePlans()) return false;
     if (this.isCorporateUser()) return true;
     if (plan.status === 'DRAFT' || plan.status === 'REJECTED') return true;
     if (plan.status === 'VALIDATED') {
@@ -374,6 +562,27 @@ export class AnnualPlansComponent implements OnInit {
       return !!(u && new Date(u) > new Date());
     }
     return false;
+  }
+
+  canOpenRowMenu(plan: CsrPlan): boolean {
+    if (!plan) return false;
+    return !!(
+      this.isPlanEditable(plan) ||
+      this.canSubmitFromList(plan) ||
+      (this.canDeletePlans() && (this.isCorporateUser() || plan.status === 'DRAFT' || plan.status === 'REJECTED')) ||
+      plan.can_approve ||
+      plan.can_reject
+    );
+  }
+
+  canRequestPlanChange(plan: CsrPlan): boolean {
+    if (!plan) return false;
+    return (
+      this.authStore.isCreatorLevel() &&
+      plan.status === 'VALIDATED' &&
+      !this.isPlanEditable(plan) &&
+      !this.isCorporateUser()
+    );
   }
 
   /** Badge CSS class for plan status (for display label). */
@@ -388,7 +597,10 @@ export class AnnualPlansComponent implements OnInit {
   }
 
   validationModeLabel(mode: string): string {
-    return mode === '111' ? 'ALL' : this.i18n.t('ANNUAL_PLANS.MODE.CORPORATE_ONLY');
+    if (mode === '311') return 'Level 3';
+    if (mode === '211') return 'Level 2';
+    if (mode === '111') return 'Level 1';
+    return 'Corporate only';
   }
 
   @HostListener('document:click')
@@ -465,7 +677,104 @@ export class AnnualPlansComponent implements OnInit {
     });
   }
 
+  approveFromMenu(plan: CsrPlan): void {
+    if (!plan?.can_approve) return;
+    this.planToApprove.set(plan);
+    this.approveConfirmOpen.set(true);
+    this.closeMenu();
+  }
+
+  rejectFromMenu(plan: CsrPlan): void {
+    if (!plan?.can_reject) return;
+    this.planToReject.set(plan);
+    this.rejectComment.set('');
+    this.rejectActivityIds.set([]);
+    this.rejectModalError.set('');
+    this.showRejectModal.set(true);
+    this.rejectModalLoading.set(true);
+    this.closeMenu();
+    this.csrPlansApi.get(plan.id).subscribe({
+      next: (detail) => {
+        this.planDetailForReject.set(detail);
+        this.rejectModalLoading.set(false);
+      },
+      error: () => {
+        this.rejectModalLoading.set(false);
+        this.rejectModalError.set(this.i18n.t('PLAN_VALIDATION.DETAIL_LOAD_ERROR'));
+      },
+    });
+  }
+
+  closeApproveConfirm(): void {
+    this.approveConfirmOpen.set(false);
+    this.planToApprove.set(null);
+  }
+
+  confirmApprove(): void {
+    const plan = this.planToApprove();
+    if (!plan?.can_approve) return;
+    this.menuActionLoading.set(plan.id);
+    this.csrPlansApi.approve(plan.id).subscribe({
+      next: () => {
+        this.menuActionLoading.set(null);
+        this.closeApproveConfirm();
+        this.refreshPlans();
+      },
+      error: () => {
+        this.menuActionLoading.set(null);
+      },
+    });
+  }
+
+  closeRejectModal(): void {
+    this.showRejectModal.set(false);
+    this.planToReject.set(null);
+    this.planDetailForReject.set(null);
+    this.rejectComment.set('');
+    this.rejectActivityIds.set([]);
+    this.rejectModalError.set('');
+  }
+
+  toggleRejectActivity(activityId: string): void {
+    const current = this.rejectActivityIds();
+    const idx = current.indexOf(activityId);
+    if (idx === -1) this.rejectActivityIds.set([...current, activityId]);
+    else this.rejectActivityIds.set(current.filter((id) => id !== activityId));
+  }
+
+  isRejectActivitySelected(activityId: string): boolean {
+    return this.rejectActivityIds().includes(activityId);
+  }
+
+  submitReject(): void {
+    const comment = this.rejectComment().trim();
+    if (!comment) {
+      this.rejectModalError.set(this.i18n.t('PLAN_VALIDATION.REJECT_REASON_REQUIRED'));
+      return;
+    }
+    const plan = this.planToReject();
+    if (!plan?.can_reject) return;
+    this.rejectModalError.set('');
+    this.menuActionLoading.set(plan.id);
+    const activityIds = this.rejectActivityIds();
+    this.csrPlansApi.reject(plan.id, {
+      comment,
+      activity_ids: activityIds.length ? activityIds : undefined,
+    }).subscribe({
+      next: () => {
+        this.menuActionLoading.set(null);
+        this.closeRejectModal();
+        this.refreshPlans();
+      },
+      error: (err) => {
+        this.menuActionLoading.set(null);
+        this.rejectModalError.set(err.error?.message || this.i18n.t('COMMON.ERROR'));
+      },
+    });
+  }
+
   deleteFromMenu(plan: CsrPlan): void {
+    if (!this.canDeletePlans()) return;
     if (!this.isCorporateUser() && plan.status !== 'DRAFT' && plan.status !== 'REJECTED') return;
     this.openConfirm({
       title: this.i18n.t('COMMON.CONFIRM'),
@@ -491,7 +800,7 @@ export class AnnualPlansComponent implements OnInit {
     this.loading.set(true);
     this.csrPlansApi.list().subscribe({
       next: (data) => {
-        this.plans.set(data);
+        this.plans.set(Array.isArray(data) ? data : []);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -527,7 +836,10 @@ export class AnnualPlansComponent implements OnInit {
   /** After preview: file to send on confirm, and modal visibility */
   pendingImportFile = signal<File | null>(null);
   showImportModal = signal(false);
-  importSelectedYear = signal<number>(new Date().getFullYear());
+  /** CSR templates are usually loaded for the next plan year; users can change in the modal. */
+  importSelectedYear = signal<number>(new Date().getFullYear() + 1);
+  /** Years found in the file before the server normalizes to the import target year (preview only). */
+  importExcelSourceYears = signal<number[]>([]);
   /** Plans from preview with validation_mode per plan (user can change in modal) */
   importPlansWithModes = signal<PlanWithMode[]>([]);
   /** Editable activity rows from preview */
@@ -647,12 +959,12 @@ export class AnnualPlansComponent implements OnInit {
 
     // Duplicates — same list, same style.
     for (const d of this.importDuplicateGroups()) {
-      const kind = d.kind === 'db'
-      const dupLabel = d.kind === 'db'
-        ? this.i18n.t('ANNUAL_PLANS.MODAL.DUP_ERR_DB_CSR_NUMBER')
-        : this.i18n.t('ANNUAL_PLANS.MODAL.DUP_ERR_EXCEL_CSR_NUMBER');
+      const dupLabel =
+        d.kind === 'db'
+          ? this.i18n.t('ANNUAL_PLANS.MODAL.DUP_ERR_DB_CSR_NUMBER')
+          : this.i18n.t('ANNUAL_PLANS.MODAL.DUP_ERR_EXCEL_CSR_NUMBER');
       out.push({
-        text: `${kind ? (kind + ' : ') : ''}${dupLabel} — ${d.activity_number} — ${d.site} (${d.year}) — ${this.i18n.t('ANNUAL_PLANS.MODAL.DUP_LINES')} ${d.linesText}`,
+        text: `${dupLabel} — ${d.activity_number} — ${d.site} (${d.year}) — ${this.i18n.t('ANNUAL_PLANS.MODAL.DUP_LINES')} ${d.linesText}`,
         firstExcelLine: d.lines?.[0] ?? 2,
       });
     }
@@ -711,10 +1023,10 @@ export class AnnualPlansComponent implements OnInit {
       const r = rows[i];
       const activityNumber = String(r.activity_number ?? r.title ?? '').trim();
       const site = String(r.site ?? '').trim();
-      const year = String(this.importSelectedYear()).trim();
-      if (!activityNumber || !site || !year) continue;
+      const planYear = String(this.importSelectedYear()).trim();
+      if (!activityNumber || !site || !planYear) continue;
 
-      const k = `${site.toLowerCase()}|${year}|${activityNumber.toLowerCase()}`;
+      const k = `${site.toLowerCase()}|${planYear}|${activityNumber.toLowerCase()}`;
       const list = map.get(k) ?? [];
       list.push(i);
       map.set(k, list);
@@ -749,9 +1061,9 @@ export class AnnualPlansComponent implements OnInit {
       const r = rows[i];
       const activityNumber = String(r.activity_number ?? r.title ?? '').trim();
       const site = String(r.site ?? '').trim();
-      const year = String(this.importSelectedYear()).trim();
-      if (!activityNumber || !site || !year) continue;
-      const k = `${site.toLowerCase()}|${year}|${activityNumber.toLowerCase()}`;
+      const planYear = String(this.importSelectedYear()).trim();
+      if (!activityNumber || !site || !planYear) continue;
+      const k = `${site.toLowerCase()}|${planYear}|${activityNumber.toLowerCase()}`;
       const list = excelMap.get(k) ?? [];
       list.push(i);
       excelMap.set(k, list);
@@ -761,7 +1073,7 @@ export class AnnualPlansComponent implements OnInit {
       const parts = k.split('|');
       const site = parts[0] ?? '';
       const year = parts[1] ?? '';
-      const activity_number = parts.slice(2).join('|') ?? '';
+      const activity_number = parts.length > 2 ? parts.slice(2).join('|') : '';
       const existing = groups.get(k);
       if (existing) {
         existing.count = list.length;
@@ -831,7 +1143,18 @@ export class AnnualPlansComponent implements OnInit {
     const rows = this.importRows();
     const col = this.importSortColumn();
     const dir = this.importSortDirection();
-    const numericKeys = new Set(['start_year', 'edition', 'participants', 'total_hc', 'percentage_employees', 'planned_budget', 'realized_budget', 'impact_actual', 'number_external_partners']);
+    const numericKeys = new Set([
+      'edition_year',
+      'start_year',
+      'edition',
+      'participants',
+      'total_hc',
+      'percentage_employees',
+      'planned_budget',
+      'realized_budget',
+      'impact_actual',
+      'number_external_partners',
+    ]);
     const withIndices = rows.map((r, i) => ({ row: r, originalIndex: i }));
     const sorted = [...withIndices].sort((a, b) => {
       const rawA = (a.row as any)[col];
@@ -980,6 +1303,7 @@ export class AnnualPlansComponent implements OnInit {
         this.importLoading.set(false);
         this.importProgress.set(100);
         const selectedYear = this.importSelectedYear();
+        this.importExcelSourceYears.set(res.excel_distinct_edition_years ?? res.excel_distinct_plan_years ?? []);
         const plansWithModes: PlanWithMode[] = (res.plans || []).map(p => ({ ...p, year: selectedYear, validation_mode: '101' }));
         this.pendingImportFile.set(file);
         this.importPlansWithModes.set(plansWithModes);
@@ -1052,6 +1376,11 @@ export class AnnualPlansComponent implements OnInit {
     );
   }
 
+  /** Comma-separated years parsed from the Excel file (before target year is applied). */
+  formatImportExcelSourceYears(): string {
+    return this.importExcelSourceYears().join(', ');
+  }
+
   setImportSelectedYear(year: number | null): void {
     if (year == null || !Number.isFinite(year)) return;
     this.importSelectedYear.set(year);
@@ -1081,7 +1410,13 @@ export class AnnualPlansComponent implements OnInit {
     this.scheduleAutoValidateRows();
 
     // Real-time DB duplicates (depends on activity_number/title + site + year).
-    if (key === 'activity_number' || key === 'title' || key === 'site' || key === 'year' || key === 'start_year') {
+    if (
+      key === 'activity_number' ||
+      key === 'title' ||
+      key === 'site' ||
+      key === 'year' ||
+      key === 'start_year'
+    ) {
       this.scheduleAutoConflictsCheck();
     }
   }
@@ -1101,10 +1436,10 @@ export class AnnualPlansComponent implements OnInit {
   }
 
   private scheduleAutoConflictsCheck(): void {
-    if (!this.showImportModal() || this.importStep() !== 1) return;
+    if (!this.showImportModal() || (this.importStep() !== 0 && this.importStep() !== 1)) return;
     if (this.autoConflictsTimer) clearTimeout(this.autoConflictsTimer);
     this.autoConflictsTimer = setTimeout(() => {
-      if (!this.showImportModal() || this.importStep() !== 1) return;
+      if (!this.showImportModal() || (this.importStep() !== 0 && this.importStep() !== 1)) return;
       const rows = this.importRows();
       if (!rows.length) return;
       this.csrPlansApi.importExcelCheckConflicts(rows, { year: this.importSelectedYear() }).subscribe({
@@ -1222,6 +1557,7 @@ export class AnnualPlansComponent implements OnInit {
     this.importStep.set(0);
     this.importConflictIndices.set(new Set());
     this.importConflicts.set([]);
+    this.importExcelSourceYears.set([]);
     this.importDuplicateStrategy.set(null);
     this.importDragOver.set(false);
     if (this.autoValidateTimer) clearTimeout(this.autoValidateTimer);

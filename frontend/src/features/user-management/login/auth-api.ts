@@ -11,10 +11,12 @@ export interface LoginResponse {
   token: string;
   email: string;
   role: string; // SITE_USER | CORPORATE_USER from backend
+  level?: string | null;
   user_id?: string | number;
   first_name?: string | null;
   last_name?: string | null;
   avatar_url?: string | null;
+  permissions?: { keys?: string[] } | null;
   expires_at?: string;
 }
 
@@ -23,9 +25,11 @@ export interface MeResponse {
   user_id: string | number;
   email: string;
   role: string;
+  level?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   avatar_url?: string | null;
+  permissions?: { keys?: string[] } | null;
 }
 
 /** Site assignment in profile (SITE_USER only) */

@@ -57,16 +57,30 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     return role === 'corporate';
   }
 
+  private canCreateActivities(): boolean { return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('activity.create'); }
+  private canUpdateActivities(): boolean { return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('activity.update'); }
+  private canDeleteActivities(): boolean { return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('activity.delete'); }
+  private canSubmitPlan(): boolean { return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('plan.submit'); }
+  private canUpdatePlanPermission(): boolean { return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('plan.update'); }
+  private canCreateRealizationPermission(): boolean { return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('realized_activity.create'); }
+
+  private planYearValue(): number | null {
+    const p = this.plan();
+    if (!p) return null;
+    const y = Number(p.year);
+    return Number.isFinite(y) ? y : null;
+  }
+
   /** Plan is "planifié" (current or future year) → show only planned-activity columns. */
   get isPlanPlanned(): boolean {
-    const p = this.plan();
-    return p ? p.year >= this.currentYear : true;
+    const y = this.planYearValue();
+    return y != null ? y >= this.currentYear : true;
   }
 
   /** True when this plan’s year is the current calendar year. */
   isPlanCalendarYearCurrent(): boolean {
-    const p = this.plan();
-    return p != null && Number(p.year) === this.currentYear;
+    const y = this.planYearValue();
+    return y != null && y === this.currentYear;
   }
 
   /** Submit realization data only for current-year plans that are approved (VALIDATED). */
@@ -87,7 +101,7 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
 
   /** Show “Submit data” in the row menu for this activity. */
   canShowSubmitDataForActivity(activityId: string | null | undefined): boolean {
-    return this.canSubmitRealizationDataOnPlan() && !this.activityHasRealization(activityId);
+    return this.canCreateRealizationPermission() && this.canSubmitRealizationDataOnPlan() && !this.activityHasRealization(activityId);
   }
 
   // ── Menu 3 points (like document action) ─────────────────────────────────
@@ -199,9 +213,10 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     if (!p || p.status !== 'SUBMITTED') return '';
     const step = p.validation_step;
     const mode = p.validation_mode || '101';
-    if (mode === '111' && step === 1) return this.translate.instant('PLAN_DETAIL.STEP_PENDING_MANAGER');
-    if (mode === '111' && step === 2) return this.translate.instant('PLAN_DETAIL.STEP_PENDING_CORPORATE');
+    const siteSteps = mode === '311' ? 3 : mode === '211' ? 2 : mode === '111' ? 1 : 0;
+    if (typeof step === 'number' && step > 0 && step <= siteSteps) return `Pending level ${step}`;
     if (mode === '101') return this.translate.instant('PLAN_DETAIL.STEP_PENDING_CORPORATE_ONLY');
+    if (typeof step === 'number' && step > siteSteps) return this.translate.instant('PLAN_DETAIL.STEP_PENDING_CORPORATE');
     return '';
   }
 
@@ -304,6 +319,7 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
   canSubmitForValidation(): boolean {
     const p = this.plan();
     if (!p) return false;
+    if (!this.canSubmitPlan()) return false;
     if (p.status === 'DRAFT') return true;
     if (p.status === 'REJECTED') return true;
     if (p.status === 'VALIDATED' && this.isUnlockUntilFuture()) return true;
@@ -319,6 +335,7 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
 
   /** True if this specific activity can be edited (plan editable or activity individually unlocked). */
   canEditActivity(activityId: string): boolean {
+    if (!this.canUpdateActivities()) return false;
     if (this.isCorporateUser()) return true;
     const p = this.plan();
     if (!p?.activities) return false;
@@ -326,8 +343,13 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     return a?.activity_editable ?? false;
   }
 
+  canDeleteActivity(activityId: string): boolean {
+    return this.canDeleteActivities() && this.canEditActivity(activityId);
+  }
+
   /** True if plan can be edited: DRAFT/REJECTED always, or VALIDATED with unlock_until in the future. */
   canEditPlan(): boolean {
+    if (!this.canUpdatePlanPermission()) return false;
     if (this.isCorporateUser()) return true;
     const p = this.plan();
     if (!p) return false;
@@ -339,7 +361,10 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
   }
 
   validationModeLabel(mode: string): string {
-    return mode === '111' ? this.translate.instant('PLAN_VALIDATION.MODE_ALL') : this.translate.instant('PLAN_VALIDATION.MODE_CORPORATE_ONLY');
+    if (mode === '311') return 'Validation level 3 (all levels)';
+    if (mode === '211') return 'Validation level 2 (level1+level2+corporate)';
+    if (mode === '111') return 'Validation level 1 (level1+corporate)';
+    return this.translate.instant('PLAN_VALIDATION.MODE_CORPORATE_ONLY');
   }
 
   ngOnInit(): void {
@@ -637,7 +662,8 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
   addActivity(): void {
     const p = this.plan();
     if (!p || !this.canEditPlan()) return;
-    if (p.year < this.currentYear) {
+    const y = this.planYearValue();
+    if (y != null && y < this.currentYear) {
       const unlock = p.status === 'VALIDATED' && this.isUnlockUntilFuture();
       this.pastYearRichTitleKey.set(
         unlock
@@ -685,6 +711,8 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
   }
 
   canAddOffPlan(): boolean {
+    if (this.authStore.isValidatorLevel()) return false;
+    if (!this.canCreateActivities()) return false;
     const p = this.plan();
     if (!p) return false;
     if (p.year > this.currentYear) return false;
@@ -753,6 +781,7 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
   /** True if user can request a change for the plan or an activity (plan validated and locked). */
   canRequestChange(): boolean {
     const p = this.plan();
+    if (this.authStore.isValidatorLevel()) return false;
     if (this.isCorporateUser()) return false;
     return !!(p && p.status === 'VALIDATED' && !this.isUnlockUntilFuture());
   }
@@ -937,7 +966,7 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
   deleteActivity(activityId: string): void {
     this.closeActivityMenu();
     // Align with per-activity `activity_editable` (e.g. rejected off-plan on a locked VALIDATED plan).
-    if (!this.canEditActivity(activityId)) return;
+    if (!this.canDeleteActivities() || !this.canEditActivity(activityId)) return;
     const planId = this.plan()?.id;
     if (!planId) return;
     this.openConfirm({

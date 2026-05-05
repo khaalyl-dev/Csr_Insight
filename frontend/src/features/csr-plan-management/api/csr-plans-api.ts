@@ -187,7 +187,7 @@ export class CsrPlansApi {
     options?: {
       site_id?: string;
       year?: number;
-      validation_modes?: Array<{ site_id: string; year: number; validation_mode: '101' | '111' }>;
+      validation_modes?: Array<{ site_id: string; year: number; validation_mode: '101' | '111' | '211' | '311' }>;
       rows?: ImportPreviewRow[];
       duplicate_strategy?: 'delete' | 'ignore' | 'overwrite';
       onProgress?: (percent: number) => void;
@@ -239,6 +239,11 @@ export interface ImportPreviewRow {
   title?: string;
   category?: string;
   collaboration_nature?: string;
+  /** Excel column « Year »: calendar year of the activity edition (not the plan year from step 1). */
+  edition_year?: number | string;
+  /** @deprecated Old parse key; prefer edition_year */
+  excel_template_year?: number | string;
+  /** @deprecated Do not use for Excel Year; kept for legacy preview payloads */
   year?: number | string;
   start_year?: number | string;
   edition?: number | string;
@@ -262,6 +267,10 @@ export interface ImportPreviewResponse {
   rows?: ImportPreviewRow[];
   errors?: string[];
   message?: string;
+  /** Distinct edition years from the Excel « Year » column (not csr plan years). */
+  excel_distinct_edition_years?: number[];
+  /** @deprecated Same as excel_distinct_edition_years (misleading name). */
+  excel_distinct_plan_years?: number[];
 }
 
 export interface ImportConflict {

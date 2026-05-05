@@ -20,10 +20,30 @@ def get_media_folder() -> str:
     if path and os.path.isdir(path):
         return os.path.abspath(path)
     # Anchor from this file: backend/config.py -> backend/ -> project root
-    backend_root = os.path.dirname(os.path.abspath(__file__))
+    backend_root = _backend_root()
     project_root = os.path.dirname(backend_root)
     default = os.path.join(project_root, "frontend", "src", "media")
     return default
+
+
+def _backend_root() -> str:
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_rag_chroma_path() -> str:
+    """Persistent ChromaDB directory for the chatbot RAG index."""
+    custom = (os.environ.get("RAG_CHROMA_PATH") or "").strip()
+    if custom:
+        return os.path.abspath(custom)
+    return os.path.join(_backend_root(), "data", "chroma")
+
+
+def get_rag_corpus_path() -> str:
+    """Markdown corpus files to ingest into RAG (see rag_ingest)."""
+    custom = (os.environ.get("RAG_CORPUS_PATH") or "").strip()
+    if custom:
+        return os.path.abspath(custom)
+    return os.path.join(_backend_root(), "rag_corpus")
 
 
 def get_db_url() -> str:
@@ -49,3 +69,22 @@ class Config:
     SQLALCHEMY_DATABASE_URI = get_db_url()
     # Disable SQLAlchemy change tracking (not needed, saves memory)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Local Ollama (chatbot) — only localhost/private IPs are allowed in chatbot_routes
+    OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/")
+    OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "phi3:mini").strip()
+    # Optional /api/generate options (smaller = less RAM; omit OLLAMA_NUM_CTX to use Ollama default)
+    # Lower default = shorter, less chatty replies (raise in .env for long explanations)
+    OLLAMA_NUM_PREDICT = int(os.environ.get("OLLAMA_NUM_PREDICT", "280"))
+    _nc = os.environ.get("OLLAMA_NUM_CTX", "").strip()
+    OLLAMA_NUM_CTX = int(_nc) if _nc.isdigit() else None
+    _ot = os.environ.get("OLLAMA_TEMPERATURE", "0.2").strip()
+    try:
+        OLLAMA_TEMPERATURE = float(_ot)
+    except ValueError:
+        OLLAMA_TEMPERATURE = 0.2
+    # Local RAG (ChromaDB) — no model training; retrieve doc chunks into the system prompt
+    _rag = (os.environ.get("RAG_ENABLED") or "true").strip().lower()
+    RAG_ENABLED = _rag in ("1", "true", "yes", "on")
+    RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "4"))
+    RAG_CHROMA_PATH = get_rag_chroma_path()
+    RAG_CORPUS_PATH = get_rag_corpus_path()

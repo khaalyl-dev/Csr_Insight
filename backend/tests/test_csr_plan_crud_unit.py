@@ -163,7 +163,7 @@ class CsrPlanCrudUnitTests(unittest.TestCase):
     @patch("features.csr_plan_management.csr_plans_routes.audit_update")
     @patch("features.csr_plan_management.csr_plans_routes._plan_is_editable", return_value=True)
     def test_update_plan_corporate_success(self, _editable, _audit, _snapshot, _to_json):
-        plan = SimpleNamespace(id="p-upd", site_id="s-1", year=2026, status="DRAFT", total_budget=None, validation_mode="101")
+        plan = SimpleNamespace(id="p-upd", site_id="s-1", year=2026, status="DRAFT", allocated_budget=None, validation_mode="101")
         fake_plan_model = SimpleNamespace(query=MagicMock())
         fake_plan_model.query.get.return_value = plan
         fake_plan_model.query.filter_by.return_value.first.return_value = None
@@ -174,7 +174,7 @@ class CsrPlanCrudUnitTests(unittest.TestCase):
             with self._ctx(
                 "PATCH",
                 "/api/csr-plans/p-upd",
-                json={"year": 2028, "total_budget": 1500, "validation_mode": "111"},
+                json={"year": 2028, "allocated_budget": 1500, "validation_mode": "111"},
                 role="CORPORATE_USER",
                 user_id="corp",
             ):
@@ -182,7 +182,7 @@ class CsrPlanCrudUnitTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(plan.year, 2028)
-        self.assertEqual(plan.total_budget, 1500)
+        self.assertEqual(plan.allocated_budget, 1500)
         self.assertEqual(plan.validation_mode, "111")
         self.assertEqual(response.get_json()["id"], "p-upd")
 
@@ -204,7 +204,7 @@ class CsrPlanCrudUnitTests(unittest.TestCase):
     @patch("features.csr_plan_management.csr_plans_routes._plan_is_editable", return_value=True)
     @patch("features.csr_plan_management.csr_plans_routes._user_can_access_site", return_value=True)
     def test_update_plan_site_level1_success(self, _access, _editable, _audit, _snapshot, _to_json):
-        plan = SimpleNamespace(id="p-upd-ok", site_id="s-1", year=2026, status="DRAFT", total_budget=None, validation_mode="101")
+        plan = SimpleNamespace(id="p-upd-ok", site_id="s-1", year=2026, status="DRAFT", allocated_budget=None, validation_mode="101")
         fake_plan_model = SimpleNamespace(query=MagicMock())
         fake_plan_model.query.get.return_value = plan
         fake_plan_model.query.filter_by.return_value.first.return_value = None
@@ -215,13 +215,13 @@ class CsrPlanCrudUnitTests(unittest.TestCase):
             with self._ctx(
                 "PATCH",
                 "/api/csr-plans/p-upd-ok",
-                json={"total_budget": "700"},
+                json={"allocated_budget": "700"},
                 role="SITE_USER",
                 user_id="site-l1",
             ):
                 response, status = routes.update_plan.__wrapped__("p-upd-ok")
         self.assertEqual(status, 200)
-        self.assertEqual(plan.total_budget, 700.0)
+        self.assertEqual(plan.allocated_budget, 700.0)
         self.assertEqual(response.get_json()["id"], "p-upd-ok")
 
     # ---------- DELETE ----------

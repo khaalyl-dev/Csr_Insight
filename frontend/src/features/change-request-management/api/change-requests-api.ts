@@ -19,7 +19,7 @@ export interface ChangeRequestWithDocs extends ChangeRequest {
   reviewed_by_name?: string;
   reviewed_by_avatar_url?: string | null;
   site_name?: string;
-  pending_item_type?: 'CHANGE_REQUEST' | 'OFF_PLAN_ACTIVITY' | 'IN_PLAN_ACTIVITY_MOD';
+  pending_item_type?: 'CHANGE_REQUEST' | 'OFF_PLAN_ACTIVITY' | 'IN_PLAN_ACTIVITY_MOD' | 'PLAN_VALIDATION';
   activity_id?: string;
   off_plan_validation_mode?: string | null;
   validation_mode?: string | null;

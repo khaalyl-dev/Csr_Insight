@@ -1,0 +1,89 @@
+{
+  "description": "CSR Insight — tables most relevant to the in-app chatbot (live data comes from Flask/SQLAlchemy, not from this file). DB engine: MySQL.",
+  "chatbot_data_policy": "The LLM never runs SQL. Aggregates and samples are built server-side with permission and site scope applied first.",
+  "tables": {
+    "users": {
+      "description": "Platform users; JWT identifies the current user for chat.",
+      "columns": {
+        "id": "UUID primary key",
+        "email": "Login email",
+        "role": "e.g. CORPORATE_USER, SITE_USER",
+        "first_name": "Given name",
+        "last_name": "Family name",
+        "is_corporate_global": "Corporate visibility across sites when applicable"
+      }
+    },
+    "sites": {
+      "description": "Industrial / legal sites for CSR scope.",
+      "columns": {
+        "id": "UUID primary key",
+        "code": "Short site code",
+        "name": "Display name (used to match user phrases like a country or plant name)"
+      }
+    },
+    "user_sites": {
+      "description": "Site users assigned to specific sites.",
+      "columns": {
+        "user_id": "FK users.id",
+        "site_id": "FK sites.id"
+      }
+    },
+    "user_permissions": {
+      "description": "Optional per-user resource/action keys for corporate users.",
+      "columns": {
+        "user_id": "FK users.id",
+        "resource": "e.g. plan, activity, document",
+        "action": "e.g. read, write"
+      }
+    },
+    "csr_plans": {
+      "description": "Annual CSR plan per site and year.",
+      "columns": {
+        "id": "UUID primary key",
+        "site_id": "FK sites.id",
+        "year": "Calendar year",
+        "status": "DRAFT, SUBMITTED, VALIDATED, REJECTED, LOCKED"
+      }
+    },
+    "planned_activity": {
+      "description": "Planned CSR activities (lines under a plan).",
+      "columns": {
+        "id": "UUID primary key",
+        "plan_id": "FK csr_plans.id",
+        "title": "Activity title",
+        "status": "Workflow field in DB (DRAFT, SUBMITTED, …). For validated/locked plans the API adds effective_status (PLANNED, IN_PROGRESS, COMPLETED, UNDER_REVIEW, …).",
+        "category_id": "FK categories.id",
+        "edition": "Ordinal edition number (Excel column Edition)",
+        "edition_year": "Calendar year of the edition (Excel column Year); not the same as csr_plans.year"
+      }
+    },
+    "realized_activity": {
+      "description": "Executed activity rows (saisie réalisée), linked to planned_activity.",
+      "columns": {
+        "id": "UUID primary key",
+        "activity_id": "FK planned_activity.id",
+        "site_id": "Denormalized site for filtering"
+      }
+    },
+    "documents": {
+      "description": "Uploaded files; site_id set when linked to a site.",
+      "columns": {
+        "id": "UUID primary key",
+        "site_id": "Optional FK sites.id"
+      }
+    },
+    "change_requests": {
+      "description": "Change / validation requests workflow.",
+      "columns": {
+        "id": "UUID primary key"
+      }
+    },
+    "audit_logs": {
+      "description": "Audit trail entries for compliance review.",
+      "columns": {
+        "id": "UUID primary key",
+        "user_id": "Actor when known"
+      }
+    }
+  }
+}

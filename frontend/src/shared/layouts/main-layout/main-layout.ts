@@ -10,6 +10,7 @@ import { SidebarService } from '@core/services/sidebar.service';
 import { ThemeService } from '@core/services/theme.service';
 import { NotificationBellComponent } from '@features/notification-management/notification-bell/notification-bell';
 import { UserTasksBellComponent } from '@features/task-management/user-tasks-bell/user-tasks-bell';
+import { ChatbotWidgetComponent } from '@shared/components/chatbot-widget/chatbot-widget';
 import { I18nService } from '@core/services/i18n.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { NotificationSocketService } from '@core/services/notification-socket.service';
@@ -41,7 +42,7 @@ const SEGMENT_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, Sidebar, UserTasksBellComponent, NotificationBellComponent, TranslateModule],
+  imports: [CommonModule, RouterModule, Sidebar, UserTasksBellComponent, NotificationBellComponent, ChatbotWidgetComponent, TranslateModule],
   templateUrl: './main-layout.html'
 })
 export class MainLayout implements OnInit, OnDestroy {

@@ -45,6 +45,9 @@ export class OffPlanActivitySidebarComponent implements OnInit {
   loading = false;
   submitError: string | null = null;
   selectedFiles: File[] = [];
+  externalPartners: string[] = [];
+  plannedObjectives: string[] = [];
+  completedObjectives = new Set<string>();
   currentYear = new Date().getFullYear();
 
   readonly categoryOtherValue = CATEGORY_OTHER_VALUE;
@@ -63,7 +66,8 @@ export class OffPlanActivitySidebarComponent implements OnInit {
   }
 
   get isOffPlanSubmission(): boolean {
-    return this.submissionMode === 'off_plan';
+    if (this.submissionMode === 'off_plan') return true;
+    return this.form?.get('creation_type')?.value === 'off_plan';
   }
 
   isCorporateUser(): boolean {
@@ -72,34 +76,40 @@ export class OffPlanActivitySidebarComponent implements OnInit {
 
   ngOnInit(): void {
     this.form = this.fb.group({
-      include_planned_details: [false],
+      creation_type: ['plan' as 'plan' | 'off_plan'],
       activity_number: ['', [Validators.required, Validators.maxLength(50)]],
       title: ['', [Validators.required, Validators.maxLength(255)]],
+      organization: [''],
+      contract_type: [''],
       description: [''],
 
       category_id: ['', Validators.required],
       new_category_name: [''],
       collaboration_nature: [''],
-      planned_budget: [null as number | null],
+      consumed_budget: [null as number | null],
       action_impact_target: [null as number | null],
+      action_impact_unit: [''],
+      action_impact_duration: [''],
+      employees_planned: [null as number | null],
       start_year: [this.planYear ?? this.currentYear],
       edition: [null as number | null],
 
       participants: [null as number | null],
+      employees_actual: [null as number | null],
       total_hc: [null as number | null],
-      percentage_employees: [null as number | null],
       realized_budget: [null as number | null],
       action_impact_actual: [null as number | null],
       action_impact_unit_realized: [''],
 
       organizer: [''],
       external_partner: [''],
-      number_external_partners: [null as number | null],
       realization_date: [''],
 
       validation_mode: ['101' as '101' | '111', Validators.required],
 
       comment: [''],
+      corporate_image_improved: [false],
+      incidents_number: [null as number | null],
       contact_name: [''],
       contact_email: [''],
       contact_department: [''],
@@ -107,6 +117,7 @@ export class OffPlanActivitySidebarComponent implements OnInit {
 
     this.form.get('category_id')?.valueChanges.subscribe(() => this.updateNewCategoryValidators());
     if (this.submissionMode === 'plan_realized_draft') {
+      this.applyPlanRealizedDraftRequiredValidators();
       this.form.get('validation_mode')?.clearValidators();
       this.form.get('validation_mode')?.updateValueAndValidity({ emitEvent: false });
     }
@@ -176,6 +187,45 @@ export class OffPlanActivitySidebarComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  addExternalPartnerFromInput(): void {
+    const ctrl = this.form.get('external_partner');
+    const raw = String(ctrl?.value ?? '').trim();
+    if (!raw) return;
+    const exists = this.externalPartners.some((p) => p.toLowerCase() === raw.toLowerCase());
+    if (!exists) this.externalPartners.push(raw);
+    ctrl?.setValue('');
+    this.cdr.markForCheck();
+  }
+
+  removeExternalPartner(index: number): void {
+    this.externalPartners.splice(index, 1);
+    this.cdr.markForCheck();
+  }
+
+  addPlannedObjective(value: string): void {
+    const raw = String(value ?? '').trim();
+    if (!raw) return;
+    if (!this.plannedObjectives.some((o) => o.toLowerCase() === raw.toLowerCase())) this.plannedObjectives.push(raw);
+    this.cdr.markForCheck();
+  }
+
+  removePlannedObjective(index: number): void {
+    const removed = this.plannedObjectives[index];
+    this.plannedObjectives.splice(index, 1);
+    if (removed) this.completedObjectives.delete(removed);
+    this.cdr.markForCheck();
+  }
+
+  isCompletedObjectiveSelected(objective: string): boolean {
+    return this.completedObjectives.has(objective);
+  }
+
+  toggleCompletedObjective(objective: string): void {
+    if (this.completedObjectives.has(objective)) this.completedObjectives.delete(objective);
+    else this.completedObjectives.add(objective);
+    this.cdr.markForCheck();
+  }
+
   private uploadFiles(siteId: string, activityId: string): void {
     if (!this.selectedFiles.length) return;
     this.selectedFiles.forEach((file) => {
@@ -194,7 +244,7 @@ export class OffPlanActivitySidebarComponent implements OnInit {
     const raw = this.form.getRawValue();
     const includePlannedDetails =
       this.submissionMode === 'plan_realized_draft'
-        ? !!raw.include_planned_details
+        ? true
         : false;
     const planY = this.planYear ?? this.currentYear;
     let month = new Date().getMonth() + 1;
@@ -208,52 +258,99 @@ export class OffPlanActivitySidebarComponent implements OnInit {
 
     return {
       plan_id: this.planId,
-      validation_mode: raw.validation_mode,
+      validation_mode: this.submissionMode === 'plan_realized_draft' ? '101' : raw.validation_mode,
       include_planned_details: includePlannedDetails,
       activity_number: String(raw.activity_number).trim(),
       title: String(raw.title).trim(),
+      organization: raw.organization?.trim() || null,
+      contract_type: raw.contract_type?.trim() || null,
       description: raw.description?.trim() ? String(raw.description).trim() : null,
 
       category_id: categoryId,
       collaboration_nature: raw.collaboration_nature?.trim() || null,
-      planned_budget:
-        includePlannedDetails && raw.planned_budget != null && raw.planned_budget !== ''
-          ? Number(raw.planned_budget)
+      consumed_budget:
+        includePlannedDetails && raw.consumed_budget != null && raw.consumed_budget !== ''
+          ? Number(raw.consumed_budget)
           : null,
       action_impact_target:
         includePlannedDetails && raw.action_impact_target != null && raw.action_impact_target !== ''
           ? Number(raw.action_impact_target)
           : null,
+      action_impact_unit: raw.action_impact_unit?.trim() || null,
+      action_impact_duration: raw.action_impact_duration?.trim() || null,
+      employees_planned: raw.employees_planned != null && raw.employees_planned !== '' ? Number(raw.employees_planned) : null,
+      planned_objectives: [...this.plannedObjectives],
       start_year: raw.start_year != null && raw.start_year !== '' ? Number(raw.start_year) : null,
       edition: raw.edition != null && raw.edition !== '' ? Number(raw.edition) : null,
-      external_partner: raw.external_partner?.trim() || null,
+      external_partner: this.externalPartners.length ? this.externalPartners.join(', ') : (raw.external_partner?.trim() || null),
+      external_partners: this.externalPartners.length ? [...this.externalPartners] : undefined,
 
       year: planY,
       month,
 
       realized_budget: raw.realized_budget != null && raw.realized_budget !== '' ? Number(raw.realized_budget) : null,
       participants: raw.participants != null && raw.participants !== '' ? Number(raw.participants) : null,
-      total_hc: raw.total_hc != null && raw.total_hc !== '' ? Number(raw.total_hc) : null,
-      percentage_employees: raw.percentage_employees != null && raw.percentage_employees !== '' ? Number(raw.percentage_employees) : null,
+      employees_actual: raw.employees_actual != null && raw.employees_actual !== '' ? Number(raw.employees_actual) : null,
       action_impact_actual: raw.action_impact_actual != null && raw.action_impact_actual !== '' ? Number(raw.action_impact_actual) : null,
       action_impact_unit_realized: raw.action_impact_unit_realized?.trim() || null,
       organizer: raw.organizer?.trim() || null,
-      number_external_partners:
-        raw.number_external_partners != null && raw.number_external_partners !== ''
-          ? Number(raw.number_external_partners)
-          : null,
       realization_date: raw.realization_date?.trim() ? raw.realization_date.substring(0, 10) : null,
 
       comment: raw.comment?.trim() || null,
+      completed_objectives: Array.from(this.completedObjectives),
+      corporate_image_improved: !!raw.corporate_image_improved,
+      incidents_number: raw.incidents_number != null && raw.incidents_number !== '' ? Number(raw.incidents_number) : null,
       contact_department: raw.contact_department?.trim() || null,
       contact_name: raw.contact_name?.trim() || null,
       contact_email: raw.contact_email?.trim() || null,
     };
   }
 
+  private applyPlanRealizedDraftRequiredValidators(): void {
+    const requiredFields = [
+      'description',
+      'collaboration_nature',
+      'organization',
+      'contract_type',
+      'consumed_budget',
+      'action_impact_target',
+      'action_impact_unit',
+      'action_impact_duration',
+      'start_year',
+      'edition',
+      'employees_actual',
+      'realized_budget',
+      'action_impact_actual',
+      'action_impact_unit_realized',
+      'organizer',
+      'incidents_number',
+      'realization_date',
+      'comment',
+      'contact_name',
+      'contact_email',
+      'contact_department',
+    ];
+    for (const field of requiredFields) {
+      const ctrl = this.form.get(field);
+      if (!ctrl) continue;
+      if (field === 'contact_email') {
+        ctrl.setValidators([Validators.required, Validators.email]);
+      } else {
+        ctrl.setValidators([Validators.required]);
+      }
+      ctrl.updateValueAndValidity({ emitEvent: false });
+    }
+  }
+
   submit(): void {
+    this.addExternalPartnerFromInput();
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (this.submissionMode === 'plan_realized_draft' && this.externalPartners.length === 0) {
+      this.submitError = 'Please add at least one external partner.';
+      this.cdr.markForCheck();
       return;
     }
     this.submitError = null;
@@ -267,7 +364,7 @@ export class OffPlanActivitySidebarComponent implements OnInit {
         : of(raw.category_id);
 
     const api$ =
-      this.submissionMode === 'plan_realized_draft'
+      !this.isOffPlanSubmission
         ? (cid: string) =>
             this.activitiesApi.createPlanRealizedDraftWithRealization(this.buildPayload(cid)).pipe(timeout(LOAD_TIMEOUT_MS))
         : (cid: string) =>

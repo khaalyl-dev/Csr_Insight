@@ -39,6 +39,16 @@ def _allowed_site_ids():
     return [us.site_id for us in user_sites] if user_sites else []
 
 
+def _site_user_can_validate() -> bool:
+    """True when current site user has validator grade on at least one active site."""
+    role = (getattr(request, "role", "") or "").upper()
+    if role not in ("SITE_USER", "SITE"):
+        return True
+    rows = UserSite.query.filter_by(user_id=request.user_id, is_active=True).all()
+    grades = [(r.grade or "").strip().lower() for r in rows]
+    return any(g in ("level_1", "level_2", "level_3") for g in grades)
+
+
 def _dashboard_filters():
     """Read optional query params: site_id, year, category_id.
     Returns (effective_site_ids or None, year or None, category_id or None).
@@ -560,9 +570,11 @@ def dashboard_notifications():
         })
 
     # Plans waiting validation (SUBMITTED)
+    role = (getattr(request, "role", "") or "").upper()
+    can_validate = _site_user_can_validate()
     validation_q = _apply_plan_filters(_plan_query(), site_ids, year).filter(CsrPlan.status == "SUBMITTED")
     validation_count = validation_q.count()
-    if validation_count > 0:
+    if validation_count > 0 and (role in ("CORPORATE_USER", "CORPORATE") or can_validate):
         notifications.append({
             "id": "validation",
             "type": "validation",
@@ -574,7 +586,6 @@ def dashboard_notifications():
 
     # Change requests pending (corporate sees all PENDING; site user sees own?)
     cr_q = ChangeRequest.query.filter(ChangeRequest.status == "PENDING")
-    role = (getattr(request, "role", "") or "").upper()
     if role in ("SITE_USER", "SITE"):
         site_ids = _allowed_site_ids() or []
         if site_ids:
@@ -597,7 +608,7 @@ def dashboard_notifications():
             .all()
         )
         pending_count += sum(1 for a in in_mod_acts if _in_plan_mod_awaits_corporate_validation(a))
-    if pending_count > 0:
+    if pending_count > 0 and (role in ("CORPORATE_USER", "CORPORATE") or can_validate):
         notifications.append({
             "id": "change_request",
             "type": "change_request",

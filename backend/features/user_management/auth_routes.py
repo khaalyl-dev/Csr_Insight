@@ -21,6 +21,7 @@ from flask import Blueprint, request, jsonify
 import jwt
 
 from core import db, generate_access_token, token_required, revoke_jti
+from core.permissions import effective_corporate_permissions
 from core.jwt_utils import ACCESS_TOKEN_EXPIRATION_HOURS, SECRET_KEY
 from models import User, UserSession, UserSite, Site, Document
 
@@ -38,6 +39,21 @@ def _avatar_serve_url(user: User):
     if not user or not getattr(user, "avatar_url", None) or not user.avatar_url:
         return None
     return f"/api/documents/serve/{user.avatar_url}"
+
+
+def _user_site_level(user_id: str):
+    """Highest active site grade for a site user."""
+    rows = UserSite.query.filter_by(user_id=user_id, is_active=True).all()
+    grades = [(r.grade or "").strip().lower() for r in rows]
+    if "level_3" in grades:
+        return "level_3"
+    if "level_2" in grades:
+        return "level_2"
+    if "level_1" in grades:
+        return "level_1"
+    if any(g in ("", "level_0") for g in grades):
+        return "level_0"
+    return None
 
 
 def _profile_payload(user: User):
@@ -61,6 +77,7 @@ def _profile_payload(user: User):
         "last_login": _latest_login_iso(user.id),
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "avatar_url": _avatar_serve_url(user),
+        "permissions": effective_corporate_permissions(user) if user.role == "CORPORATE_USER" or user.get_permissions() else None,
     }
 
     if user.role == "SITE_USER":
@@ -130,10 +147,12 @@ def login():
         "token": token,
         "email": user.email,
         "role": user.role,
+        "level": _user_site_level(user.id) if user.role == "SITE_USER" else None,
         "user_id": user.id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "avatar_url": _avatar_serve_url(user),
+        "permissions": effective_corporate_permissions(user) if user.role == "CORPORATE_USER" or user.get_permissions() else None,
         "expires_at": expires_at.isoformat(),
     })
 
@@ -188,9 +207,11 @@ def me():
         "user_id": user.id,
         "email": user.email,
         "role": user.role,
+        "level": _user_site_level(user.id) if user.role == "SITE_USER" else None,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "avatar_url": _avatar_serve_url(user),
+        "permissions": effective_corporate_permissions(user) if user.role == "CORPORATE_USER" or user.get_permissions() else None,
     })
 
 

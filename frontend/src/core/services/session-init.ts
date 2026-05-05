@@ -25,8 +25,10 @@ export function initSession(): () => Promise<void> {
             authStore.patchUser({
               email: res.email,
               role: mapBackendRole(res.role),
+              level: res.level ?? null,
               first_name: res.first_name ?? undefined,
               last_name: res.last_name ?? undefined,
+              permissions: res.permissions ?? null,
             });
             applyAvatarUrlToStore(authStore, http, res.avatar_url);
           }

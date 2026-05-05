@@ -41,6 +41,10 @@
               {{ 'PLANNED_ACTIVITY_DETAIL.PLAN_STATUS_LABEL' | translate }}:
               <span class="ml-1 font-semibold">{{ csrStatusLabel(activity()!.plan_status) }}</span>
             </span>
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-gray-700">
+              {{ 'PLANNED_ACTIVITY_DETAIL.STATUS' | translate }}:
+              <span class="ml-1 font-semibold">{{ csrStatusLabel(activity()!.effective_status ?? activity()!.status) }}</span>
+            </span>
             <span *ngIf="activity()!.is_off_plan" class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-amber-900 font-semibold">
               {{ 'PLAN_DETAIL.BADGE_OFF_PLAN' | translate }}
             </span>
@@ -52,20 +56,20 @@
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-900 text-white hover:opacity-90 text-sm font-medium">
             {{ 'PLANNED_ACTIVITY_DETAIL.VIEW_PLAN' | translate }}
           </a>
-          <button *ngIf="activity()!.plan_editable !== false" type="button" (click)="openEditSidebar()"
+          <button *ngIf="canManageActivity()" type="button" (click)="openEditSidebar()"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium">
             {{ 'PLANNED_ACTIVITY_DETAIL.EDIT' | translate }}
           </button>
-          <button *ngIf="activity()!.plan_editable !== false" type="button" (click)="openDeleteModal()"
+          <button *ngIf="canManageActivity()" type="button" (click)="openDeleteModal()"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-300 text-red-700 hover:bg-red-50 text-sm font-medium">
             {{ 'COMMON.DELETE' | translate }}
           </button>
-          <button *ngIf="activity()!.plan_id && !isPlanRealized() && canSubmitRealizedData() && activity()!.plan_editable !== false" type="button" (click)="openAddRealizationSidebar()"
+          <button *ngIf="canAddRealization()" type="button" (click)="openAddRealizationSidebar()"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-brand-900 border border-brand-900 hover:bg-gray-50 text-sm font-medium">
             <i class="fas fa-clipboard-check text-sm"></i>
             {{ 'PLANNED_ACTIVITIES.ADD_REALIZATION' | translate }}
           </button>
-          <span *ngIf="activity()!.plan_editable === false"
+          <span *ngIf="activity()!.plan_editable === false || (!canManageActivity() && !canAddRealization())"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm"
             [attr.title]="'PLAN_LOCKED_TITLE' | translate">
             <i class="fas fa-lock"></i> {{ 'REALIZED_DETAIL.MODIFICATION_UNAVAILABLE' | translate }}
@@ -116,6 +120,11 @@
             <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'PLAN_DETAIL.EDITION' | translate }}</div>
             <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
               <div class="text-sm font-semibold text-gray-900">{{ activity()!.edition != null ? activity()!.edition : '–' }}</div>
+            </div>
+
+            <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'PLAN_DETAIL.EDITION_YEAR' | translate }}</div>
+            <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
+              <div class="text-sm font-semibold text-gray-900">{{ activity()!.edition_year != null ? activity()!.edition_year : '–' }}</div>
             </div>
 
             <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'PLANNED_ACTIVITY_EDIT.IMPACT_DURATION' | translate }}</div>
@@ -214,7 +223,7 @@
 </div>
 
 <!-- Add realization sidebar -->
-<div *ngIf="showAddRealizationSidebar() && activity()"
+<div *ngIf="showAddRealizationSidebar() && activity() && canAddRealization()"
   class="fixed inset-0 z-50 flex"
   (click)="closeAddRealizationSidebar()">
   <div class="flex-1 bg-black/40 transition-opacity" aria-hidden="true"></div>
@@ -232,7 +241,7 @@
 </div>
 
 <!-- Delete confirmation modal -->
-<div *ngIf="showDeleteModal()"
+<div *ngIf="showDeleteModal() && canManageActivity()"
   class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 !mt-0"
   (click)="closeDeleteModal()"
   role="dialog"
@@ -261,7 +270,7 @@
 </div>
 
 <!-- Edit planned activity sidebar -->
-<div *ngIf="showEditSidebar() && activity()"
+<div *ngIf="showEditSidebar() && activity() && canManageActivity()"
   class="fixed inset-0 z-50 flex"
   (click)="closeEditSidebar()">
   <div class="flex-1 bg-black/40 transition-opacity" aria-hidden="true"></div>

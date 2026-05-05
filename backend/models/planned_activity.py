@@ -45,6 +45,8 @@ class CsrActivity(db.Model):
     )
     activity_number = db.Column(db.String(50), nullable=False, comment="Numéro d'activité (ex. CSR 1)")
     title = db.Column(db.String(255), nullable=False, comment="Titre / intitulé")
+    organization = db.Column(db.String(255), nullable=True, comment="Organisation")
+    contract_type = db.Column(db.String(100), nullable=True, comment="Type de contrat")
     description = db.Column(db.Text, nullable=True, comment="Description détaillée")
     collaboration_nature = db.Column(
         db.String(30), nullable=True,
@@ -56,14 +58,22 @@ class CsrActivity(db.Model):
     action_impact_target = db.Column(db.Numeric(15, 2), nullable=True, comment="Objectif d'impact (nombre)")
     action_impact_unit = db.Column(db.String(100), nullable=True, comment="Unité d'impact cible (Trees, etc.)")
     action_impact_duration = db.Column(db.String(100), nullable=True, comment="Durée de l'impact")
+    employees_planned = db.Column(db.Integer, nullable=True, comment="Employés impliqués (prévu)")
     start_year = db.Column(db.Integer, nullable=True, comment="Année de démarrage")
     edition = db.Column(db.Integer, nullable=True, comment="Numéro d'édition")
+    edition_year = db.Column(
+        db.Integer,
+        nullable=True,
+        comment="Année de l'édition (colonne Year du fichier consolidé CSR)",
+    )
     organizer = db.Column(db.String(255), nullable=True, comment="Organisateur (ex. HR)")
-    # Nombre de partenaires externes associés à cette activité (agrégé)
-    number_external_partners = db.Column(db.Integer, nullable=True, comment="Nombre de partenaires externes")
     status = db.Column(
         db.String(20), nullable=False, default="DRAFT",
-        comment="Statut: DRAFT, IN_PROGRESS, COMPLETED, CANCELLED, VALIDATED"
+        comment=(
+            "Statut workflow en base (soumission, validation d’activité, demandes de modification). "
+            "Ce n’est pas le statut « métier » affiché quand le plan annuel est validé : dans ce cas l’API "
+            "calcule effective_status (PLANNED / IN_PROGRESS / COMPLETED, UNDER_REVIEW, REJECTED, CANCELLED)."
+        ),
     )
     # Métadonnées de création / mise à jour / verrouillage
     created_by = db.Column(
