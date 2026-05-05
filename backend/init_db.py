@@ -21,7 +21,7 @@ from sqlalchemy import text
 from app import create_app
 from core.db import db
 from core.permissions import ALLOWED_PERMISSION_KEYS
-from models import User, Site, UserSite, Category
+from models import User, Site, UserSite, Category, CsrPlan, CsrActivity
 
 
 def _run_seed_activities_sql() -> None:
@@ -64,7 +64,83 @@ def _run_seed_activities_sql() -> None:
     for stmt in statements:
         conn.execute(text(stmt))
     db.session.commit()
-    print("✓ Seeded test activities (50 planned + 100 realized for year 2099)")
+
+
+def _seed_yearly_test_plans_with_activities() -> None:
+    """
+    Create 1 plan with 50 planned activities for each of:
+      - past year (current_year - 1)
+      - current year
+      - future year (current_year + 1)
+
+    The plans are attached to the first site and first user and are
+    re-seeded safely on each run by deleting only activities whose
+    activity_number starts with an INIT-SEED prefix.
+    """
+    first_site = Site.query.order_by(Site.code).first()
+    first_user = User.query.order_by(User.email).first()
+    first_category = Category.query.order_by(Category.name).first()
+    if not (first_site and first_user and first_category):
+        print("⚠ Cannot seed yearly test plans: missing site, user, or category")
+        return
+
+    current_year = datetime.now(UTC).year
+    years = [current_year - 1, current_year, current_year + 1]
+    seed_prefix = "INIT-SEED-"
+
+    for year in years:
+        plan = (
+            CsrPlan.query.filter_by(site_id=first_site.id, year=year)
+            .order_by(CsrPlan.created_at)
+            .first()
+        )
+        if not plan:
+            plan = CsrPlan(
+                site_id=first_site.id,
+                year=year,
+                validation_mode="101",
+                status="DRAFT",
+                allocated_budget=100_000,
+                total_hc=800,
+                created_by=first_user.id,
+            )
+            db.session.add(plan)
+            db.session.flush()
+            print(f"✓ Created test plan for site={first_site.code} year={year}")
+
+        pattern = f"{seed_prefix}{year}-%"
+        CsrActivity.query.filter(
+            CsrActivity.plan_id == plan.id,
+            CsrActivity.activity_number.like(pattern),
+        ).delete(synchronize_session=False)
+
+        for i in range(1, 51):
+            number = f"{seed_prefix}{year}-{i:03d}"
+            activity = CsrActivity(
+                plan_id=plan.id,
+                category_id=first_category.id,
+                activity_number=number,
+                title=f"Seed activity {i} for {year}",
+                organization="Internal" if i % 2 == 0 else "External",
+                contract_type="One shot" if i % 2 == 0 else "Successive performance",
+                description=f"Generated test activity #{i} for year {year}.",
+                collaboration_nature="PARTNERSHIP",
+                periodicity="Annual",
+                planned_budget=500 + i * 50,
+                action_impact_target=10 + i,
+                action_impact_unit="people",
+                action_impact_duration="1 year",
+                employees_planned=5 + (i % 20),
+                start_year=year,
+                edition=1,
+                organizer="CSR Team",
+                status="DRAFT",
+                created_by=first_user.id,
+            )
+            db.session.add(activity)
+
+    db.session.commit()
+    print("✓ Seeded yearly test plans with 50 planned activities each (past/current/future)")
 
 
 def init_db():
@@ -257,7 +333,10 @@ def init_db():
         db.session.commit()
         print("✓ Site access assigned (level_0..level_3 for test users, level_1 for site users, level_3 for admin)")
 
-        # Seed test activities (50 planned + 100 realized) for a dedicated plan (year 2099)
+        # Seed per-year test plans (past, current, future) with 50 planned activities each
+        _seed_yearly_test_plans_with_activities()
+
+        # Seed dedicated test plan (year 2099) with 50 planned + 100 realized activities
         _run_seed_activities_sql()
 
 
