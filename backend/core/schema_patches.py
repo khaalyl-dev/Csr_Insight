@@ -118,6 +118,16 @@ def apply_schema_patches(db) -> None:
             _apply_patch(
                 conn,
                 "planned_activity",
+                "nb_of_external_partner",
+                "ALTER TABLE planned_activity "
+                "ADD COLUMN nb_of_external_partner INT NOT NULL DEFAULT 0 "
+                "COMMENT 'Nombre de partenaires externes' "
+                "AFTER external_partner_id",
+                "planned_activity.nb_of_external_partner",
+            )
+            _apply_patch(
+                conn,
+                "planned_activity",
                 "employees_planned",
                 "ALTER TABLE planned_activity "
                 "ADD COLUMN employees_planned INT NULL "
@@ -125,6 +135,29 @@ def apply_schema_patches(db) -> None:
                 "AFTER action_impact_duration",
                 "planned_activity.employees_planned",
             )
+            try:
+                if _column_exists(conn, "planned_activity", "nb_of_external_partner"):
+                    conn.execute(
+                        text(
+                            """
+                            UPDATE planned_activity pa
+                            LEFT JOIN external_partners ep ON ep.id = pa.external_partner_id
+                            SET pa.nb_of_external_partner = CASE
+                                WHEN pa.external_partner_id IS NULL OR ep.name IS NULL OR TRIM(ep.name) = '' THEN 0
+                                ELSE (
+                                    LENGTH(ep.name) - LENGTH(REPLACE(ep.name, ',', '')) + 1
+                                )
+                            END
+                            """
+                        )
+                    )
+                    conn.commit()
+            except Exception as exc:
+                logger.warning("Schema patch failed (planned_activity.nb_of_external_partner backfill): %s", exc)
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             _apply_patch(
                 conn,
                 "realized_activity",
@@ -329,6 +362,49 @@ def apply_schema_patches(db) -> None:
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                     """
                 )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS activity_kpis (
+                        id CHAR(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+                        plan_id CHAR(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+                        activity_id CHAR(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+                        incidents_count INT NULL,
+                        participants_actual_sum INT NULL,
+                        employees_planned INT NULL,
+                        involvement_rate DECIMAL(8,2) NULL,
+                        announced_objectives_count INT NULL,
+                        completed_objectives_count INT NULL,
+                        action_delivery_rate DECIMAL(8,2) NULL,
+                        realized_budget_sum DECIMAL(15,2) NULL,
+                        planned_budget_amount DECIMAL(15,2) NULL,
+                        budget_control_rate DECIMAL(8,2) NULL,
+                        plan_total_hc INT NULL,
+                        participants_vs_total_hc_rate DECIMAL(8,2) NULL,
+                        lifecycle_status VARCHAR(20) NULL COMMENT 'DRAFT | PLANNED | PENDING | COMPLETED',
+                        created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        PRIMARY KEY (id),
+                        UNIQUE KEY uq_activity_kpis_activity_id (activity_id),
+                        KEY ix_activity_kpis_plan_id (plan_id),
+                        CONSTRAINT fk_activity_kpis_plan
+                          FOREIGN KEY (plan_id) REFERENCES csr_plans(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_activity_kpis_activity
+                          FOREIGN KEY (activity_id) REFERENCES planned_activity(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    """
+                )
+            )
+            _apply_patch(
+                conn,
+                "activity_kpis",
+                "lifecycle_status",
+                "ALTER TABLE activity_kpis "
+                "ADD COLUMN lifecycle_status VARCHAR(20) NULL "
+                "COMMENT 'DRAFT | PLANNED | PENDING | COMPLETED (execution vs validation)' "
+                "AFTER participants_vs_total_hc_rate",
+                "activity_kpis.lifecycle_status",
             )
             conn.commit()
     except Exception as exc:

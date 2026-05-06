@@ -43,6 +43,12 @@ class CsrActivity(db.Model):
         CHAR(36, collation="utf8mb4_unicode_ci"), db.ForeignKey("external_partners.id", ondelete="SET NULL"), nullable=True,
         comment="Partenaire externe éventuel"
     )
+    nb_of_external_partner = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+        comment="Nombre de partenaires externes",
+    )
     activity_number = db.Column(db.String(50), nullable=False, comment="Numéro d'activité (ex. CSR 1)")
     title = db.Column(db.String(255), nullable=False, comment="Titre / intitulé")
     organization = db.Column(db.String(255), nullable=True, comment="Organisation")

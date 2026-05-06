@@ -214,7 +214,10 @@
       <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col flex-1 min-h-0 overflow-hidden">
         <div class="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-5">
           <p class="text-xs text-gray-500 -mt-1">{{ 'PLANNED_ACTIVITY_EDIT.FIELDS_REQUIRED' | translate }}</p>
-          <h3 class="text-sm font-bold text-gray-800">{{ 'PLANNED_ACTIVITY_DETAIL.SECTION_INFO_PLANNED' | translate }}</h3>
+          <div>
+            <h4 class="text-sm font-semibold text-gray-700">General Info</h4>
+            <p class="text-xs text-gray-500 mt-1">Core identity and planned context fields.</p>
+          </div>
           <!-- Planned activity inputs -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm">
               <div>
@@ -289,9 +292,35 @@
                 <textarea formControlName="description" rows="2"
                   class="w-full pl-4 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"></textarea>
               </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Organization</label>
+                <select formControlName="organization"
+                  class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none cursor-pointer">
+                  <option value="">Select organization</option>
+                  <option value="INTERNAL">Internal</option>
+                  <option value="EXTERNAL">External</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Contract Type</label>
+                <select formControlName="contract_type"
+                  class="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none cursor-pointer">
+                  <option value="">Select contract type</option>
+                  <option value="ONE_SHOT">One shot</option>
+                  <option value="SUCCESSIVE_PERFORMANCE">Successive performance</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Employees Involved (Planned)</label>
+                <input type="number" formControlName="employees_planned" min="0"
+                  class="w-full pl-4 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+              </div>
           </div>
           <div class="h-px bg-gray-100" role="presentation"></div>
-          <h3 class="text-sm font-bold text-gray-800">{{ 'REALIZED_EDIT.REALIZED_DATA' | translate }}</h3>
+          <div>
+            <h4 class="text-sm font-semibold text-gray-700">Execution Data (REAL values)</h4>
+            <p class="text-xs text-gray-500 mt-1">Actual execution and measured outcomes.</p>
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ 'REALIZED_EDIT.BUDGET_REALIZED' | translate }}</label>
@@ -322,6 +351,39 @@
                 class="w-full pl-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
             </div>
             <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Corporate Image Improved</label>
+              <select formControlName="corporate_image_improved"
+                class="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option [ngValue]="null">Select</option>
+                <option [ngValue]="true">Yes</option>
+                <option [ngValue]="false">No</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Number of Incidents</label>
+              <input type="number" formControlName="incidents_number" min="0"
+                class="w-full pl-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+            </div>
+            <div class="md:col-span-2">
+              <h4 class="text-sm font-semibold text-gray-700">Evaluation</h4>
+              <p class="text-xs text-gray-500 mt-1 mb-2">Objectives completion and qualitative indicators.</p>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Project Completed Objectives</label>
+              <div class="border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50/50" *ngIf="plannedObjectives.length; else noObjectivesInRealizedEdit">
+                <label *ngFor="let objective of plannedObjectives" class="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox"
+                    [checked]="isObjectiveCompleted(objective)"
+                    (change)="toggleCompletedObjective(objective)"
+                    class="mt-1 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                  <span class="text-sm text-gray-700">{{ objective }}</span>
+                </label>
+              </div>
+              <ng-template #noObjectivesInRealizedEdit>
+                <p class="text-xs text-gray-500">Add announced objectives first, then mark completed ones here.</p>
+              </ng-template>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700">Contact</h4>
+              <p class="text-xs text-gray-500 mt-1 mb-2">Person responsible for this report.</p>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ 'REALIZED_EDIT.CONTACT_NAME' | translate }}</label>
               <input type="text" formControlName="contact_name"
                 class="w-full pl-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
@@ -332,6 +394,13 @@
                 class="w-full pl-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
             </div>
             <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ 'REALIZED_EDIT.CONTACT_DEPARTMENT' | translate }}</label>
+              <input type="text" formControlName="contact_department"
+                class="w-full pl-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+            </div>
+            <div class="md:col-span-2">
+              <h4 class="text-sm font-semibold text-gray-700">Reporting</h4>
+              <p class="text-xs text-gray-500 mt-1 mb-2">Narrative and report-level metadata.</p>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ 'REALIZED_EDIT.COMMENT' | translate }}</label>
               <textarea formControlName="comment" rows="2"
                 class="w-full pl-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"></textarea>

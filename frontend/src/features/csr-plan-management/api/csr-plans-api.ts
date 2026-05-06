@@ -54,10 +54,45 @@ export interface CsrPlanActivityDetail {
   has_realization?: boolean;
   /** Newest realization row id (same ordering as aggregated realized fields). */
   primary_realization_id?: string | null;
+  kpi?: {
+    has_realized_data?: boolean;
+    incidents_count?: number | null;
+    participants_actual_sum?: number | null;
+    employees_planned?: number | null;
+    involvement_rate?: number | null;
+    announced_objectives_count?: number | null;
+    completed_objectives_count?: number | null;
+    action_delivery_rate?: number | null;
+    realized_budget_sum?: number | null;
+    planned_budget_amount?: number | null;
+    budget_control_rate?: number | null;
+    plan_total_hc?: number | null;
+    participants_vs_total_hc_rate?: number | null;
+    updated_at?: string | null;
+  } | null;
 }
 
 export interface CsrPlanDetail extends CsrPlan {
   activities?: CsrPlanActivityDetail[];
+  plan_kpis?: {
+    incidents_sum?: number | null;
+    participants_estimated_sum?: number | null;
+    participants_realized_sum?: number | null;
+    involvement_rate?: number | null;
+    announced_objectives_sum?: number | null;
+    completed_objectives_sum?: number | null;
+    action_delivery_rate?: number | null;
+    planned_actions?: number | null;
+    accomplished_actions?: number | null;
+    action_execution_rate?: number | null;
+    estimated_budget_sum?: number | null;
+    realized_budget_sum?: number | null;
+    actual_budget_sum?: number | null;
+    budget_control_rate?: number | null;
+    external_partners_sum?: number | null;
+    participants_vs_total_hc_rate?: number | null;
+    category_percentages?: Array<{ category_name: string; actions_count: number; percentage: number | null }>;
+  } | null;
   can_approve?: boolean;
   can_reject?: boolean;
   /** Current user's grade on this plan's site (e.g. level_0, level_1); corporate users get null. */

@@ -1,0 +1,70 @@
+<button
+  type="button"
+  class="fixed right-6 z-[70] flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition hover:scale-105 bottom-6"
+  [class.bg-brand-900]="!isOpen()"
+  [class.bg-transparent]="isOpen()"
+  [class.bottom-[480px]]="isOpen()"
+  (click)="toggle()"
+  [attr.aria-label]="'CHATBOT.TOGGLE' | translate">
+  @if (!isOpen()) {
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h8M8 14h5m-9 7 1.8-3.6A9 9 0 1 1 21 12a9 9 0 0 1-9 9H4Z" />
+    </svg>
+  } @else {
+    <span class="text-2xl leading-none">×</span>
+  }
+</button>
+
+@if (isOpen()) {
+  <section class="fixed bottom-6 right-6 z-[69] w-[380px] max-w-[calc(100vw-2rem)] h-[520px] rounded-2xl border border-gray-200 bg-white shadow-2xl flex flex-col overflow-hidden">
+    <header class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
+      <div>
+        <h3 class="font-semibold">{{ 'CHATBOT.TITLE' | translate }}</h3>
+        <p class="text-xs text-white/80">{{ 'CHATBOT.SUBTITLE' | translate }}</p>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-3 py-3 space-y-2 bg-slate-50">
+      @for (m of messages(); track $index) {
+        <div class="flex" [class.justify-end]="m.role === 'user'" [class.justify-start]="m.role === 'assistant'">
+          <div
+            class="max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap"
+            [class.bg-brand-900]="m.role === 'user'"
+            [class.text-white]="m.role === 'user'"
+            [class.bg-white]="m.role === 'assistant'"
+            [class.text-gray-800]="m.role === 'assistant'"
+            [class.border]="m.role === 'assistant'"
+            [class.border-gray-200]="m.role === 'assistant'">
+            @if (m.role === 'assistant') {
+              <span [innerHTML]="assistantHtml(m.content)"></span>
+            } @else {
+              {{ m.content }}
+            }
+          </div>
+        </div>
+      }
+      @if (loading()) {
+        <div class="text-xs text-gray-500 px-1">{{ 'CHATBOT.THINKING' | translate }}</div>
+      }
+    </div>
+
+    <footer class="border-t border-gray-200 p-3 bg-white">
+      <textarea
+        rows="2"
+        class="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-700"
+        [value]="inputText()"
+        (input)="inputText.set($any($event.target).value)"
+        (keydown)="onInputKeydown($event)"
+        [placeholder]="'CHATBOT.PLACEHOLDER' | translate"></textarea>
+      <div class="mt-2 flex justify-end">
+        <button
+          type="button"
+          class="rounded-lg bg-brand-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          [disabled]="!canSend()"
+          (click)="sendMessage()">
+          {{ 'CHATBOT.SEND' | translate }}
+        </button>
+      </div>
+    </footer>
+  </section>
+}

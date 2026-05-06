@@ -1,0 +1,35 @@
+@startuml
+!theme plain
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+title Diagramme de cas d'utilisation — Sprint « BI & KPI »
+
+left to right direction
+
+actor "Utilisateur\ncorporate" as CU
+actor "Système\nd'intégration" as SYS
+
+rectangle "Pilotage & reporting" {
+  usecase "Consulter le tableau\nde bord consolidé" as UC1
+  usecase "Filtrer les données\n(site, année, catégorie)" as UC2
+  usecase "Comparer planifié /\nréalisé" as UC3
+  usecase "Exporter les données" as UC4
+  usecase "Visualiser graphiques\net KPI" as UC5
+  usecase "Publier / synchroniser\nvers Power BI" as UC6
+  usecase "Actualiser les\nsnapshots CSR" as UC7
+}
+
+CU --> UC1
+CU --> UC2
+CU --> UC3
+CU --> UC4
+CU --> UC5
+
+SYS --> UC6
+SYS --> UC7
+
+UC1 ..> UC2 : <<include>>
+UC1 ..> UC5 : <<include>>
+UC3 ..> UC1 : <<extend>>
+@enduml

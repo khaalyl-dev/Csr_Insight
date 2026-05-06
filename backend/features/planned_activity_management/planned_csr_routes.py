@@ -6,11 +6,11 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Blueprint, request, jsonify
-from sqlalchemy import exists
 
 from core import db, token_required
 from core.permissions import has_permission
 from models import (
+    ActivityKpi,
     CsrActivity,
     CsrPlan,
     UserSite,
@@ -43,6 +43,7 @@ from features.change_request_management.change_requests_routes import (
     _activity_has_off_plan_realization,
     _latest_off_plan_realization,
 )
+from features.kpi_management.kpi_service import activity_kpi_to_json, recompute_activity_kpi
 
 
 def _is_corporate(role: str) -> bool:
@@ -233,6 +234,27 @@ def _list_text_values(raw: Any) -> List[str]:
     return [s] if s else []
 
 
+def _external_partner_values_from_payload(data: Dict[str, Any]) -> List[str]:
+    names = _list_text_values(data.get("external_partners"))
+    if names:
+        return names
+    return _list_text_values(data.get("external_partner"))
+
+
+def _resolve_external_partner_and_count(data: Dict[str, Any]) -> Tuple[Optional[str], Optional[int]]:
+    names = _external_partner_values_from_payload(data)
+    if not names:
+        return None, 0
+    combined = ", ".join(names)
+    key = combined.lower()
+    ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
+    if not ep:
+        ep = ExternalPartner(name=combined, type="OTHER")
+        db.session.add(ep)
+        db.session.flush()
+    return ep.id, len(names)
+
+
 def _replace_planned_objectives(activity_id: str, values: List[str]) -> None:
     CsrObjective.query.filter_by(activity_id=activity_id).delete()
     for value in values:
@@ -264,6 +286,7 @@ def _activity_to_json(a: CsrActivity, cr_context: Optional[Dict[str, Any]] = Non
         .order_by(CsrCompletedObjective.created_at.asc())
         .all()
     ]
+    kpi_json = activity_kpi_to_json(a.id)
     return {
         "id": a.id,
         "plan_id": a.plan_id,
@@ -286,6 +309,7 @@ def _activity_to_json(a: CsrActivity, cr_context: Optional[Dict[str, Any]] = Non
         "edition": a.edition,
         "start_year": a.start_year,
         "employees_planned": getattr(a, "employees_planned", None),
+        "nb_of_external_partner": getattr(a, "nb_of_external_partner", 0),
         "planned_objectives": planned_objectives,
         "completed_objectives": completed_objectives,
         "external_partner_name": a.external_partner.name if getattr(a, "external_partner", None) else None,
@@ -295,6 +319,8 @@ def _activity_to_json(a: CsrActivity, cr_context: Optional[Dict[str, Any]] = Non
         "off_plan_validation_step": (
             getattr(off_r, "off_plan_validation_step", None) if off_r else getattr(a, "off_plan_validation_step", None)
         ),
+        "kpi": kpi_json,
+        "lifecycle_status": (kpi_json or {}).get("lifecycle_status"),
     }
 
 
@@ -335,10 +361,10 @@ def list_activities():
         return denied
     """List CSR activities. Optional: plan_id, year, exclude_realized.
 
-    exclude_realized: when true, omits activities that already have at least one ``realized_activity`` row.
-    Default: true when plan_id is absent (global planned-activities list); false when plan_id is set.
-    When plan_id is absent and exclusion is on, results are also limited to current/future plan years
-    and plans in VALIDATED status. SITE_USER only sees activities of their sites' plans."""
+    exclude_realized: when true, only activities on approved annual plans (VALIDATED or LOCKED) and with KPI
+    lifecycle_status PLANNED or PENDING (CSR Activities work queue). No other filters.
+    When exclude_realized is false, returns all accessible planned lines (e.g. plan detail totals).
+    SITE_USER only sees activities of their sites' plans."""
     plan_id = request.args.get("plan_id")
     year = request.args.get("year", type=int)
     # By default exclude realized when listing all; when plan_id is set (e.g. plan detail) include all.
@@ -373,14 +399,9 @@ def list_activities():
         q = q.join(CsrPlan)
 
     if exclude_realized:
-        # Hide plan lines that already have at least one realization (planned list = still to be filled).
-        has_realization = exists().where(RealizedCsr.activity_id == CsrActivity.id)
-        q = q.filter(~has_realization)
-        # Global list (no plan_id): only current/future years and validated plans (work queue).
-        if not plan_id:
-            current_year = date.today().year
-            q = q.filter(CsrPlan.year >= current_year)
-            q = q.filter(CsrPlan.status == "VALIDATED")
+        q = q.join(ActivityKpi, ActivityKpi.activity_id == CsrActivity.id)
+        q = q.filter(CsrPlan.status.in_(["VALIDATED", "LOCKED"]))
+        q = q.filter(ActivityKpi.lifecycle_status.in_(["PLANNED", "PENDING"]))
 
     activities = q.order_by(CsrPlan.year.desc(), CsrActivity.plan_id, CsrActivity.activity_number).all()
     cr_ctx = _build_cr_effective_context(activities)
@@ -494,20 +515,14 @@ def create_activity():
         organizer=(data.get("organizer") or "").strip() or None,
         status="DRAFT",
     )
-    # Optional external partners list (or legacy single external_partner)
-    external_partners = _list_text_values(data.get("external_partners"))
-    ext_name = ", ".join(external_partners) if external_partners else (data.get("external_partner") or "").strip() or None
-    if ext_name:
-        key = ext_name.lower()
-        ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
-        if not ep:
-            ep = ExternalPartner(name=ext_name, type="OTHER")
-            db.session.add(ep)
-            db.session.flush()
-        a.external_partner_id = ep.id
+    # Optional external partner(s): persist relation + computed count.
+    external_partner_id, nb_external = _resolve_external_partner_and_count(data)
+    a.external_partner_id = external_partner_id
+    a.nb_of_external_partner = nb_external or 0
     db.session.add(a)
     db.session.flush()
     _replace_planned_objectives(a.id, _list_text_values(data.get("planned_objectives")))
+    recompute_activity_kpi(a.id)
     audit_create(
         user_id=request.user_id,
         site_id=plan.site_id,
@@ -624,23 +639,11 @@ def create_plan_realized_draft_with_realization():
     start_year = _int_val("start_year")
     organizer = _str_val("organizer")
 
-    raw_external_partners = data.get("external_partners")
-    external_partners = []
-    if isinstance(raw_external_partners, list):
-        for item in raw_external_partners:
-            s = str(item).strip()
-            if s and s.lower() not in [x.lower() for x in external_partners]:
-                external_partners.append(s)
-    external_partner_name = ", ".join(external_partners) if external_partners else _str_val("external_partner")
-    external_partner_id = None
-    if external_partner_name:
-        key = external_partner_name.strip().lower()
-        ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
-        if not ep:
-            ep = ExternalPartner(name=external_partner_name, type="OTHER")
-            db.session.add(ep)
-            db.session.flush()
-        external_partner_id = ep.id
+    external_partner_id, nb_external = _resolve_external_partner_and_count(data)
+    external_partner_name = None
+    if external_partner_id:
+        ep = ExternalPartner.query.get(external_partner_id)
+        external_partner_name = ep.name if ep else None
 
     comment = _str_val("comment")
     contact_name = _str_val("contact_name")
@@ -742,6 +745,7 @@ def create_plan_realized_draft_with_realization():
         action_impact_duration=_str_val("action_impact_duration"),
         employees_planned=_int_val("employees_planned"),
         external_partner_id=external_partner_id,
+        nb_of_external_partner=nb_external or 0,
         status="DRAFT",
     )
     db.session.add(a)
@@ -769,6 +773,7 @@ def create_plan_realized_draft_with_realization():
     )
     db.session.add(r)
     _replace_completed_objectives(a.id, _list_text_values(data.get("completed_objectives")))
+    recompute_activity_kpi(a.id)
 
     audit_create(
         user_id=request.user_id,
@@ -888,23 +893,11 @@ def create_off_plan_realization():
     start_year = _int_val("start_year")
     organizer = _str_val("organizer")
 
-    raw_external_partners = data.get("external_partners")
-    external_partners = []
-    if isinstance(raw_external_partners, list):
-        for item in raw_external_partners:
-            s = str(item).strip()
-            if s and s.lower() not in [x.lower() for x in external_partners]:
-                external_partners.append(s)
-    external_partner_name = ", ".join(external_partners) if external_partners else _str_val("external_partner")
-    external_partner_id = None
-    if external_partner_name:
-        key = external_partner_name.strip().lower()
-        ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
-        if not ep:
-            ep = ExternalPartner(name=external_partner_name, type="OTHER")
-            db.session.add(ep)
-            db.session.flush()
-        external_partner_id = ep.id
+    external_partner_id, nb_external = _resolve_external_partner_and_count(data)
+    external_partner_name = None
+    if external_partner_id:
+        ep = ExternalPartner.query.get(external_partner_id)
+        external_partner_name = ep.name if ep else None
 
     comment = _str_val("comment")
     contact_name = _str_val("contact_name")
@@ -966,6 +959,7 @@ def create_off_plan_realization():
         action_impact_duration=_str_val("action_impact_duration"),
         employees_planned=_int_val("employees_planned"),
         external_partner_id=external_partner_id,
+        nb_of_external_partner=nb_external or 0,
         status="VALIDATED" if corporate_submit else "SUBMITTED",
     )
     db.session.add(a)
@@ -993,6 +987,7 @@ def create_off_plan_realization():
     )
     db.session.add(r)
     _replace_completed_objectives(a.id, _list_text_values(data.get("completed_objectives")))
+    recompute_activity_kpi(a.id)
 
     if not corporate_submit:
         first_grade = "level_1" if _mode_site_steps(vm) > 0 else "level_corporate"
@@ -1563,7 +1558,32 @@ def get_activity(activity_id: str):
         return jsonify({"message": "Activité introuvable"}), 404
     if not _user_can_access_plan(request.user_id, a.plan_id, getattr(request, "role", "")):
         return jsonify({"message": "Vous n'avez pas accès à cette activité"}), 403
-    return jsonify(_activity_to_json_with_plan(a, getattr(request, "role", ""))), 200
+    if not ActivityKpi.query.filter_by(activity_id=activity_id).first():
+        recompute_activity_kpi(activity_id)
+        db.session.commit()
+    role = getattr(request, "role", "") or ""
+    out = _activity_to_json_with_plan(a, role)
+    if a.plan and getattr(a.plan, "allocated_budget", None) is not None:
+        out["plan_allocated_budget"] = float(a.plan.allocated_budget)
+    else:
+        out["plan_allocated_budget"] = None
+    # Full related realization rows (same shape as /api/realized-csr) for activity detail screens.
+    from features.realized_activity_management.realized_csr_routes import _realized_to_json
+
+    r_rows = (
+        RealizedCsr.query.options(
+            db.joinedload(RealizedCsr.activity).joinedload(CsrActivity.plan).joinedload(CsrPlan.site),
+        )
+        .filter(RealizedCsr.activity_id == activity_id)
+        .order_by(
+            RealizedCsr.realization_date.is_(None),
+            RealizedCsr.realization_date.desc(),
+            RealizedCsr.created_at.desc(),
+        )
+        .all()
+    )
+    out["realizations"] = [_realized_to_json(r, role) for r in r_rows]
+    return jsonify(out), 200
 
 
 def _activity_site_id(a: CsrActivity):
@@ -1654,33 +1674,13 @@ def update_activity(activity_id: str):
         a.edition = _int_val("edition")
     if "start_year" in data:
         a.start_year = _int_val("start_year")
-    if "external_partners" in data:
-        partners = _list_text_values(data.get("external_partners"))
-        if partners:
-            combined = ", ".join(partners)
-            key = combined.strip().lower()
-            ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
-            if not ep:
-                ep = ExternalPartner(name=combined, type="OTHER")
-                db.session.add(ep)
-                db.session.flush()
-            a.external_partner_id = ep.id
-        else:
-            a.external_partner_id = None
-    if "external_partner" in data:
-        ext_name = _str_val("external_partner")
-        if ext_name:
-            key = ext_name.strip().lower()
-            ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
-            if not ep:
-                ep = ExternalPartner(name=ext_name, type="OTHER")
-                db.session.add(ep)
-                db.session.flush()
-            a.external_partner_id = ep.id
-        else:
-            a.external_partner_id = None
+    if "external_partners" in data or "external_partner" in data:
+        external_partner_id, nb_external = _resolve_external_partner_and_count(data)
+        a.external_partner_id = external_partner_id
+        a.nb_of_external_partner = nb_external or 0
     if "planned_objectives" in data:
         _replace_planned_objectives(a.id, _list_text_values(data.get("planned_objectives")))
+    recompute_activity_kpi(a.id)
     audit_update(
         user_id=request.user_id,
         site_id=_activity_site_id(a),
@@ -1720,6 +1720,8 @@ def delete_activity(activity_id: str):
     )
     # Ensure realizations are removed (ORM/DB FK may otherwise try to null activity_id).
     RealizedCsr.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
+    CsrCompletedObjective.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
+    CsrObjective.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
     db.session.delete(a)
     db.session.commit()
     emit_tasks_refresh_for_request_actor()

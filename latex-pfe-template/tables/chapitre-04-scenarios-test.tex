@@ -1,0 +1,187 @@
+% Scénarios de test consolidés — chapitre 4 (plans & activités)
+\small
+\PFETableSetup
+\setlength{\LTpre}{0pt}
+\setlength{\LTpost}{0pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\setlength{\tabcolsep}{3.5pt}
+\renewcommand{\arraystretch}{1.25}
+
+\begin{longtable}{|>{\centering\arraybackslash}m{2.8cm}|
+>{\raggedright\arraybackslash}p{2.5cm}|
+>{\raggedright\arraybackslash}p{3.8cm}|
+>{\raggedright\arraybackslash}p{4.3cm}|
+>{\centering\arraybackslash}p{1.1cm}|}
+\caption{Synthèse des cas de test du sprint 2}\label{tab:ch4-scenarios-tests}\\
+\hline
+\tableHeaderStyle
+\multicolumn{1}{|c|}{\tableHeaderCell{Nom du cas d'utilisation}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Cas de test}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Description du cas}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat attendu}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat réel}} \\
+\hline
+\endfirsthead
+\hline
+\multicolumn{5}{|c|}{\tablename\ \thetable{} --- \textit{(suite)}} \\
+\hline
+\tableHeaderStyle
+\multicolumn{1}{|c|}{\tableHeaderCell{Nom du cas d'utilisation}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Cas de test}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Description du cas}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat attendu}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat réel}} \\
+\hline
+\endhead
+\hline
+\multicolumn{5}{|r|}{\textit{Suite page suivante\ldots}} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\needspace{16\baselineskip}
+\multirow{7}{=}{\centering Gérer un plan CSR\\manuellement} &
+Créer un plan CSR &
+Création d'un nouveau plan annuel avec site, année et budget. &
+Le plan est enregistré et visible dans la liste. &
+Vrai \\
+\cline{2-5}
+ &
+Consulter un plan CSR &
+Ouverture du détail d'un plan déjà créé. &
+Les informations du plan sont affichées correctement. &
+Vrai \\
+\cline{2-5}
+ &
+Modifier un plan CSR &
+Mise à jour des informations d'un plan en état modifiable. &
+Les modifications sont enregistrées et visibles. &
+Vrai \\
+\cline{2-5}
+ &
+Supprimer un plan CSR &
+Suppression d'un plan autorisée selon les règles métier. &
+Le plan est supprimé et n'apparaît plus dans la liste. &
+Vrai \\
+\cline{2-5}
+ &
+Soumettre un plan CSR pour validation &
+Soumission d'un plan complet pour lancer le workflow de validation. &
+Le statut passe en « soumis » et le plan devient non modifiable. &
+Vrai \\
+\cline{2-5}
+ &
+Importer un plan via Excel &
+Import d'un fichier Excel pour créer plan et activités associées. &
+Le plan et ses activités sont créés si les données sont valides. &
+Vrai \\
+\cline{2-5}
+ &
+Lire et parser le fichier Excel avant l'import &
+Vérification de la structure et des données avant confirmation d'import. &
+Les erreurs de format sont détectées avant insertion. &
+Vrai \\
+\hline
+
+\needspace{10\baselineskip}
+\multirow{4}{=}{\centering Gérer une activité\\planifiée} &
+Créer une activité planifiée &
+Ajout d'une nouvelle activité dans un plan CSR. &
+L'activité est enregistrée et affichée dans le plan. &
+Vrai \\
+\cline{2-5}
+ &
+Consulter une activité planifiée &
+Ouverture des détails d'une activité planifiée existante. &
+Les informations détaillées sont affichées. &
+Vrai \\
+\cline{2-5}
+ &
+Modifier une activité planifiée &
+Mise à jour des informations d'une activité planifiée. &
+Les modifications sont sauvegardées. &
+Vrai \\
+\cline{2-5}
+ &
+Supprimer une activité planifiée &
+Suppression d'une activité planifiée selon les règles d'état. &
+L'activité est retirée de la liste du plan. &
+Vrai \\
+\hline
+
+\needspace{10\baselineskip}
+\multirow{4}{=}{\centering Gérer une activité\\réalisée} &
+Saisir les données réelles de l'activité &
+Saisie des données de réalisation (quantités, coûts, période, etc.). &
+La réalisation est enregistrée avec succès. &
+Vrai \\
+\cline{2-5}
+ &
+Consulter une activité réalisée &
+Affichage des détails d'une activité déjà réalisée. &
+Les données réelles sont consultables. &
+Vrai \\
+\cline{2-5}
+ &
+Modifier une activité réalisée &
+Mise à jour des données d'une activité réalisée. &
+Les modifications sont enregistrées. &
+Vrai \\
+\cline{2-5}
+ &
+Supprimer une activité réalisée &
+Suppression d'une réalisation autorisée. &
+La réalisation est supprimée de la liste. &
+Vrai \\
+\hline
+
+\needspace{12\baselineskip}
+\multirow{5}{=}{\centering Gérer une activité\\réalisée hors plan} &
+Créer une activité réalisée hors plan &
+Création d'une activité réalisée non prévue dans le plan initial. &
+L'activité hors plan est enregistrée. &
+Vrai \\
+\cline{2-5}
+ &
+Consulter une activité réalisée hors plan &
+Affichage du détail d'une activité hors plan. &
+Les informations sont affichées correctement. &
+Vrai \\
+\cline{2-5}
+ &
+Modifier une activité réalisée hors plan &
+Mise à jour des informations d'une activité hors plan. &
+Les modifications sont sauvegardées. &
+Vrai \\
+\cline{2-5}
+ &
+Supprimer une activité réalisée hors plan &
+Suppression d'une activité hors plan existante. &
+L'activité est supprimée de la liste. &
+Vrai \\
+\cline{2-5}
+ &
+Soumettre une activité réalisée hors plan pour validation &
+Envoi de l'activité hors plan dans le circuit de validation. &
+Le statut passe en attente de validation. &
+Vrai \\
+\hline
+
+\needspace{7\baselineskip}
+\multirow{2}{=}{\centering Contrôler les\\duplicatas (import Excel)} &
+Supprimer les duplicatas &
+Suppression des lignes dupliquées avant import. &
+Les doublons sont retirés du jeu de données. &
+Vrai \\
+\cline{2-5}
+ &
+Ignorer les duplicatas et continuer &
+Poursuite de l'import en ignorant les lignes dupliquées détectées. &
+L'import continue sans bloquer sur les doublons. &
+Vrai \\
+\hline
+
+\end{longtable}
+\normalsize

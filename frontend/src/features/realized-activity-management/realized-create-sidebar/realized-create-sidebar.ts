@@ -46,6 +46,8 @@ export class RealizedCreateSidebarComponent implements OnInit {
   loading = false;
   loadingData = true;
   selectedFiles: File[] = [];
+  fileTouched = false;
+  submitError = '';
 
   get selectedPlan(): CsrPlan | null {
     const id = this.form.get('plan_id')?.value;
@@ -67,15 +69,20 @@ export class RealizedCreateSidebarComponent implements OnInit {
     this.form = this.fb.group({
       plan_id: ['', Validators.required],
       activity_id: ['', Validators.required],
-      realized_budget: [null as number | null],
-      participants: [null as number | null],
+      realized_budget: [null as number | null, Validators.required],
+      participants: [null as number | null, Validators.required],
       total_hc: [null as number | null],
-      action_impact_actual: [null as number | null],
-      action_impact_unit: [''],
-      realization_date: [''],
-      comment: [''],
-      contact_name: [''],
-      contact_email: [''],
+      action_impact_actual: [null as number | null, Validators.required],
+      action_impact_unit: ['', Validators.required],
+      realization_date: ['', Validators.required],
+      corporate_image_improved: [null as boolean | null, Validators.required],
+      incidents_number: [null as number | null, Validators.required],
+      organizer: ['', Validators.required],
+      external_partner: ['', Validators.required],
+      comment: ['', Validators.required],
+      contact_name: ['', Validators.required],
+      contact_email: ['', [Validators.required, Validators.email]],
+      contact_department: ['', Validators.required],
     });
 
     this.form.get('plan_id')?.valueChanges.subscribe((id) => this.onPlanChange(id));
@@ -161,6 +168,13 @@ export class RealizedCreateSidebarComponent implements OnInit {
     ).subscribe((activity) => {
       const list = Array.isArray(activity?.planned_objectives) ? activity.planned_objectives : [];
       this.plannedObjectives = list.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
+      this.form.patchValue({
+        organizer: (activity as any)?.organizer ?? '',
+        external_partner:
+          (activity as any)?.external_partner_name ??
+          (activity as any)?.external_partner ??
+          '',
+      }, { emitEvent: false });
       this.cdr.markForCheck();
     });
   }
@@ -177,6 +191,7 @@ export class RealizedCreateSidebarComponent implements OnInit {
 
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
+    this.fileTouched = true;
     if (input.files?.length) {
       this.selectedFiles.push(...Array.from(input.files));
       input.value = '';
@@ -208,8 +223,20 @@ export class RealizedCreateSidebarComponent implements OnInit {
   }
 
   submit(): void {
+    this.submitError = '';
+    this.fileTouched = true;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (this.plannedObjectives.length > 0 && this.completedObjectives.size === 0) {
+      this.submitError = 'Select at least one completed objective.';
+      this.cdr.markForCheck();
+      return;
+    }
+    if (this.selectedFiles.length === 0) {
+      this.submitError = 'Please attach at least one file.';
+      this.cdr.markForCheck();
       return;
     }
     this.loading = true;
@@ -224,8 +251,10 @@ export class RealizedCreateSidebarComponent implements OnInit {
       realization_date: raw.realization_date?.trim() ? raw.realization_date.substring(0, 10) : null,
       comment: raw.comment?.trim() || null,
       completed_objectives: Array.from(this.completedObjectives),
+      corporate_image_improved: raw.corporate_image_improved,
+      incidents_number: raw.incidents_number != null && raw.incidents_number !== '' ? Number(raw.incidents_number) : null,
       employees_actual: raw.participants != null && raw.participants !== '' ? Number(raw.participants) : null,
-      contact_department: null,
+      contact_department: raw.contact_department?.trim() || null,
       contact_name: raw.contact_name?.trim() || null,
       contact_email: raw.contact_email?.trim() || null,
     };

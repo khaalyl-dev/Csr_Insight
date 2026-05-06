@@ -1,0 +1,45 @@
+% Cas d'utilisation « Soumettre un plan CSR pour validation » — inclus sous la sous-section 4.4.3
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Description textuelle du cas d'utilisation : «~Soumettre un plan CSR pour validation~»}
+  \label{tab:cu-soumettre-plan-csr}
+  \PFETableSetup
+  \PFETableRowColors
+  \PFETableArrayStretch
+  \PFETableTabularXBegin
+  \begin{tabularx}{\PFETableBlockWidth}{@{}>{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}X@{}}
+    \tableHeaderStyle \tableHeaderCell{Champ} & \tableHeaderCell{Contenu} \\
+    \textbf{Titre} & Soumettre un plan CSR pour validation \\
+    \textbf{Acteurs} & Utilisateur Corporate ; utilisateur Site. \\
+    \textbf{Objectif} &
+      Permettre à l'utilisateur de soumettre un plan CSR afin de lancer le processus de validation et de figer les informations avant son exécution. \\
+    \textbf{Préconditions} &
+      1. L'utilisateur est authentifié.\par
+      2. Un token est obtenu pour accéder aux ressources protégées.\par
+      3. Un plan CSR existe.\par
+      4. Le plan est complet et en état modifiable. \\
+    \textbf{Postconditions} &
+      1. Le plan CSR passe à l'état «~soumis~».\par
+      2. Il devient non modifiable selon les règles métier.\par
+      3. Il est prêt pour le processus de validation.\par
+      4. Une notification est envoyée à l'utilisateur corporate. \\
+    \textbf{Scénario nominal} &
+      1. L'utilisateur accède au module des plans CSR.\par
+      2. Le système affiche la liste des plans existants.\par
+      3. L'utilisateur sélectionne un plan.\par
+      4. Le système affiche les détails du plan.\par
+      5. L'utilisateur déclenche l'action de soumission.\par
+      6. Le système vérifie que les informations requises sont complètes.\par
+      7. Le système change le statut du plan en «~soumis~».\par
+      8. Le système enregistre la modification. \\
+    \textbf{Scénario alternatif} &
+      \textbf{A. Données incomplètes :} \par
+      A.1 Le système refuse la soumission. \par
+      A.2 Il signale les champs ou règles non satisfaits. \par\medskip
+      \textbf{B. Plan non modifiable :} \par
+      B.1 Le système informe l'utilisateur que la soumission n'est pas possible. \par
+      B.2 Le message indique la cause (statut, droits ou fenêtre de modification). \\
+  \end{tabularx}%
+  \PFETableTabularXEnd
+\end{table}

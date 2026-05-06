@@ -17,7 +17,20 @@ logger = logging.getLogger(__name__)
 from core import db, token_required
 from core.permissions import has_permission
 from core.user_avatar import user_avatar_serve_url
-from models import CsrPlan, Site, User, UserSite, Validation, ChangeRequest
+from models import (
+    Category,
+    ExternalPartner,
+    ChangeRequest,
+    CsrActivity,
+    CsrCompletedObjective,
+    CsrObjective,
+    CsrPlan,
+    RealizedCsr,
+    Site,
+    User,
+    UserSite,
+    Validation,
+)
 from features.csr_plan_management.plan_visibility import csr_plans_visible_query
 from features.change_request_management.change_requests_routes import (
     _activity_has_off_plan_realization,
@@ -32,6 +45,11 @@ from features.audit_history_management.audit_helper import (
     audit_delete,
     write_audit,
     snapshot_plan,
+)
+from features.kpi_management.kpi_service import (
+    activity_kpi_to_json,
+    ensure_plan_activity_kpis,
+    recompute_plan_activity_kpis,
 )
 
 bp = Blueprint("csr_plans", __name__, url_prefix="/api/csr-plans")
@@ -264,6 +282,149 @@ def _plan_to_json(plan: CsrPlan):
     }
 
 
+def _safe_rate(n: float, d: float) -> Optional[float]:
+    if d == 0:
+        return None
+    return round((n / d) * 100.0, 2)
+
+
+def _plan_kpis(plan: CsrPlan) -> dict:
+    activity_ids = [
+        row[0]
+        for row in db.session.query(CsrActivity.id).filter(CsrActivity.plan_id == plan.id).all()
+    ]
+    planned_actions = len(activity_ids)
+    if not activity_ids:
+        return {
+            "incidents_sum": 0,
+            "participants_estimated_sum": 0,
+            "participants_realized_sum": 0,
+            "involvement_rate": None,
+            "announced_objectives_sum": 0,
+            "completed_objectives_sum": 0,
+            "action_delivery_rate": None,
+            "planned_actions": 0,
+            "accomplished_actions": 0,
+            "action_execution_rate": None,
+            "estimated_budget_sum": 0,
+            "realized_budget_sum": 0,
+            "actual_budget_sum": 0,
+            "budget_control_rate": None,
+            "external_partners_sum": 0,
+            "participants_vs_total_hc_rate": None,
+            "category_percentages": [],
+        }
+
+    participants_estimated_sum = (
+        db.session.query(func.coalesce(func.sum(CsrActivity.employees_planned), 0))
+        .filter(CsrActivity.id.in_(activity_ids))
+        .scalar()
+        or 0
+    )
+    realized_participants_sum, incidents_sum, realized_budget_sum = (
+        db.session.query(
+            func.coalesce(func.sum(RealizedCsr.participants), 0),
+            func.coalesce(func.sum(RealizedCsr.incidents_number), 0),
+            func.coalesce(func.sum(RealizedCsr.realized_budget), 0),
+        )
+        .filter(RealizedCsr.activity_id.in_(activity_ids))
+        .first()
+    )
+    announced_objectives_sum = (
+        db.session.query(func.count(CsrObjective.id))
+        .filter(CsrObjective.activity_id.in_(activity_ids))
+        .scalar()
+        or 0
+    )
+    completed_objectives_sum = (
+        db.session.query(func.count(CsrCompletedObjective.id))
+        .filter(
+            CsrCompletedObjective.activity_id.in_(activity_ids),
+            CsrCompletedObjective.achieved.is_(True),
+        )
+        .scalar()
+        or 0
+    )
+    accomplished_actions = (
+        db.session.query(func.count(distinct(RealizedCsr.activity_id)))
+        .filter(RealizedCsr.activity_id.in_(activity_ids))
+        .scalar()
+        or 0
+    )
+    estimated_budget_sum = (
+        db.session.query(func.coalesce(func.sum(CsrActivity.planned_budget), 0))
+        .filter(CsrActivity.id.in_(activity_ids))
+        .scalar()
+        or 0
+    )
+
+    external_partners_sum = 0
+    partner_labels = (
+        db.session.query(ExternalPartner.name)
+        .select_from(CsrActivity)
+        .outerjoin(ExternalPartner, ExternalPartner.id == CsrActivity.external_partner_id)
+        .filter(CsrActivity.id.in_(activity_ids))
+        .all()
+    )
+    for row in partner_labels:
+        name = (row[0] or "").strip()
+        if not name:
+            continue
+        external_partners_sum += len([p for p in name.split(",") if p.strip()])
+
+    cat_rows = (
+        db.session.query(Category.name, func.count(CsrActivity.id))
+        .join(CsrActivity, CsrActivity.category_id == Category.id)
+        .filter(CsrActivity.plan_id == plan.id)
+        .group_by(Category.name)
+        .all()
+    )
+    category_percentages = []
+    for cat_name, cat_count in cat_rows:
+        pct = _safe_rate(float(cat_count), float(planned_actions)) if planned_actions else None
+        category_percentages.append(
+            {
+                "category_name": cat_name,
+                "actions_count": int(cat_count or 0),
+                "percentage": pct,
+            }
+        )
+
+    realized_participants_sum = int(realized_participants_sum or 0)
+    incidents_sum = int(incidents_sum or 0)
+    realized_budget_sum = float(realized_budget_sum or 0)
+    estimated_budget_sum = float(estimated_budget_sum or 0)
+    participants_estimated_sum = int(participants_estimated_sum or 0)
+    total_hc = int(getattr(plan, "total_hc", 0) or 0)
+    allocated_budget = float(getattr(plan, "allocated_budget", 0) or 0)
+
+    involvement_rate = _safe_rate(float(realized_participants_sum), float(participants_estimated_sum)) if participants_estimated_sum else None
+    action_delivery_rate = _safe_rate(float(completed_objectives_sum), float(announced_objectives_sum)) if announced_objectives_sum else None
+    action_execution_rate = _safe_rate(float(accomplished_actions), float(planned_actions)) if planned_actions else None
+    budget_control_rate = _safe_rate(realized_budget_sum, allocated_budget) if allocated_budget else None
+    participants_vs_total_hc_rate = _safe_rate(float(realized_participants_sum), float(total_hc)) if total_hc else None
+
+    return {
+        "incidents_sum": incidents_sum,
+        "participants_estimated_sum": participants_estimated_sum,
+        "participants_realized_sum": realized_participants_sum,
+        "involvement_rate": involvement_rate,
+        "announced_objectives_sum": int(announced_objectives_sum or 0),
+        "completed_objectives_sum": int(completed_objectives_sum or 0),
+        "action_delivery_rate": action_delivery_rate,
+        "planned_actions": planned_actions,
+        "accomplished_actions": int(accomplished_actions or 0),
+        "action_execution_rate": action_execution_rate,
+        "estimated_budget_sum": estimated_budget_sum,
+        "realized_budget_sum": realized_budget_sum,
+        "actual_budget_sum": realized_budget_sum,
+        "budget_control_rate": budget_control_rate,
+        "external_partners_sum": external_partners_sum,
+        "participants_vs_total_hc_rate": participants_vs_total_hc_rate,
+        "category_percentages": category_percentages,
+    }
+
+
 def _user_can_access_site(user_id: str, site_id: str) -> bool:
     return UserSite.query.filter_by(
         user_id=user_id, site_id=site_id, is_active=True
@@ -483,6 +644,7 @@ def _bulk_submit_plan(plan_id: str, user_id: str, role: str) -> Tuple[bool, Opti
         plan.validated_at = now
         plan.validation_step = None
         plan.unlock_until = None
+        recompute_plan_activity_kpis(plan_id)
     else:
         plan.status = "SUBMITTED"
         plan.submitted_at = now
@@ -634,10 +796,12 @@ def update_plan(plan_id):
             if tb_val < 0:
                 return jsonify({"message": "Le budget total doit être >= 0"}), 400
             plan.allocated_budget = tb_val
+    recalc_plan_kpis = False
     if "total_hc" in data:
         thc = data.get("total_hc")
         if thc is None or thc == "":
             plan.total_hc = None
+            recalc_plan_kpis = True
         else:
             try:
                 thc_val = int(thc)
@@ -646,6 +810,7 @@ def update_plan(plan_id):
             if thc_val < 0:
                 return jsonify({"message": "Le total HC doit être >= 0"}), 400
             plan.total_hc = thc_val
+            recalc_plan_kpis = True
 
     if plan.status == "REJECTED":
         plan.rejected_comment = None
@@ -660,6 +825,12 @@ def update_plan(plan_id):
         old_snapshot=old_snapshot,
         new_snapshot=snapshot_plan(plan),
     )
+    if recalc_plan_kpis or (
+        "year" in data
+        and data["year"] is not None
+        and plan.status in ("VALIDATED", "LOCKED")
+    ):
+        recompute_plan_activity_kpis(plan.id)
     db.session.commit()
     emit_tasks_refresh_for_request_actor()
     return jsonify(_plan_json_with_approval_flags(plan, request.user_id, getattr(request, "role", ""))), 200
@@ -710,7 +881,10 @@ def get_plan(plan_id):
             a.unlock_until = None
             a.unlock_since = None
     db.session.commit()
+    if ensure_plan_activity_kpis(plan.id):
+        db.session.commit()
     out = _plan_to_json(plan)
+    out["plan_kpis"] = _plan_kpis(plan)
     role_str = (getattr(request, "role", "") or "").upper()
     out["can_approve"] = out["can_reject"] = _compute_can_approve(plan, request.user_id, role_str)
     if role_str in ("SITE_USER", "SITE"):
@@ -866,6 +1040,7 @@ def get_plan(plan_id):
                 and not is_off_plan_activity
                 and a.status == "REJECTED"
             ),
+            "kpi": activity_kpi_to_json(a.id),
         })
     return jsonify(out), 200
 
@@ -899,6 +1074,7 @@ def submit_plan(plan_id):
         plan.validated_at = now
         plan.unlock_until = None
         plan.validation_step = None
+        recompute_plan_activity_kpis(plan_id)
         write_audit(
             request.user_id,
             plan.site_id,
@@ -994,6 +1170,7 @@ def approve_plan(plan_id):
         request.user_id, plan.site_id, "APPROVE", "PLAN", plan_id,
         f"Plan {plan.year} validé",
     )
+    recompute_plan_activity_kpis(plan_id)
     db.session.commit()
 
     site_name = plan.site.name if plan.site else "Site inconnu"

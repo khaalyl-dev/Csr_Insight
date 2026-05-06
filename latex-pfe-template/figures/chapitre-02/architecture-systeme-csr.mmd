@@ -1,0 +1,28 @@
+flowchart TB
+  U[Utilisateur] -->|Login| FE[Frontend Angular - SPA]
+  FE -->|POST /api/auth/login| AUTH[API Flask \n Authentification JWT]
+  AUTH -->|JWT Bearer| FE
+
+  FE -->|Requetes REST /api| API[API Flask \n Blueprints - Plans, Activites, Workflow, Docs, Audit, Notifications]
+
+  %% Branch 1: création / traitement
+  API -->|Import Excel / Creation / Mise a jour| PROC[Validation et regles metier\nstatuts, droits, verrouillage]
+  PROC --> ORM[SQLAlchemy / Flask-SQLAlchemy]
+  ORM --> DB[(MySQL)]
+  PROC --> MEDIA[(Stockage fichiers\nmedia)]
+  DB --> DASH[Tableaux de bord\nKPI, analytics]
+  DASH --> FE
+
+  %% Temps réel
+  API <-->|Socket.IO| RT[Canal temps reel\nnotifications / taches]
+  RT --> FE
+
+  %% Branch 2: consultation archive
+  FE -->|Consultation / recherche| API
+  API -->|Lecture| ORM
+  ORM --> DB
+  API -->|Telechargement / serve| MEDIA
+  DB -->|Données historiques| FE
+
+  classDef store fill:#f6f6f6,stroke:#475569,stroke-width:1px;
+  class DB,MEDIA store;

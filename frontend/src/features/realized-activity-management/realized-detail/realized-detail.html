@@ -58,6 +58,34 @@
       </div>
     </div>
 
+    <div *ngIf="realized()!.kpi as kpi" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Safety</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ kpi.incidents_count ?? 0 }}</p>
+        <p class="text-xs text-gray-500">Incidents</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">People</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.involvement_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpi.participants_actual_sum ?? 0 }} / {{ kpi.employees_planned ?? 0 }}</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Quality</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.action_delivery_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpi.completed_objectives_count ?? 0 }} / {{ kpi.announced_objectives_count ?? 0 }} objectives</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Cost</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.budget_control_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ formatMoney(kpi.realized_budget_sum) }} / {{ formatMoney(kpi.planned_budget_amount) }}</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">% Employees</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.participants_vs_total_hc_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpi.participants_actual_sum ?? 0 }} / {{ kpi.plan_total_hc ?? 0 }}</p>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <!-- Comparison -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden xl:col-span-2">
@@ -113,12 +141,16 @@
               </div>
             </div>
 
-            <!-- Realized-only: participants/headcount -->
+            <!-- Participation: planned estimate vs actual -->
             <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'REALIZED_DETAIL.PARTICIPANTS' | translate }}</div>
-            <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30"><div class="text-sm text-gray-500">–</div></div>
+            <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
+              <div class="text-sm font-semibold text-gray-900">
+                {{ realized()!.kpi?.employees_planned != null ? realized()!.kpi?.employees_planned : '–' }}
+              </div>
+            </div>
             <div class="rounded-xl border border-gray-200 p-3 bg-emerald-50/30">
               <div class="text-sm font-semibold text-gray-900">
-                {{ participationDisplay(realized()!.participants, realized()!.total_hc) }}
+                {{ realized()!.participants != null ? realized()!.participants : '–' }}
               </div>
             </div>
 

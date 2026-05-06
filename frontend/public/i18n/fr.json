@@ -652,6 +652,7 @@
     "SUBTITLE": "Saisie et suivi des rapports CSR",
     "NEW_REALIZATION": "Nouveau rapport CSR",
     "TOTAL_REALIZATIONS": "Total rapports CSR",
+    "LIST_COMPLETED_ONLY_HINT": "Uniquement les rapports CSR finalisés (hors brouillon) pour les activités au statut d’exécution « réalisé ».",
     "TOTAL_BUDGET_REALIZED": "Budget réalisé total",
     "SEARCH_PLACEHOLDER": "Rechercher par activité CSR, site ou année...",
     "ALL_YEARS": "Toutes années",
@@ -681,6 +682,11 @@
     "TITLE": "Activités CSR",
     "SUBTITLE": "Activités CSR des plans validés par le corporate (lecture seule)",
     "TOTAL_PLANNED": "Total activités CSR",
+    "EXECUTION_STATUS": "Exécution",
+    "EXEC_LIFECYCLE_DRAFT": "Brouillon",
+    "EXEC_LIFECYCLE_PLANNED": "Planifié",
+    "EXEC_LIFECYCLE_PENDING": "En attente de rapport",
+    "EXEC_LIFECYCLE_COMPLETED": "Réalisé",
     "TOTAL_BUDGET_PLANNED": "Budget prévu total",
     "SEARCH_PLACEHOLDER": "Rechercher par activité CSR, site, catégorie ou année...",
     "ALL_YEARS": "Toutes années",
@@ -1362,7 +1368,17 @@
     "DELETE_CONFIRM": "Supprimer définitivement cette activité CSR ? Cette action est irréversible.",
     "DELETE_ERROR": "Impossible de supprimer cette activité CSR. Veuillez réessayer.",
     "CONTEXT_SECTION": "Contexte",
-    "FIELD_COLUMN": "Champ"
+    "FIELD_COLUMN": "Champ",
+    "CONTRACT_TYPE": "Type de contrat",
+    "ANNOUNCED_OBJECTIVES": "Objectifs annoncés",
+    "COMPLETED_OBJECTIVES": "Objectifs réalisés",
+    "REALIZATIONS_TITLE": "Rapports CSR (données réalisées)",
+    "NO_REALIZATIONS": "Aucune ligne de rapport CSR pour cette activité.",
+    "VIEW_REALIZATION": "Ouvrir le rapport",
+    "PLAN_ALLOCATED_BUDGET": "Budget alloué au plan",
+    "REALIZATION_STATUS": "Statut du rapport",
+    "CORPORATE_IMAGE": "Image corporate améliorée",
+    "ACTIVITY_ID": "Id activité (base de données)"
   },
   "PLANNED_ACTIVITY_LIST": {
     "DELETE_CONFIRM": "Supprimer définitivement cette activité CSR ?"

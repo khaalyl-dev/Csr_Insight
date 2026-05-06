@@ -700,6 +700,7 @@
     "SUBTITLE": "Record and track what your teams have accomplished",
     "NEW_REALIZATION": "Log a CSR report",
     "TOTAL_REALIZATIONS": "Total CSR reports",
+    "LIST_COMPLETED_ONLY_HINT": "Only finalized CSR reports (non-draft) on activities with execution status “completed”.",
     "TOTAL_BUDGET_REALIZED": "Total budget used",
     "SEARCH_PLACEHOLDER": "Search by CSR activity, site or year...",
     "ALL_YEARS": "All years",
@@ -729,6 +730,11 @@
     "TITLE": "CSR Activities",
     "SUBTITLE": "CSR Activities from approved corporate plans (read-only)",
     "TOTAL_PLANNED": "Total CSR activities",
+    "EXECUTION_STATUS": "Execution",
+    "EXEC_LIFECYCLE_DRAFT": "Draft",
+    "EXEC_LIFECYCLE_PLANNED": "Planned",
+    "EXEC_LIFECYCLE_PENDING": "Pending report",
+    "EXEC_LIFECYCLE_COMPLETED": "Completed",
     "TOTAL_BUDGET_PLANNED": "Total planned budget",
     "SEARCH_PLACEHOLDER": "Search by CSR activity, site, category or year...",
     "ALL_YEARS": "All years",
@@ -1359,7 +1365,17 @@
     "DELETE_CONFIRM": "Permanently delete this CSR activity? This action cannot be undone.",
     "DELETE_ERROR": "Couldn't delete this CSR activity. Please try again.",
     "CONTEXT_SECTION": "Context",
-    "FIELD_COLUMN": "Field"
+    "FIELD_COLUMN": "Field",
+    "CONTRACT_TYPE": "Contract type",
+    "ANNOUNCED_OBJECTIVES": "Announced objectives",
+    "COMPLETED_OBJECTIVES": "Completed objectives",
+    "REALIZATIONS_TITLE": "CSR reports (realized data)",
+    "NO_REALIZATIONS": "No CSR report rows yet for this activity.",
+    "VIEW_REALIZATION": "Open report",
+    "PLAN_ALLOCATED_BUDGET": "Plan allocated budget",
+    "REALIZATION_STATUS": "Report status",
+    "CORPORATE_IMAGE": "Corporate image improved",
+    "ACTIVITY_ID": "Activity id (database)"
   },
   "PLANNED_ACTIVITY_LIST": {
     "DELETE_CONFIRM": "Permanently delete this CSR activity? This cannot be undone."

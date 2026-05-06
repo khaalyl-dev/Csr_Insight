@@ -10,11 +10,20 @@ from typing import Optional
 from flask import Blueprint, request, jsonify
 
 from core import db, token_required
-from models import RealizedCsr, CsrActivity, CsrPlan, CsrObjective, CsrCompletedObjective
+from models import (
+    ActivityKpi,
+    RealizedCsr,
+    CsrActivity,
+    CsrPlan,
+    CsrObjective,
+    CsrCompletedObjective,
+    ExternalPartner,
+)
 from features.csr_plan_management.plan_visibility import data_scope_site_ids
 from features.audit_history_management.audit_helper import audit_delete
 from features.notification_management.notification_helper import notify_corporate
 from features.notification_management.socketio_emit import emit_tasks_refresh_for_request_actor
+from features.kpi_management.kpi_service import activity_kpi_to_json, recompute_activity_kpi
 
 bp = Blueprint("realized_csr", __name__, url_prefix="/api/realized-csr")
 
@@ -108,11 +117,7 @@ def _realized_to_json(r: RealizedCsr, role: str = ""):
         "action_impact_duration": getattr(act, "action_impact_duration", None) if act else None,
         "organizer": getattr(act, "organizer", None) if act else None,
         "external_partner_name": act.external_partner.name if act and getattr(act, "external_partner", None) else None,
-        "number_external_partners": (
-            len([p for p in (act.external_partner.name or "").split(",") if p.strip()])
-            if act and getattr(act, "external_partner", None) and act.external_partner.name
-            else None
-        ),
+        "number_external_partners": (getattr(act, "nb_of_external_partner", None) if act else None),
         "plan_id": act.plan_id if act else None,
         "site_name": plan.site.name if plan and plan.site else None,
         "site_region": plan.site.region if plan and plan.site else None,
@@ -145,7 +150,38 @@ def _realized_to_json(r: RealizedCsr, role: str = ""):
         "updated_at": r.updated_at.isoformat() if getattr(r, "updated_at", None) else None,
         "unlock_until": r.unlock_until.isoformat() if getattr(r, "unlock_until", None) else None,
         "unlock_since": r.unlock_since.isoformat() if getattr(r, "unlock_since", None) else None,
+        "kpi": activity_kpi_to_json(r.activity_id),
     }
+
+
+def _list_text_values(raw):
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        out = []
+        for v in raw:
+            s = str(v).strip()
+            if s and s.lower() not in [x.lower() for x in out]:
+                out.append(s)
+        return out
+    s = str(raw).strip()
+    return [s] if s else []
+
+
+def _resolve_external_partner_and_count(data):
+    names = _list_text_values(data.get("external_partners"))
+    if not names:
+        names = _list_text_values(data.get("external_partner"))
+    if not names:
+        return None, 0
+    combined = ", ".join(names)
+    key = combined.lower()
+    ep = ExternalPartner.query.filter(db.func.lower(ExternalPartner.name) == key).first()
+    if not ep:
+        ep = ExternalPartner(name=combined, type="OTHER")
+        db.session.add(ep)
+        db.session.flush()
+    return ep.id, len(names)
 
 
 def _allowed_activity_ids(user_id: str, role: str) -> Optional[list]:
@@ -176,11 +212,12 @@ def list_realized():
     if activity_id:
         q = q.filter_by(activity_id=activity_id)
 
-    # Keep dashboard/list behavior (validated plans only), but when querying
-    # a specific activity (edit screen), return its realizations regardless of plan status.
+    # List (CSR Reports): approved plans and COMPLETED execution lifecycle. Detail by activity_id: no extra filters.
     q = q.join(RealizedCsr.activity).join(CsrActivity.plan)
     if not activity_id:
-        q = q.filter(CsrPlan.status == "VALIDATED")
+        q = q.filter(CsrPlan.status.in_(["VALIDATED", "LOCKED"]))
+        q = q.join(ActivityKpi, ActivityKpi.activity_id == RealizedCsr.activity_id)
+        q = q.filter(ActivityKpi.lifecycle_status == "COMPLETED")
 
     # RealizedCsr no longer has year/month columns; order by realization_date (newest first),
     # then by created_at as a fallback. MySQL/MariaDB do not support "NULLS LAST",
@@ -213,6 +250,9 @@ def get_realized(realized_id: str):
     allowed = _allowed_activity_ids(request.user_id, getattr(request, "role", ""))
     if allowed is not None and r.activity_id not in allowed:
         return jsonify({"message": "Vous n'avez pas accès à cette réalisation"}), 403
+    if not ActivityKpi.query.filter_by(activity_id=r.activity_id).first():
+        recompute_activity_kpi(r.activity_id)
+        db.session.commit()
     return jsonify(_realized_to_json(r, getattr(request, "role", ""))), 200
 
 
@@ -266,19 +306,6 @@ def create_realized():
         v = data.get(key)
         return str(v).strip() if v is not None and str(v).strip() else default
 
-    def _list_text_values(raw):
-        if raw is None:
-            return []
-        if isinstance(raw, list):
-            out = []
-            for v in raw:
-                s = str(v).strip()
-                if s and s.lower() not in [x.lower() for x in out]:
-                    out.append(s)
-            return out
-        s = str(raw).strip()
-        return [s] if s else []
-
     realization_date = None
     rd = data.get("realization_date")
     if rd:
@@ -311,9 +338,14 @@ def create_realized():
         created_by=request.user_id,
     )
     db.session.add(r)
+    if "external_partners" in data or "external_partner" in data:
+        external_partner_id, nb_external = _resolve_external_partner_and_count(data)
+        activity.external_partner_id = external_partner_id
+        activity.nb_of_external_partner = nb_external or 0
     CsrCompletedObjective.query.filter_by(activity_id=activity_id).delete()
     for objective in _list_text_values(data.get("completed_objectives")):
         db.session.add(CsrCompletedObjective(activity_id=activity_id, objective=objective, achieved=True))
+    recompute_activity_kpi(activity_id)
     db.session.commit()
     # Notify corporate only when the plan is not in DRAFT (e.g. VALIDATED plan)
     plan = r.activity.plan if r.activity else None
@@ -423,7 +455,13 @@ def update_realized(realized_id: str):
                 dedup.append(s)
         for objective in dedup:
             db.session.add(CsrCompletedObjective(activity_id=r.activity_id, objective=objective, achieved=True))
+    if "external_partners" in data or "external_partner" in data:
+        external_partner_id, nb_external = _resolve_external_partner_and_count(data)
+        if r.activity is not None:
+            r.activity.external_partner_id = external_partner_id
+            r.activity.nb_of_external_partner = nb_external or 0
 
+    recompute_activity_kpi(r.activity_id)
     db.session.commit()
     emit_tasks_refresh_for_request_actor()
     return jsonify(_realized_to_json(r, getattr(request, "role", ""))), 200
@@ -459,7 +497,10 @@ def delete_realized(realized_id: str):
         description=f"Suppression réalisation pour activité {act_label or '—'}",
         old_snapshot={},
     )
+    activity_id = r.activity_id
     db.session.delete(r)
+    db.session.flush()
+    recompute_activity_kpi(activity_id)
     db.session.commit()
     emit_tasks_refresh_for_request_actor()
     return jsonify({"message": "Réalisation supprimée"}), 200

@@ -144,6 +144,12 @@
               <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'organizer'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
             </div>
           </th>
+          <th (click)="sortBy('lifecycle_status')" class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
+            <div class="flex items-center gap-2">
+              <span>{{ 'PLANNED_ACTIVITIES.EXECUTION_STATUS' | translate }}</span>
+              <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'lifecycle_status'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+            </div>
+          </th>
           <th (click)="sortBy('status')" class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
             <div class="flex items-center gap-2">
               <span>{{ 'COMMON.STATUS' | translate }}</span>
@@ -169,6 +175,7 @@
           <td class="p-4 align-middle text-gray-700">{{ a.start_year != null ? a.start_year : '–' }}</td>
           <td class="p-4 align-middle text-gray-700">{{ a.edition != null ? a.edition : '–' }}</td>
           <td class="p-4 align-middle text-gray-700">{{ a.organizer ?? '–' }}</td>
+          <td class="p-4 align-middle text-gray-700">{{ lifecycleDisplayStatus(a) }}</td>
           <td class="p-4 align-middle text-gray-700">{{ activityDisplayStatus(a) }}</td>
           <td class="p-4 align-middle text-center" (click)="$event.stopPropagation()">
             <a [routerLink]="['/csr-plans', a.plan_id]" class="text-brand-700 hover:text-brand-800 font-medium text-sm">{{ 'PLAN_DETAIL.VIEW_PLAN' | translate }}</a>

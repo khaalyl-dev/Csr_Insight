@@ -986,6 +986,14 @@ def import_excel():
 
         db.session.commit()
 
+        touched_plan_ids = [p.id for p in plan_cache.values()]
+        if touched_plan_ids:
+            from features.kpi_management.kpi_service import recompute_plan_activity_kpis
+
+            for pid in touched_plan_ids:
+                recompute_plan_activity_kpis(pid)
+            db.session.commit()
+
         return jsonify({
             "message": "Import terminé",
             "plans_created": len(plans_created),

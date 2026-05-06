@@ -1,0 +1,165 @@
+% --- Sprint backlog — Workflow transverse (issu du Tableau 5.1 du brouillon Word) ---
+\small
+\PFETableSetup
+
+\setlength{\PFEbacklogTabW}{\dimexpr\textwidth+2.8cm\relax}
+\setlength{\LTcapwidth}{\PFEbacklogTabW}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+
+\setlength{\LTpre}{0pt}
+\setlength{\LTpost}{0pt}
+
+\PFETableArrayStretch
+\setlength{\extrarowheight}{4pt}
+\renewcommand{\arraystretch}{1.4}
+
+\arrayrulecolor{black}
+
+\begin{longtable}{|>{\centering\arraybackslash}m{1.2cm}|>{\raggedright\arraybackslash}m{5.2cm}|>{\centering\arraybackslash}m{1.6cm}|>{\raggedright\arraybackslash}m{5.5cm}|>{\centering\arraybackslash}m{1.7cm}|}
+
+\caption{Sprint backlog du sprint 3 — Gestion transverse des validations, notifications et traçabilité}\label{tab:sprint-backlog-3}\\
+
+\hline
+\tableHeaderStyle
+\tableHeaderCell{ID} & \tableHeaderCell{User story} & \tableHeaderCell{Tâche ID} & \tableHeaderCell{Tâche} & \tableHeaderCell{Priorité} \\
+\hline
+\endfirsthead
+
+\hline
+\multicolumn{5}{|c|}{\tablename\ \thetable{} — \textit{(suite)}} \\
+\hline
+\tableHeaderStyle
+\tableHeaderCell{ID} & \tableHeaderCell{User story} & \tableHeaderCell{Tâche ID} & \tableHeaderCell{Tâche} & \tableHeaderCell{Priorité} \\
+\hline
+\endhead
+
+\hline
+\multicolumn{5}{|r|}{\textit{Suite page suivante\ldots}} \\
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
+1 & En tant qu'utilisateur, je veux soumettre une entité (plan ou activité) afin de déclencher le processus de validation & 1.1 &
+Implémenter le mécanisme de soumission (plan / activité) & +++++ \\
+\cline{3-5}
+& & 1.2 &
+Vérifier la complétude des données avant soumission & +++++ \\
+\cline{3-5}
+& & 1.3 &
+Changer le statut (DRAFT $\rightarrow$ SUBMITTED) & +++++ \\
+\cline{3-5}
+& & 1.4 &
+Enregistrer la date et l'utilisateur de soumission & ++++ \\
+\cline{3-5}
+& & 1.5 &
+Verrouiller l'entité après soumission & ++++ \\
+\hline
+2 & En tant qu'utilisateur Corporate, je veux valider une entité afin de confirmer sa conformité & 2.1 &
+Implémenter la validation des plans et activités & +++++ \\
+\cline{3-5}
+& & 2.2 &
+Mettre à jour le statut (Under Review $\rightarrow$ Approved) & +++++ \\
+\cline{3-5}
+& & 2.3 &
+Enregistrer les informations de validation (date, acteur) & +++++ \\
+\cline{3-5}
+& & 2.4 &
+Permettre la validation multi-niveaux si nécessaire & ++++ \\
+\cline{3-5}
+& & 2.5 &
+Verrouiller l'entité validée & ++++ \\
+\hline
+3 & En tant qu'utilisateur Corporate, je veux rejeter une entité afin de demander une correction & 3.1 &
+Implémenter le rejet des plans et activités & +++++ \\
+\cline{3-5}
+& & 3.2 &
+Ajouter un champ commentaire obligatoire & +++++ \\
+\cline{3-5}
+& & 3.3 &
+Mettre à jour le statut (Under Review $\rightarrow$ Rejected) & +++++ \\
+\cline{3-5}
+& & 3.4 &
+Rendre l'entité modifiable après rejet & +++++ \\
+\hline
+4 & En tant qu'utilisateur Site, je veux soumettre une demande de modification afin de corriger des données verrouillées & 4.1 &
+Implémenter le module de demandes de modification & +++++ \\
+\cline{3-5}
+& & 4.2 &
+Permettre la création d'une demande avec justification et la durée & +++++ \\
+\cline{3-5}
+& & 4.3 &
+Ajouter la gestion des pièces jointes & ++++ \\
+\cline{3-5}
+& & 4.4 &
+Associer la demande à une entité (plan / activité) & +++++ \\
+\cline{3-5}
+& & 4.5 &
+Définir le statut de la demande (En Attente, Approuvée, Rejetée) & ++++ \\
+\hline
+5 & En tant qu'utilisateur Corporate, je veux traiter les demandes de modification afin de garder le contrôle & 5.1 &
+Consulter les demandes de modification & +++++ \\
+\cline{3-5}
+& & 5.2 &
+Approuver une demande de modification & +++++ \\
+\cline{3-5}
+& & 5.3 &
+Rejeter une demande avec justification & ++++ \\
+\cline{3-5}
+& & 5.4 &
+Déverrouiller temporairement l'entité après approbation & ++++ \\
+\hline
+6 & En tant qu'utilisateur, je veux recevoir des notifications afin d'être informé des actions du système & 6.1 &
+Implémenter le module de notifications & +++++ \\
+\cline{3-5}
+& & 6.2 &
+Envoyer une notification lors de la soumission & +++++ \\
+\cline{3-5}
+& & 6.3 &
+Envoyer une notification lors de validation & +++++ \\
+\cline{3-5}
+& & 6.4 &
+Envoyer une notification lors de rejet & +++++ \\
+\cline{3-5}
+& & 6.5 &
+Notifier les demandes de modification & +++++ \\
+\cline{3-5}
+& & 6.6 &
+Permettre la consultation des notifications & ++++ \\
+\hline
+7 & En tant qu'utilisateur, je veux gérer mes tâches afin de suivre les actions à effectuer & 7.1 &
+Implémenter le module de gestion des tâches & +++++ \\
+\cline{3-5}
+& & 7.2 &
+Générer automatiquement une tâche après soumission & +++++ \\
+\cline{3-5}
+& & 7.3 &
+Assigner les tâches aux utilisateurs concernés & +++++ \\
+\cline{3-5}
+& & 7.4 &
+Permettre la consultation des tâches & ++++ \\
+\hline
+8 & En tant qu'utilisateur Corporate , je veux tracer toutes les actions afin d'assurer la traçabilité du système & 8.1 &
+Implémenter le module d'audit & +++++ \\
+\cline{3-5}
+& & 8.2 &
+Enregistrer chaque action (création, modification, validation\ldots) & +++++ \\
+\cline{3-5}
+& & 8.3 &
+Associer chaque action à un utilisateur & +++++ \\
+\cline{3-5}
+& & 8.4 &
+Enregistrer la date et le type d'action & +++++ \\
+\cline{3-5}
+& & 8.5 &
+Permettre la consultation de l'historique & ++++ \\
+\cline{3-5}
+& & 8.6 &
+Filtrer l'historique (par entité, action, site) & ++++ \\
+\hline
+
+\end{longtable}
+
+\normalsize

@@ -5,8 +5,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type { CsrActivity } from '../models/csr-activity.model';
+import type { RealizedCsr } from '@features/realized-activity-management/models/realized-csr.model';
 
 export interface PlannedActivityListItem extends CsrActivity {
+  /** Same as kpi.lifecycle_status when KPI row exists; mirrors backend root field. */
+  lifecycle_status?: 'DRAFT' | 'PLANNED' | 'PENDING' | 'COMPLETED' | string | null;
   site_id?: string | null;
   site_name?: string | null;
   site_code?: string | null;
@@ -16,6 +19,10 @@ export interface PlannedActivityListItem extends CsrActivity {
   plan_status?: string | null;
   /** When false, plan is locked; user must submit a change request to edit/delete. */
   plan_editable?: boolean;
+  /** Present on GET /csr-activities/:id — all realization rows linked to this activity. */
+  realizations?: RealizedCsr[];
+  /** Plan-level allocated budget (€), when loaded with activity detail. */
+  plan_allocated_budget?: number | null;
 }
 
 export interface CreateCsrActivityPayload {

@@ -1,0 +1,162 @@
+% Dictionnaire de données : même style visuel que tables/chapitre-01-tab-synthese.tex
+% (tabularx, \PFETableSetup, bandeau d'en-tête, lignes alternées, sans filets verticaux).
+% Table un peu plus large que \textwidth et centrée sur la page (comme chapitre-02-product-backlog).
+\begingroup
+\small
+\setlength{\PFEdictTabW}{\dimexpr\textwidth+26mm\relax}
+\setlength{\LTcapwidth}{\PFEdictTabW}
+\setlength{\LTleft}{\dimexpr(\textwidth-\PFEdictTabW)/2\relax}
+\setlength{\LTright}{\dimexpr(\textwidth-\PFEdictTabW)/2\relax}
+\setlength{\LTpre}{4pt}
+\setlength{\LTpost}{6pt}
+\PFETableSetup
+\PFETableRowColors
+\PFETableArrayStretch
+\PFETableTabularXBegin
+\begin{xltabular}{\PFEdictTabW}{@{}%
+  >{\centering\arraybackslash\hsize=0.5\hsize}X%
+  >{\raggedright\arraybackslash\hsize=1.0\hsize}X%
+  >{\raggedright\arraybackslash\hsize=1.65\hsize}X%
+  >{\raggedright\arraybackslash\hsize=0.85\hsize}X%
+@{}}
+  \caption{Dictionnaire de données du diagramme de classes général.}
+  \label{tab:dictionnaire-donnees-classe} \\
+  \tableHeaderStyle
+  \tableHeaderCell{N\textsuperscript{o}} &
+  \tableHeaderCell{Attribut} &
+  \tableHeaderCell{Libellé} &
+  \tableHeaderCell{Type} \\
+  \endfirsthead
+  \multicolumn{4}{c}{\small\itshape Suite du tableau~\ref{tab:dictionnaire-donnees-classe}.} \\
+  \tableHeaderStyle
+  \tableHeaderCell{N\textsuperscript{o}} &
+  \tableHeaderCell{Attribut} &
+  \tableHeaderCell{Libellé} &
+  \tableHeaderCell{Type} \\
+  \endhead
+  \endfoot
+  \endlastfoot
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe User} (\texttt{users})}} \\
+  1 & \texttt{id} & Identifiant unique de l'utilisateur & \texttt{CHAR(36)} \\
+  2 & \texttt{first\_name} & Prénom & \texttt{VARCHAR(255)} \\
+  3 & \texttt{last\_name} & Nom & \texttt{VARCHAR(255)} \\
+  4 & \texttt{email} & Adresse email (identifiant de connexion) & \texttt{VARCHAR(255)} \\
+  5 & \texttt{password\_hach} & Mot de passe hashé (schéma ; colonne ORM \texttt{password\_hash}) & \texttt{VARCHAR(255)} \\
+  6 & \texttt{role} & Rôle (\texttt{SITE\_USER} / \texttt{CORPORATE\_USER}) & \texttt{VARCHAR(50)} \\
+  7 & \texttt{is\_active} & Compte actif ou désactivé & \texttt{BOOLEAN} \\
+  8 & \texttt{is\_corporate\_global} & Accès corporate global (tous les sites) & \texttt{BOOLEAN} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe Site} (\texttt{sites})}} \\
+  9 & \texttt{id} & Identifiant unique du site & \texttt{CHAR(36)} \\
+  10 & \texttt{name} & Nom du site & \texttt{VARCHAR(255)} \\
+  11 & \texttt{code} & Code du site (ex.\ COFXX) & \texttt{VARCHAR(50)} \\
+  12 & \texttt{region} & Région (ex.\ EE, America) & \texttt{VARCHAR(255)} \\
+  13 & \texttt{country} & Pays & \texttt{VARCHAR(255)} \\
+  14 & \texttt{is\_active} & Site actif ou non & \texttt{BOOLEAN} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe UserSite} (\texttt{user\_sites})}} \\
+  15 & \texttt{id} & Identifiant de l'association utilisateur--site & \texttt{CHAR(36)} \\
+  16 & \texttt{grade} & Niveau d'accès sur le site & \texttt{VARCHAR(20)} \\
+  17 & \texttt{is\_active} & Accès actif ou non & \texttt{BOOLEAN} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe UserSession} (\texttt{user\_sessions})}} \\
+  18 & \texttt{id} & Identifiant de la session & \texttt{CHAR(36)} \\
+  19 & \texttt{refresh\_token} & Jeton de rafraîchissement & \texttt{VARCHAR(512)} \\
+  20 & \texttt{is\_expires} & Date d'expiration (équivalent ORM \texttt{expires\_at}) & \texttt{DATETIME} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe CSRPlan} (\texttt{csr\_plans})}} \\
+  21 & \texttt{id} & Identifiant du plan & \texttt{CHAR(36)} \\
+  22 & \texttt{year} & Année du plan & \texttt{INTEGER} \\
+  23 & \texttt{status} & Statut du plan (brouillon, soumis, validé, etc.) & \texttt{VARCHAR(30)} \\
+  24 & \texttt{validation\_mode} & Mode de validation (\texttt{101} / \texttt{111}) & \texttt{VARCHAR(10)} \\
+  25 & \texttt{total\_budget} & Budget total du plan (€) & \texttt{DECIMAL(15,2)} \\
+  26 & \texttt{submitted\_at} & Date de soumission & \texttt{DATETIME} \\
+  27 & \texttt{validated\_at} & Date de validation finale & \texttt{DATETIME} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe PlannedCSR} (\texttt{planned\_activity})}} \\
+  28 & \texttt{id} & Identifiant de l'activité & \texttt{CHAR(36)} \\
+  29 & \texttt{activityNumber} & Numéro d'activité (ORM \texttt{activity\_number}) & \texttt{VARCHAR(50)} \\
+  30 & \texttt{title} & Titre / intitulé & \texttt{VARCHAR(255)} \\
+  31 & \texttt{collaborationNature} & Nature de la collaboration (ORM \texttt{collaboration\_nature}) & \texttt{VARCHAR(30)} \\
+  32 & \texttt{periodicity} & Périodicité & \texttt{VARCHAR(100)} \\
+  33 & \texttt{plannedBudget} & Budget prévu (€) (ORM \texttt{planned\_budget}) & \texttt{DECIMAL(15,2)} \\
+  34 & \texttt{actionImpactTarget} & Objectif d'impact (nombre) (ORM \texttt{action\_impact\_target}) & \texttt{DECIMAL(15,2)} \\
+  35 & \texttt{actionImpactUnit} & Unité d'impact cible (ORM \texttt{action\_impact\_unit}) & \texttt{VARCHAR(100)} \\
+  36 & \texttt{actionImpactDuration} & Durée de l'impact (ORM \texttt{action\_impact\_duration}) & \texttt{VARCHAR(100)} \\
+  37 & \texttt{startYear} & Année de démarrage (ORM \texttt{start\_year}) & \texttt{INTEGER} \\
+  38 & \texttt{edition} & Numéro d'édition & \texttt{INTEGER} \\
+  39 & \texttt{organizer} & Organisateur (ex.\ HR) & \texttt{VARCHAR(255)} \\
+  40 & \texttt{status} & Statut de l'activité & \texttt{VARCHAR(20)} \\
+  41 & \texttt{NbExternalPartner} & Nombre de partenaires externes (ORM \texttt{number\_external\_partners}) & \texttt{INTEGER} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe RealizedCSR} (\texttt{realized\_csr})}} \\
+  42 & \texttt{id} & Identifiant de la réalisation & \texttt{CHAR(36)} \\
+  43 & \texttt{participants} & Nombre de participants internes & \texttt{INTEGER} \\
+  44 & \texttt{total\_hc} & Effectif total du site & \texttt{INTEGER} \\
+  45 & \texttt{realizedBudget} & Budget réel dépensé (€) (ORM \texttt{realized\_budget}) & \texttt{DECIMAL(15,2)} \\
+  46 & \texttt{actionImpactActual} & Impact réalisé (nombre) (ORM \texttt{action\_impact\_actual}) & \texttt{DECIMAL(15,2)} \\
+  47 & \texttt{actionImpactUnit} & Unité d'impact réalisée (ORM \texttt{action\_impact\_unit}) & \texttt{VARCHAR(100)} \\
+  48 & \texttt{isOffPlan} & Activité hors plan (ORM \texttt{is\_off\_plan}) & \texttt{BOOLEAN} \\
+  49 & \texttt{offPlanValidationMode} & Mode validation hors plan (ORM \texttt{off\_plan\_validation\_mode}) & \texttt{VARCHAR(10)} \\
+  50 & \texttt{offPlanValidationStep} & Étape de validation (ORM \texttt{off\_plan\_validation\_step}) & \texttt{INTEGER} \\
+  51 & \texttt{realizationDate} & Date de réalisation (ORM \texttt{realization\_date}) & \texttt{DATE} \\
+  52 & \texttt{status} & Statut de la réalisation & \texttt{VARCHAR(20)} \\
+  53 & \texttt{contactName} & Nom du contact (ORM \texttt{contact\_name}) & \texttt{VARCHAR(255)} \\
+  54 & \texttt{contactEmail} & Email du contact (ORM \texttt{contact\_email}) & \texttt{VARCHAR(255)} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe Category} (\texttt{categories})}} \\
+  55 & \texttt{id} & Identifiant de la catégorie & \texttt{CHAR(36)} \\
+  56 & \texttt{name} & Nom (ex.\ Environment, Social) & \texttt{VARCHAR(255)} \\
+  57 & \texttt{description} & Description de la catégorie & \texttt{TEXT} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe Externalpartner} (\texttt{external\_partners})}} \\
+  58 & \texttt{id} & Identifiant du partenaire & \texttt{CHAR(36)} \\
+  59 & \texttt{name} & Nom du partenaire & \texttt{VARCHAR(255)} \\
+  60 & \texttt{type} & Type de partenaire & \texttt{VARCHAR(50)} \\
+  61 & \texttt{contactPerson} & Personne contact (ORM \texttt{contact\_person}) & \texttt{VARCHAR(255)} \\
+  62 & \texttt{email} & Email & \texttt{VARCHAR(255)} \\
+  63 & \texttt{phone} & Téléphone & \texttt{VARCHAR(50)} \\
+  64 & \texttt{adress} & Adresse (schéma \texttt{adress} ; ORM \texttt{address}) & \texttt{TEXT} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe Document} (\texttt{documents})}} \\
+  65 & \texttt{id} & Identifiant du document & \texttt{CHAR(36)} \\
+  66 & \texttt{fileName} & Nom du fichier (ORM \texttt{file\_name}) & \texttt{VARCHAR(255)} \\
+  67 & \texttt{filePath} & Chemin de stockage (ORM \texttt{file\_path}) & \texttt{VARCHAR(512)} \\
+  68 & \texttt{fileType} & Type de fichier (ORM \texttt{file\_type}) & \texttt{VARCHAR(20)} \\
+  69 & \texttt{total\_budget} & Non mappé sur \texttt{documents} (champs homonymes sur \texttt{csr\_plans}) & \textemdash \\
+  70 & \texttt{submitted\_at} & Non mappé sur \texttt{documents} (voir \texttt{csr\_plans.submitted\_at}) & \textemdash \\
+  71 & \texttt{validated\_at} & Non mappé sur \texttt{documents} (voir \texttt{csr\_plans.validated\_at}) & \textemdash \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe AuditLog} (\texttt{audit\_logs})}} \\
+  72 & \texttt{id} & Identifiant de la ligne d'audit & \texttt{CHAR(36)} \\
+  73 & \texttt{action} & Action (CREATE, UPDATE, DELETE, \ldots) & \texttt{VARCHAR(64)} \\
+  74 & \texttt{entityEnum} & Type d'entité concernée (ORM \texttt{entity\_type}) & \texttt{VARCHAR(20)} \\
+  75 & \texttt{desciption} & Description / détail (schéma \texttt{desciption} ; ORM \texttt{description}) & \texttt{TEXT} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe Notification} (\texttt{notifications})}} \\
+  76 & \texttt{id} & Identifiant de la notification & \texttt{CHAR(36)} \\
+  77 & \texttt{title} & Titre & \texttt{VARCHAR(255)} \\
+  78 & \texttt{message} & Contenu du message & \texttt{TEXT} \\
+  79 & \texttt{type} & Type (\texttt{info}, \texttt{success}, \texttt{warning}, \texttt{error}) & \texttt{ENUM} \\
+  80 & \texttt{entityEnum} & Type d'entité liée (ORM \texttt{entity\_type}) & \texttt{VARCHAR(50)} \\
+  81 & \texttt{isRead} & Notification lue ou non (ORM \texttt{is\_read}) & \texttt{BOOLEAN} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe Validation} (\texttt{validations})}} \\
+  82 & \texttt{id} & Identifiant de la validation & \texttt{CHAR(36)} \\
+  83 & \texttt{entityEnum} & Type \texttt{PLAN} ou \texttt{ACTIVITY} (schéma ; ORM \texttt{entity\_type}) & \texttt{VARCHAR(20)} \\
+  84 & \texttt{grade} & Niveau de validation (\texttt{level\_0}, \texttt{level\_1}, \ldots) & \texttt{VARCHAR(20)} \\
+  85 & \texttt{status} & Statut (\texttt{PENDING}, \texttt{APPROVED}, \texttt{REJECTED}) & \texttt{VARCHAR(20)} \\
+  86 & \texttt{comment} & Commentaire (motif de rejet ou remarque) & \texttt{TEXT} \\
+  87 & \texttt{submitted\_at} & Date de création / soumission (ORM \texttt{created\_at}) & \texttt{DATETIME} \\
+  88 & \texttt{validated\_at} & Date de décision & \texttt{DATETIME} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe ChangeRequest} (\texttt{change\_requests})}} \\
+  89 & \texttt{id} & Identifiant de la demande & \texttt{CHAR(36)} \\
+  90 & \texttt{entityEnum} & Type \texttt{PLAN} ou \texttt{ACTIVITY} (schéma ; ORM \texttt{entity\_type}) & \texttt{VARCHAR(20)} \\
+  91 & \texttt{year} & Année / période concernée & \texttt{INTEGER} \\
+  92 & \texttt{reason} & Justification de la demande & \texttt{TEXT} \\
+  93 & \texttt{status} & Statut (\texttt{PENDING}, \texttt{APPROVED}, \texttt{REJECTED}) & \texttt{VARCHAR(20)} \\
+  94 & \texttt{requestedDuration} & Durée demandée de déverrouillage (ORM \texttt{requested\_duration}) & \texttt{VARCHAR(100)} \\
+  95 & \texttt{requestMode} & Mode de validation \texttt{101} / \texttt{111} (schéma ; ORM \texttt{validation\_mode}) & \texttt{VARCHAR(10)} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe ChatbotLog} (\texttt{chatbot\_logs})}} \\
+  96 & \texttt{id} & Identifiant & \texttt{CHAR(36)} \\
+  97 & \texttt{question} & Question posée & \texttt{TEXT} \\
+  98 & \texttt{answer} & Réponse du chatbot & \texttt{TEXT} \\
+  \multicolumn{4}{@{}l@{}}{\cellcolor{tableHeader}\textcolor{white}{\textbf{Classe CsrSnapshot} (\texttt{csr\_snapshots})}} \\
+  99 & \texttt{id} & Identifiant du snapshot & \texttt{CHAR(36)} \\
+  100 & \texttt{year} & Année & \texttt{INTEGER} \\
+  101 & \texttt{month} & Mois & \texttt{INTEGER} \\
+  102 & \texttt{totalBudget} & Budget total (ORM \texttt{total\_budget}) & \texttt{DECIMAL(15,2)} \\
+  103 & \texttt{totalRealized} & Montant réalisé (ORM \texttt{total\_realized}) & \texttt{DECIMAL(15,2)} \\
+  104 & \texttt{completionRate} & Taux de réalisation (ORM \texttt{completion\_rate}) & \texttt{DECIMAL(5,2)} \\
+  105 & \texttt{validated\_at} & Date de création du snapshot (colonne ORM \texttt{created\_at} ; schéma \texttt{validated\_at}) & \texttt{DATETIME} \\
+\end{xltabular}%
+\PFETableTabularXEnd
+\endgroup

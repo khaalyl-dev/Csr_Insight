@@ -350,6 +350,16 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     return this.canDeleteActivities() && this.canEditActivity(activityId);
   }
 
+  planKpiRate(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toFixed(1)}%`;
+  }
+
+  planKpiMoney(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })} €`;
+  }
+
   /** True if plan can be edited: DRAFT/REJECTED always, or VALIDATED with unlock_until in the future. */
   canEditPlan(): boolean {
     if (!this.canUpdatePlanPermission()) return false;

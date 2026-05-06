@@ -62,6 +62,71 @@
       </div>
     </div>
 
+    <div *ngIf="plan()!.plan_kpis as kpis" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Safety</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ kpis.incidents_sum ?? 0 }}</p>
+        <p class="text-xs text-gray-500">Incidents</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">People</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ planKpiRate(kpis.involvement_rate) }}</p>
+        <p class="text-xs text-gray-500">Estimated {{ kpis.participants_estimated_sum ?? 0 }} vs realized {{ kpis.participants_realized_sum ?? 0 }}</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Quality</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ planKpiRate(kpis.action_delivery_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpis.completed_objectives_sum ?? 0 }} / {{ kpis.announced_objectives_sum ?? 0 }} objectives</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Volume</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ planKpiRate(kpis.action_execution_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpis.accomplished_actions ?? 0 }} / {{ kpis.planned_actions ?? 0 }} actions</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Cost</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ planKpiRate(kpis.budget_control_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ planKpiMoney(kpis.estimated_budget_sum) }} vs {{ planKpiMoney(kpis.realized_budget_sum) }}</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Actual Budget</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ planKpiMoney(kpis.actual_budget_sum) }}</p>
+        <p class="text-xs text-gray-500">Consumed budget</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">External Partners</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ kpis.external_partners_sum ?? 0 }}</p>
+        <p class="text-xs text-gray-500">Total partner entries</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">% of total HC</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ planKpiRate(kpis.participants_vs_total_hc_rate) }}</p>
+        <p class="text-xs text-gray-500">Participants / plan total HC</p>
+      </div>
+    </div>
+
+    <div *ngIf="plan()!.plan_kpis?.category_percentages?.length" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800">Category percentage in plan</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="p-3 text-left">Category</th>
+              <th class="p-3 text-left">Actions</th>
+              <th class="p-3 text-left">Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of plan()!.plan_kpis!.category_percentages" class="border-t border-gray-100">
+              <td class="p-3">{{ c.category_name }}</td>
+              <td class="p-3">{{ c.actions_count }} actions</td>
+              <td class="p-3">{{ planKpiRate(c.percentage) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Approve plan confirmation -->
     <div *ngIf="showPlanApproveConfirm()" class="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] !mt-0"
       (click)="closePlanApproveConfirm()" role="dialog" aria-modal="true" aria-labelledby="pd-approve-plan-title">

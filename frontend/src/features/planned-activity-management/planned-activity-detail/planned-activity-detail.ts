@@ -66,6 +66,21 @@ export class PlannedActivityDetailComponent implements OnInit, OnDestroy {
     );
   }
 
+  externalPartnersCount(partners?: string | null): number {
+    if (!partners) return 0;
+    return partners
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0).length;
+  }
+
+  /** Yes / no / — for booleans from API (including numeric 0/1). */
+  yesNo(value: boolean | number | null | undefined): string {
+    if (value === true || value === 1) return this.translate.instant('PLAN_DETAIL.OFF_PLAN_YES');
+    if (value === false || value === 0) return this.translate.instant('PLAN_DETAIL.OFF_PLAN_NO');
+    return '–';
+  }
+
   activityTitle(): string {
     return this.activity()?.title || (this.isPlanRealized() ? this.translate.instant('PLANNED_ACTIVITY_DETAIL.TITLE_REALIZED') : this.translate.instant('PLANNED_ACTIVITY_DETAIL.TITLE_PLANNED'));
   }
@@ -98,6 +113,16 @@ export class PlannedActivityDetailComponent implements OnInit, OnDestroy {
     if (m === '111') return this.translate.instant('PLAN_VALIDATION.MODE_ALL');
     if (m === '101') return this.translate.instant('PLAN_VALIDATION.MODE_CORPORATE_ONLY');
     return m || '–';
+  }
+
+  formatPercent(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toFixed(1)}%`;
+  }
+
+  formatMoney(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })} €`;
   }
 
   ngOnInit(): void {

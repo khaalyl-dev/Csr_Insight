@@ -1,0 +1,70 @@
+@startuml
+!theme plain
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+title Diagramme de classes — Plan annuel & activités planifiées
+
+class Site {
+  +id : UUID
+  +name : String
+  +code : String
+  +region : String
+  +country : String
+}
+
+class User {
+  +id : UUID
+  +email : String
+  +role : Enum
+}
+
+class CsrPlan {
+  +id : UUID
+  +year : int
+  +status : PlanStatus
+  +totalBudget : Decimal
+  +validationMode : String
+  +submittedAt : DateTime
+  +validatedAt : DateTime
+}
+
+class PlannedActivity {
+  +id : UUID
+  +activityNumber : String
+  +title : String
+  +plannedBudget : Decimal
+  +status : ActivityStatus
+}
+
+class Category {
+  +id : UUID
+  +name : String
+}
+
+class ExternalPartner {
+  +id : UUID
+  +name : String
+  +type : PartnerType
+}
+
+class Validation {
+  +id : UUID
+  +entityType : EntityType
+  +entityId : UUID
+  +status : ValidationStatus
+}
+
+Site "1" o-- "n" CsrPlan : héberge
+User "1" ..> "n" CsrPlan : crée / soumet
+CsrPlan "1" *-- "n" PlannedActivity : contient
+Category "1" <-- "n" PlannedActivity : thématique
+ExternalPartner "0..1" <-- "n" PlannedActivity : partenaire
+Validation ..> CsrPlan : workflow\n(plan / activité)
+
+note bottom of CsrPlan
+  Statuts typiques :
+  DRAFT, SUBMITTED,
+  VALIDATED, REJECTED
+end note
+@enduml

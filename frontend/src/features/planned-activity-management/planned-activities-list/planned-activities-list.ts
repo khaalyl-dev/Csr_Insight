@@ -33,6 +33,7 @@ export class PlannedActivitiesListComponent implements OnInit {
     { key: 'title', label: 'Title' },
     { key: 'description', label: 'Description' },
     { key: 'category_name', label: 'Category' },
+    { key: 'lifecycle_status', label: 'Execution status' },
     { key: 'collaboration_nature', label: 'Nature of collaboration' },
     { key: 'year', label: 'Year' },
     { key: 'start_year', label: 'Start year' },
@@ -108,6 +109,19 @@ export class PlannedActivitiesListComponent implements OnInit {
       VALIDATED: 'PLAN_DETAIL.STATUS_VALIDATED',
       CANCELLED: 'PLAN_DETAIL.ACTIVITY_STATUS_CANCELLED',
       LOCKED: 'PLAN_DETAIL.STATUS_VALIDATED_LOCKED',
+    };
+    const k = keyMap[raw];
+    return k ? this.translate.instant(k) : raw || '–';
+  }
+
+  /** KPI execution lifecycle (not validation workflow). */
+  lifecycleDisplayStatus(a: PlannedActivityListItem): string {
+    const raw = ((a.lifecycle_status ?? a.kpi?.lifecycle_status) || '').toUpperCase();
+    const keyMap: Record<string, string> = {
+      DRAFT: 'PLANNED_ACTIVITIES.EXEC_LIFECYCLE_DRAFT',
+      PLANNED: 'PLANNED_ACTIVITIES.EXEC_LIFECYCLE_PLANNED',
+      PENDING: 'PLANNED_ACTIVITIES.EXEC_LIFECYCLE_PENDING',
+      COMPLETED: 'PLANNED_ACTIVITIES.EXEC_LIFECYCLE_COMPLETED',
     };
     const k = keyMap[raw];
     return k ? this.translate.instant(k) : raw || '–';
@@ -248,15 +262,21 @@ export class PlannedActivitiesListComponent implements OnInit {
     );
     const col = this.sortColumn();
     const dir = this.sortDirection();
+    const lifecycleOf = (x: PlannedActivityListItem) =>
+      ((x.lifecycle_status ?? x.kpi?.lifecycle_status) ?? '').toString().toLowerCase();
     return [...filtered].sort((a, b) => {
       const valA =
         col === 'status'
           ? ((a.effective_status ?? a.status) ?? '').toString().toLowerCase()
-          : ((a as any)[col]?.toString().toLowerCase() ?? '');
+          : col === 'lifecycle_status'
+            ? lifecycleOf(a)
+            : ((a as any)[col]?.toString().toLowerCase() ?? '');
       const valB =
         col === 'status'
           ? ((b.effective_status ?? b.status) ?? '').toString().toLowerCase()
-          : ((b as any)[col]?.toString().toLowerCase() ?? '');
+          : col === 'lifecycle_status'
+            ? lifecycleOf(b)
+            : ((b as any)[col]?.toString().toLowerCase() ?? '');
       const numA = typeof (a as any)[col] === 'number' ? (a as any)[col] : parseFloat(valA) || 0;
       const numB = typeof (b as any)[col] === 'number' ? (b as any)[col] : parseFloat(valB) || 0;
       if (col === 'year' || col === 'planned_budget' || col === 'start_year' || col === 'edition' || col === 'external_partner_count') {
@@ -310,6 +330,7 @@ export class PlannedActivitiesListComponent implements OnInit {
       title: a.title ?? '',
       description: (a as any).description ?? '',
       category_name: a.category_name ?? '',
+      lifecycle_status: this.lifecycleDisplayStatus(a),
       collaboration_nature: (a as any).collaboration_nature ?? '',
       year: a.year ?? '',
       start_year: a.start_year ?? '',

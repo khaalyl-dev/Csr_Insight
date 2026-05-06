@@ -1,0 +1,34 @@
+% --- Sprint backlog — BI & KPI (sprint 4) ---
+\begingroup
+\PFETableSetup
+\PFETableRowColors
+\PFETableLongMargins
+\PFETableArrayStretch
+\begin{longtable}{@{}p{0.6cm}p{4.0cm}p{1.0cm}p{7.8cm}p{1.4cm}@{}}
+\caption{Sprint backlog — BI \& KPI}\label{tab:sprint-backlog-4}\\
+\toprule
+\tableHeaderStyle \tableHeaderCell{ID} & \tableHeaderCell{User story} & \tableHeaderCell{Tâche} & \tableHeaderCell{Tâche (détail)} & \tableHeaderCell{Priorité} \\
+\midrule
+\endfirsthead
+\multicolumn{5}{c}{\tablename\ \thetable{} — \textit{(suite)}} \\
+\toprule
+\tableHeaderStyle \tableHeaderCell{ID} & \tableHeaderCell{User story} & \tableHeaderCell{Tâche} & \tableHeaderCell{Tâche (détail)} & \tableHeaderCell{Priorité} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\textit{Suite page suivante\ldots}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+1 & En tant qu'utilisateur corporate, je veux un tableau de bord consolidé afin de piloter la performance CSR & 1.1 & Agrégations multi-sites (\texttt{/api/dashboard})~: synthèses, graphiques d'activités, chronologie & +++++ \\
+1 & En tant qu'utilisateur corporate, je veux un tableau de bord consolidé afin de piloter la performance CSR & 1.2 & Filtres (site, année, catégorie) et indicateurs de performance par site & +++++ \\
+2 & En tant qu'utilisateur corporate, je veux comparer le planifié et le réalisé afin de mesurer les écarts & 2.1 & Endpoints ou sections dédiées aux écarts budget / volumes / jalons & +++++ \\
+2 & En tant qu'utilisateur corporate, je veux comparer le planifié et le réalisé afin de mesurer les écarts & 2.2 & Représentations graphiques cohérentes avec les données validées & ++++ \\
+3 & En tant qu'utilisateur corporate, je veux exporter les données afin de les partager & 3.1 & Export tabulaire ou fichiers (CSV / Excel) à partir des vues filtrées & ++++ \\
+4 & En tant qu'utilisateur corporate, je veux visualiser des graphiques dynamiques afin de faciliter l'analyse & 4.1 & Composants front de visualisation (graphiques, cartes, top activités) branchés sur l'API dashboard & +++++ \\
+5 & En tant que système, je veux synchroniser les données vers Power BI afin d'alimenter les tableaux de bord externes & 5.1 & Socle d'API \texttt{/api/powerbi} et stratégie de snapshot / rafraîchissement & ++++ \\
+5 & En tant que système, je veux synchroniser les données vers Power BI afin d'alimenter les tableaux de bord externes & 5.2 & Sécurisation des accès et documentation des jeux de données publiés & +++ \\
+6 & En tant qu'utilisateur corporate, je veux suivre les KPI GIMSI afin d'assurer l'amélioration continue & 6.1 & Formalisation des indicateurs retenus et calculs alignés sur le modèle de données CSR & +++++ \\
+6 & En tant qu'utilisateur corporate, je veux suivre les KPI GIMSI afin d'assurer l'amélioration continue & 6.2 & Vues récapitulatives ou exports pour revue de direction & ++++ \\
+\end{longtable}
+\endgroup

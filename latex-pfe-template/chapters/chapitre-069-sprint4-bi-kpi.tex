@@ -1,0 +1,214 @@
+% Sprint 4 — planification ch. 2 : BI, Power BI, KPI / GIMSI
+\PFEChapterOpening{BI \& KPI}
+
+\section{Introduction}
+
+Ce chapitre présente le quatrième et dernier sprint fonctionnel principal, \emph{BI \& KPI}, tel qu'indiqué dans le tableau~\ref{tab:ch02-planification-sprints}. Il vise la \textbf{lecture consolidée} de la performance CSR pour le corporate~: tableaux de bord web, \textbf{comparaisons planifié / réalisé}, \textbf{exports}, \textbf{graphiques dynamiques} et socle pour \textbf{Power BI} et les \textbf{KPI GIMSI}. Le module \texttt{dashboard\_analytics} (préfixe \texttt{/api/dashboard}) et le paquet \texttt{powerbi\_integration} (\texttt{/api/powerbi}) structurent cette couche côté backend.
+
+\section{Objectif attendu}
+
+Fournir aux décideurs une vision \textbf{synthétique et actionnable} de l'avancement multi-sites, tout en permettant l'export et la réutilisation des données dans des outils d'analyse (Power BI, tableaux de direction). Les user stories des blocs \emph{Dashboard \& Reporting} (5.x), \emph{Reporting \& Power BI} (6.x) et \emph{KPI \& pilotage GIMSI} (10.x) du product backlog définissent ce sprint.
+
+\section{Sprint Backlog}
+
+Le tableau~\ref{tab:sprint-backlog-4} résume les tâches retenues.
+
+\input{tables/chapitre-06-sprint-backlog}
+
+\section{Analyse détaillée des besoins}
+
+\subsection{Diagramme de cas d'utilisation}
+
+La figure~\ref{fig:doc-ch6-1} illustre les cas du sprint \emph{BI \& KPI}.
+
+\IfFileExists{figures/chapitre-06/diagramme-cas-utilisation-bi-kpi.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/diagramme-cas-utilisation-bi-kpi.png}
+  \caption{Diagramme de cas d'utilisation — BI \& KPI.}
+  \label{fig:doc-ch6-1}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/diagramme-cas-utilisation-bi-kpi.png})}\vspace{3.2cm}}}
+  \caption{Diagramme de cas d'utilisation — BI \& KPI.}
+  \label{fig:doc-ch6-1}
+\end{figure}%
+}
+
+\subsection{Description textuelle du cas d'utilisation : «~Consulter le tableau de bord corporate~»}
+
+Le tableau~\ref{tab:cu-tableau-de-bord} décrit le cas «~Consulter le tableau de bord corporate~».
+
+\subsection{Description textuelle du cas d'utilisation : «~Exploiter les données pour le reporting et Power BI~»}
+
+Le tableau~\ref{tab:cu-reporting-powerbi} décrit le cas «~Exploiter les données pour le reporting et Power BI~».
+
+\input{tables/chapitre-06-cas-utilisation}
+
+\section{Modélisation conceptuelle}
+
+\subsection{Diagramme de classe}
+
+La figure~\ref{fig:doc-ch6-2} schématise les agrégats et sources de données exposés au pilotage.
+
+\IfFileExists{figures/chapitre-06/diagramme-classe-bi-kpi.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/diagramme-classe-bi-kpi.png}
+  \caption{Diagramme de classe — BI \& KPI (agrégats, indicateurs).}
+  \label{fig:doc-ch6-2}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/diagramme-classe-bi-kpi.png})}\vspace{3.2cm}}}
+  \caption{Diagramme de classe — BI \& KPI (agrégats, indicateurs).}
+  \label{fig:doc-ch6-2}
+\end{figure}%
+}
+
+\subsection{Diagramme de séquence}
+
+La figure~\ref{fig:doc-ch6-seq-dash} décrit le scénario «~Chargement du tableau de bord filtré~».
+
+\IfFileExists{figures/chapitre-06/diagramme-sequence-dashboard-filtre.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/diagramme-sequence-dashboard-filtre.png}
+  \caption{Diagramme de séquence — chargement du tableau de bord.}
+  \label{fig:doc-ch6-seq-dash}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/diagramme-sequence-dashboard-filtre.png})}\vspace{3.2cm}}}
+  \caption{Diagramme de séquence — chargement du tableau de bord.}
+  \label{fig:doc-ch6-seq-dash}
+\end{figure}%
+}
+
+La figure~\ref{fig:doc-ch6-seq-export} illustre un export ou une extraction pour reporting.
+
+\IfFileExists{figures/chapitre-06/diagramme-sequence-export-reporting.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/diagramme-sequence-export-reporting.png}
+  \caption{Diagramme de séquence — export / reporting.}
+  \label{fig:doc-ch6-seq-export}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/diagramme-sequence-export-reporting.png})}\vspace{3.2cm}}}
+  \caption{Diagramme de séquence — export / reporting.}
+  \label{fig:doc-ch6-seq-export}
+\end{figure}%
+}
+
+\section{Réalisation}
+
+La figure~\ref{fig:doc-ch6-3} pourra présenter le tableau de bord corporate (cartes et graphiques).
+
+\IfFileExists{figures/chapitre-06/ui-dashboard-corporate.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/ui-dashboard-corporate.png}
+  \caption{Interface : tableau de bord corporate.}
+  \label{fig:doc-ch6-3}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/ui-dashboard-corporate.png})}\vspace{3.2cm}}}
+  \caption{Interface : tableau de bord corporate.}
+  \label{fig:doc-ch6-3}
+\end{figure}%
+}
+
+La figure~\ref{fig:doc-ch6-4} pourra montrer une vue d'écarts ou de KPI / graphiques avancés.
+
+\IfFileExists{figures/chapitre-06/ui-ecarts-kpi.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/ui-ecarts-kpi.png}
+  \caption{Interface : écarts planifié / réalisé ou KPI.}
+  \label{fig:doc-ch6-4}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/ui-ecarts-kpi.png})}\vspace{3.2cm}}}
+  \caption{Interface : écarts planifié / réalisé ou KPI.}
+  \label{fig:doc-ch6-4}
+\end{figure}%
+}
+
+\section{Tests et validation}
+
+\subsection{Test}
+
+Les tableaux~\ref{tab:ch6-scenario-dashboard-filtres} et~\ref{tab:ch6-scenario-ecarts-export} décrivent les scénarios de test principaux.
+
+\input{tables/chapitre-06-scenarios-test}
+
+Les endpoints \texttt{/api/dashboard} et, selon l'avancement, \texttt{/api/powerbi} ont été testés avec \emph{Postman} et par contrôle croisé avec des requêtes d'agrégation sur un jeu de données de démonstration. Les figures~\ref{fig:ch6-postman-dashboard},~\ref{fig:ch6-postman-dashboard-site} et~\ref{fig:ch6-postman-powerbi} accueillent les captures.
+
+\IfFileExists{figures/chapitre-06/postman-dashboard.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/postman-dashboard.png}
+  \caption{Tests Postman — agrégat dashboard (\texttt{/api/dashboard}).}
+  \label{fig:ch6-postman-dashboard}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/postman-dashboard.png})}\vspace{3.2cm}}}
+  \caption{Tests Postman — agrégat dashboard (\texttt{/api/dashboard}).}
+  \label{fig:ch6-postman-dashboard}
+\end{figure}%
+}
+
+\IfFileExists{figures/chapitre-06/postman-dashboard-filtre-site.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/postman-dashboard-filtre-site.png}
+  \caption{Tests Postman — dashboard avec filtre site / année.}
+  \label{fig:ch6-postman-dashboard-site}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/postman-dashboard-filtre-site.png})}\vspace{3.2cm}}}
+  \caption{Tests Postman — dashboard avec filtre site / année.}
+  \label{fig:ch6-postman-dashboard-site}
+\end{figure}%
+}
+
+\IfFileExists{figures/chapitre-06/postman-powerbi.png}{%
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/chapitre-06/postman-powerbi.png}
+  \caption{Tests Postman — couche Power BI (\texttt{/api/powerbi}).}
+  \label{fig:ch6-postman-powerbi}
+\end{figure}%
+}{%
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{3.2cm}\textit{(Figure à insérer : \texttt{figures/chapitre-06/postman-powerbi.png})}\vspace{3.2cm}}}
+  \caption{Tests Postman — couche Power BI (\texttt{/api/powerbi}).}
+  \label{fig:ch6-postman-powerbi}
+\end{figure}%
+}
+
+\subsection{Validation}
+
+La démonstration de fin de sprint a été réalisée avec le \emph{Product Owner} sur un périmètre multi-sites de démonstration. Les écarts résiduels entre indicateurs écran et exports ont été corrigés ; la feuille de route des compléments Power BI a été notée pour les évolutions post-livraison.
+
+\section{Conclusion}
+
+Ce sprint clôt la chaîne de livraison fonctionnelle prévue en quatre itérations en offrant aux métiers corporate les instruments de pilotage et de diffusion des résultats CSR.
+
+La conclusion générale du mémoire, qui suit dans le document, synthétise les apports du projet et les perspectives.

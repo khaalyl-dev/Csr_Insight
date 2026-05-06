@@ -1,0 +1,23 @@
+Source document: Chapitre 1 Draft (1).docx (embedded media under word/media/)
+Extracted: 2026-04-22 by parsing word/document.xml paragraph order vs. figure captions.
+
+Chapter 4 (Sprint 2) — copied to figures/chapitre-04/ for LaTeX:
+  image18.png -> diagramme-cas-utilisation-plans-activites.png   (Figure 4.1)
+  image4.png  -> diagramme-classe-plans-activites.png            (Figure 4.2)
+  image2.png  -> diagramme-sequence-creer-plan-csr.png           (Figure 4.3)
+  image8.png  -> diagramme-sequence-modifier-activite-planifiee.png (Figure 4.4)
+  image11.png -> ui-liste-plans-annuels.png                      (Figure 4.5)
+
+Chapter 3 (Sprint 1) — copied to figures/chapitre-03/ for LaTeX:
+  image26.png -> diagramme-cas-utilisation-auth-sites-utilisateurs.png (Figure 3.1)
+  image12.png -> diagramme-classe-auth-sites-documents.png             (Figure 3.2)
+  image14.png -> diagramme-sequence-s-authentifier.png                 (Figure 3.3)
+  image19.png -> diagramme-sequence-creer-un-site.png                  (Figure 3.4)
+  image7.png  -> ui-gestion-utilisateurs.png                           (Figure 3.5)
+  image6.png  -> ui-gestion-sites.png                                  (Figure 3.6)
+
+Chapter 3 extra (in Word but not referenced in current chapitre-03 .tex):
+  image16.png -> chapitre-03/fig-3.7-ui-modification-site.png (archive only)
+  image20.png -> chapitre-03/fig-3.8-ui-documents.png           (archive only)
+
+Folder all-media/: all 28 embedded PNGs, prefixed 01_.. 28_ for document order.

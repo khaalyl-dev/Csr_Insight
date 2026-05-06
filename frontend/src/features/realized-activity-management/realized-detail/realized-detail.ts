@@ -60,6 +60,16 @@ export class RealizedDetailComponent implements OnInit, OnDestroy {
     return !this.authStore.isValidatorLevel() && this.realized()?.plan_editable !== false;
   }
 
+  formatPercent(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toFixed(1)}%`;
+  }
+
+  formatMoney(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })} €`;
+  }
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {

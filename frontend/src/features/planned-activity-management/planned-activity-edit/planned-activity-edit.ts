@@ -68,6 +68,7 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
   loading = false;
   loadingData = true;
   errorMsg = '';
+  plannedObjectives: string[] = [];
   readonly categoryOtherValue = CATEGORY_OTHER_VALUE;
   readonly months = MONTHS;
   monthLabel = (m: number) => MONTH_LABELS[m] ?? String(m);
@@ -107,6 +108,8 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
       new_category_name: [''],
       activity_number: ['', Validators.required],
       title: ['', Validators.required],
+      organization: [''],
+      contract_type: [''],
       description: [''],
       planned_budget: [null as number | null],
       collaboration_nature: [''],
@@ -114,6 +117,7 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
       action_impact_target: [null as number | null],
       action_impact_unit: [''],
       action_impact_duration: [''],
+      employees_planned: [null as number | null],
       organizer: [''],
       start_year: [null as number | null],
       edition: [null as number | null],
@@ -172,6 +176,8 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
           category_id: a.category_id ?? '',
           activity_number: a.activity_number ?? '',
           title: a.title ?? '',
+          organization: (a as any).organization ?? '',
+          contract_type: (a as any).contract_type ?? '',
           description: a.description ?? '',
           planned_budget: a.is_off_plan ? null : (a.planned_budget ?? null),
           collaboration_nature: a.collaboration_nature ?? '',
@@ -179,12 +185,16 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
           action_impact_target: (a as any).action_impact_target ?? null,
           action_impact_unit: (a as any).action_impact_unit ?? '',
           action_impact_duration: (a as any).action_impact_duration ?? '',
+          employees_planned: (a as any).employees_planned ?? null,
           organizer: (a as any).organizer ?? '',
           start_year: a.start_year ?? null,
           edition: a.edition ?? null,
           number_external_partners: (a as any).number_external_partners ?? null,
           external_partner: a.external_partner_name ?? '',
         });
+        this.plannedObjectives = Array.isArray((a as any).planned_objectives)
+          ? (a as any).planned_objectives.filter((x: unknown): x is string => typeof x === 'string' && x.trim().length > 0)
+          : [];
         this.loadCategories();
         // Realized activity data is edited in realized screens; planned activity edit stays planned-only.
         this.loadActivityPhotos(a.id);
@@ -347,6 +357,8 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
           category_id: categoryId,
           activity_number: raw.activity_number.trim(),
           title: raw.title.trim(),
+          organization: raw.organization?.trim() || null,
+          contract_type: raw.contract_type?.trim() || null,
           description: raw.description?.trim() || null,
           planned_budget: plannedBudget,
           collaboration_nature: raw.collaboration_nature?.trim() || null,
@@ -354,6 +366,8 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
           action_impact_target: raw.action_impact_target != null && raw.action_impact_target !== '' ? Number(raw.action_impact_target) : null,
           action_impact_unit: raw.action_impact_unit?.trim() || null,
           action_impact_duration: raw.action_impact_duration?.trim() || null,
+          employees_planned: raw.employees_planned != null && raw.employees_planned !== '' ? Number(raw.employees_planned) : null,
+          planned_objectives: [...this.plannedObjectives],
           organizer: organizerForActivity,
           edition: raw.edition != null && raw.edition !== '' ? Number(raw.edition) : null,
           start_year: raw.start_year != null && raw.start_year !== '' ? Number(raw.start_year) : null,
@@ -428,6 +442,20 @@ export class PlannedActivityEditComponent implements OnInit, OnDestroy {
   cancel(): void {
     if (this.sidebarMode) this.closed.emit();
     else this.location.back();
+  }
+
+  addPlannedObjective(value: string): void {
+    const raw = String(value ?? '').trim();
+    if (!raw) return;
+    if (!this.plannedObjectives.some((o) => o.toLowerCase() === raw.toLowerCase())) {
+      this.plannedObjectives.push(raw);
+      this.cdr.markForCheck();
+    }
+  }
+
+  removePlannedObjective(index: number): void {
+    this.plannedObjectives.splice(index, 1);
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy(): void {

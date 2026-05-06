@@ -1,0 +1,155 @@
+% Scénarios de test consolidés — chapitre 5 (workflow transverse)
+\small
+\PFETableSetup
+\setlength{\LTpre}{0pt}
+\setlength{\LTpost}{0pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\setlength{\tabcolsep}{3.5pt}
+\renewcommand{\arraystretch}{1.25}
+
+\begin{longtable}{|>{\centering\arraybackslash}m{2.8cm}|
+>{\raggedright\arraybackslash}p{2.5cm}|
+>{\raggedright\arraybackslash}p{3.8cm}|
+>{\raggedright\arraybackslash}p{4.3cm}|
+>{\centering\arraybackslash}p{1.1cm}|}
+\caption{Synthèse des cas de test du sprint 3}\label{tab:ch5-scenarios-tests}\\
+\hline
+\tableHeaderStyle
+\multicolumn{1}{|c|}{\tableHeaderCell{Nom du cas d'utilisation}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Cas de test}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Description du cas}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat attendu}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat réel}} \\
+\hline
+\endfirsthead
+\hline
+\multicolumn{5}{|c|}{\tablename\ \thetable{} --- \textit{(suite)}} \\
+\hline
+\tableHeaderStyle
+\multicolumn{1}{|c|}{\tableHeaderCell{Nom du cas d'utilisation}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Cas de test}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Description du cas}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat attendu}} &
+\multicolumn{1}{c|}{\tableHeaderCell{Résultat réel}} \\
+\hline
+\endhead
+\hline
+\multicolumn{5}{|r|}{\textit{Suite page suivante\ldots}} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\needspace{18\baselineskip}
+\multirow{3}{=}{\centering Valider un plan CSR} &
+Validation corporate (mode direct) &
+Un utilisateur Corporate valide un plan soumis lorsque le mode le permet sans étape site préalable. &
+Le plan passe au statut validé et n'est plus modifiable. &
+Vrai \\
+\cline{2-5}
+ &
+Validation en deux étapes &
+Le Corporate tente de valider avant la validation du site lorsque le mode l'exige. &
+Le système refuse et indique que la validation du site est requise en premier. &
+Vrai \\
+\cline{2-5}
+ &
+Consultation liste des plans soumis &
+Ouverture de l'interface listant les plans en attente de décision. &
+Les informations essentielles (site, année, statut, budget) sont affichées. &
+Vrai \\
+\hline
+
+\needspace{12\baselineskip}
+\multirow{2}{=}{\centering Rejeter un plan CSR} &
+Motif obligatoire manquant &
+Tentative de rejet sans saisir le motif de rejet. &
+La soumission est refusée et le champ motif est signalé comme obligatoire. &
+Vrai \\
+\cline{2-5}
+ &
+Rejet avec motif valide &
+Saisie d'un motif de rejet et confirmation du rejet. &
+Le plan est rejeté, le statut est mis à jour et le motif est conservé. &
+Vrai \\
+\hline
+
+\needspace{18\baselineskip}
+\multirow{3}{=}{\centering Soumettre une demande\\de modification pour un plan} &
+Données incomplètes &
+Soumission d'une demande sans justification ou sans durée d'ouverture requise. &
+Message d'erreur listant les champs à compléter. &
+Vrai \\
+\cline{2-5}
+ &
+Pièce jointe non conforme &
+Ajout d'un fichier de type ou taille non autorisé. &
+Le fichier est refusé avec un message explicite. &
+Vrai \\
+\cline{2-5}
+ &
+Soumission valide &
+Demande complète sur un plan verrouillé avec justification et durée. &
+La demande est enregistrée avec le statut « en attente » et associée au plan. &
+Vrai \\
+\hline
+
+\needspace{12\baselineskip}
+\multirow{2}{=}{\centering Traiter une demande\\de modification} &
+Approbation corporate &
+Examen puis approbation d'une demande en attente. &
+Le statut de la demande est mis à jour et le site est notifié. &
+Vrai \\
+\cline{2-5}
+ &
+Rejet avec justification &
+Rejet d'une demande avec commentaire obligatoire. &
+Le statut est mis à jour et le motif est conservé pour le site. &
+Vrai \\
+\hline
+
+\needspace{12\baselineskip}
+\multirow{2}{=}{\centering Recevoir des\\notifications} &
+Notification après validation &
+Un événement de validation génère une notification pour les acteurs concernés. &
+La notification apparaît dans le centre de notifications. &
+Vrai \\
+\cline{2-5}
+ &
+Marquer comme lue &
+L'utilisateur ouvre ou marque une notification comme lue. &
+L'état de lecture est mis à jour et le compteur reflète le changement. &
+Vrai \\
+\hline
+
+\needspace{12\baselineskip}
+\multirow{2}{=}{\centering Gérer les tâches} &
+Tâche créée après un événement &
+Soumission ou validation déclenchant la création d'une tâche assignée. &
+La tâche apparaît dans la liste des tâches de l'utilisateur concerné. &
+Vrai \\
+\cline{2-5}
+ &
+Ouverture d'une tâche &
+Clic sur une tâche pour accéder au contexte (plan ou demande). &
+La navigation mène à l'écran attendu. &
+Vrai \\
+\hline
+
+\needspace{12\baselineskip}
+\multirow{2}{=}{\centering Consulter le\\journal d'audit} &
+Affichage chronologique &
+Consultation de la liste des événements par un profil Corporate autorisé. &
+Les actions sont listées avec date, type, entité et auteur. &
+Vrai \\
+\cline{2-5}
+ &
+Filtrage par critères &
+Application de filtres (site, type d'action, période). &
+La liste se restreint aux enregistrements correspondants. &
+Vrai \\
+\hline
+
+\end{longtable}
+\normalsize

@@ -1,0 +1,527 @@
+% Importé depuis Chapitre.docx (partie 2)
+\PFEChapterOpening{Fondation \& Initiation}
+
+\section{Introduction}
+
+Ce chapitre présente la \textbf{conception} et l’\textbf{architecture} de la plateforme CSR : \textbf{exigences fonctionnelles et non fonctionnelles}, \textbf{gestion de projet Scrum} (\emph{product backlog}, sprints et chronologie), schémas \textbf{UML}\footnote{UML : \emph{Unified Modeling Language} (langage de modélisation unifié). Il s’agit d’un ensemble de notations graphiques standardisées pour représenter, analyser et concevoir des systèmes logiciels orientés objet (cas d’utilisation, classes, séquences, etc.).} (cas d’utilisation, diagramme de classes), puis \textbf{choix technologiques} et \textbf{environnements} matériel et logiciel de développement.
+
+\section{Spécification des exigences}
+
+\subsection{Exigences fonctionnelles}
+
+Les exigences fonctionnelles suivantes spécifient les fonctionnalités que le système doit fournir :
+
+\textbf{Gestion des utilisateurs et des sites}
+
+\begin{itemize}
+  \item Assurer l’authentification des utilisateurs via un mécanisme sécurisé.
+  \item Émettre des jetons d’accès (JWT) et gérer les sessions (rafraîchissement des jetons).
+  \item Gérer des profils utilisateurs distincts (Utilisateur Site, Utilisateur Corporate).
+  \item Restreindre l’accès aux données en fonction du rôle de l’utilisateur et du site associé.
+  \item Permettre au niveau corporate de créer, modifier, désactiver et affecter des utilisateurs aux différents sites.
+  \item Gérer les sites et les catégories d’activités CSR.
+\end{itemize}
+
+\textbf{Gestion du plan annuel CSR}
+
+\begin{itemize}
+  \item Créer des plans annuels CSR (un plan par couple site/année) avec gestion des statuts (brouillon, soumis, validé, rejeté, etc.).
+  \item Prendre en charge les modes de validation 101 et 111 (chaîne de validation adaptée aux processus groupe/site).
+  \item Ajouter et modifier des activités planifiées rattachées au plan (catégorie, budget prévisionnel, responsable, dates, partenaire externe, impact cible, etc.).
+  \item Intégrer la gestion des activités hors plan lorsque le modèle le prévoit.
+  \item Gérer le cycle de vie du plan (modification, soumission, validation, rejet, verrouillage).
+  \item Autoriser la modification tant que le plan est en état modifiable (brouillon ou période de déverrouillage).
+  \item Permettre la soumission du plan pour validation.
+  \item Assurer l’approbation ou le rejet par les acteurs corporate, avec validation multi-niveaux si nécessaire.
+  \item Verrouiller le plan après validation définitive ou en dehors de la fenêtre de modification.
+  \item Importer des fichiers Excel consolidés avec prévisualisation, contrôles (région/pays/site), détection de conflits et paramétrage par plan.
+\end{itemize}
+
+\textbf{Gestion des activités CSR réalisées}
+
+\begin{itemize}
+  \item Enregistrer la réalisation des activités planifiées.
+  \item Ajouter des activités hors plan.
+  \item Autoriser la modification des activités tant qu’elles ne sont pas validées.
+  \item Soumettre les activités pour validation corporate.
+\end{itemize}
+
+\textbf{Comparaison Planifié vs Réalisé}
+
+\begin{itemize}
+  \item Comparer automatiquement les budgets prévisionnels et les budgets réels.
+  \item Calculer le taux de réalisation des activités.
+  \item Identifier les écarts budgétaires.
+  \item Mettre en évidence les activités en dépassement de budget.
+\end{itemize}
+
+\textbf{Gestion des demandes de modification}
+
+\begin{itemize}
+  \item Permettre la soumission de demandes de modification pour les plans ou activités verrouillés (avec justification et pièces jointes).
+  \item Permettre aux acteurs corporate de consulter, approuver ou rejeter les demandes.
+  \item Définir une durée de déverrouillage lorsque le processus l’exige.
+  \item Gérer les documents associés aux demandes ou aux entités métier (plans, activités).
+\end{itemize}
+
+\textbf{Gestion des tableaux de bord}
+
+\begin{itemize}
+  \item Visualiser les données CSR sous forme de tableaux de bord interactifs.
+  \item Afficher les indicateurs clés de performance (KPI) liés aux activités CSR.
+  \item Suivre et comparer les budgets planifiés et réalisés.
+  \item Analyser l’impact des activités CSR (global et par participant).
+  \item Filtrer les données par site, période, catégorie et type d’activité.
+  \item Comparer les performances entre sites et régions.
+  \item Suivre l’évolution des indicateurs dans le temps.
+  \item Distinguer les activités planifiées et hors plan.
+  \item Restreindre l’accès aux tableaux de bord selon le rôle utilisateur (Corporate / Site).
+  \item Assurer la mise à jour automatique des données à partir de l’entrepôt de données.
+\end{itemize}
+
+\textbf{Fonctionnalités transverses}
+\begin{itemize}
+  \item Gérer le dépôt et la consultation des documents liés aux sites ou aux entités métier.
+  \item Notifier les utilisateurs (validation, rejet, rappels, etc.).
+  \item Enregistrer les actions significatives dans un journal d’audit.
+  \item Assurer l’internationalisation de l’interface (français et anglais) avec gestion des préférences utilisateur.
+  \item Permettre la consultation et la mise à jour du profil utilisateur (informations personnelles et préférences de notification).
+\end{itemize}
+
+\subsection{Exigences non fonctionnelles}
+
+Afin d’assurer le bon fonctionnement du système, les exigences non fonctionnelles suivantes doivent être respectées :
+
+\textbf{Sécurité}
+
+\begin{itemize}
+  \item Protéger les données d’authentification (hachage des mots de passe, absence de stockage en clair).
+  \item Authentifier les utilisateurs par jetons et contrôler systématiquement les requêtes API.
+  \item Séparer les droits d’accès (Corporate vs Site) et limiter l’accès aux données autorisées.
+  \item Protéger les données sensibles (plans, budgets, indicateurs) conformément aux bonnes pratiques (HTTPS, configuration sécurisée du serveur et de la base).
+\end{itemize}
+
+\textbf{Fiabilité}
+
+\begin{itemize}
+  \item Garantir la cohérence des règles métier (statuts, validations, verrouillages).
+  \item Gérer les erreurs côté API et fournir des retours explicites côté interface utilisateur.
+  \item Assurer la persistance des données dans une base MySQL avec contraintes d’intégrité.
+\end{itemize}
+
+\textbf{Performance}
+
+\begin{itemize}
+  \item Garantir des temps de réponse acceptables pour les usages courants (consultation, tableaux de bord, import de fichiers volumineux).
+  \item Assurer la montée en charge via une architecture client/serveur (Angular + API Flask).
+\end{itemize}
+\newpage
+\textbf{Traçabilité}
+
+\begin{itemize}
+  \item Enregistrer les opérations importantes dans un journal d’audit (création, modification, validation, suppression, etc.).
+  \item Conserver l’historique des validations et des demandes de modification.
+  \item Assurer l’horodatage et l’identification des acteurs.
+\end{itemize}
+
+\textbf{Ergonomie et maintenabilité}
+
+\begin{itemize}
+  \item Proposer une interface web responsive avec une navigation structurée par modules.
+  \item Organiser le code en modules fonctionnels côté backend (Flask) et frontend (Angular) pour faciliter la maintenance et l’évolution.
+\end{itemize}
+
+\subsection{Identification des Acteurs}
+
+Les principaux acteurs du système sont :
+
+\begin{description}
+  \item[Utilisateur Corporate] Cet acteur dispose de tous les droits d'accès lui permettant d'administrer l'ensemble de la plateforme CSR. Il gère les comptes utilisateurs et configure les sites et leurs paramètres. Il valide les plans et activités soumis par les sites, traite les demandes de modification des périodes clôturées et analyse les performances consolidées de tous les sites à travers les tableaux de bord et les dashboards Power BI.
+  \item[Utilisateur Site] Cet acteur est soit un responsable CSR soit un collaborateur désigné au sein d'un site géographique de l'entreprise. Il dispose de droits d'accès limités à son propre site, ce qui lui permet d'assurer la gestion opérationnelle des activités CSR qui lui sont rattachées. Il crée et soumet le plan annuel CSR, déclare les activités réalisées planifiées ou hors plan, renseigne les données de réalisation et suit l'avancement de son budget et de ses KPIs. En cas de besoin, il soumet des demandes de modification pour les périodes clôturées et apporte les corrections suite à un rejet.
+\end{description}
+
+\subsection{Diagramme de cas d’utilisation générale}
+
+La figure 2.1 présente le diagramme de cas d’utilisation général, décrivant les interactions entre les acteurs et les fonctionnalités du système.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/chapitre-02/diagramme_de_cas_utilisation_global.png}
+  \caption{Diagramme de cas d’utilisation général.}
+  \label{fig:doc-ch2-1}
+\end{figure}
+
+\section{Le pilotage du projet par SCRUM}
+
+\subsection{Product Backlog}
+
+Le \emph{product backlog} est une liste dynamique des fonctionnalités qui définissent le périmètre du projet. Il regroupe des \textbf{user stories}, c’est-à-dire des descriptions de besoins du point de vue de l’utilisateur final, généralement structurées selon le schéma suivant : 
+ 
+\vspace{0.8em}
+« En tant que \emph{[utilisateur]}, je veux \emph{[réaliser une action]} afin de \emph{[atteindre un objectif]}. »
+\vspace{0.8em}
+
+Cette distinction facilite le cadrage entre les fonctionnalités visibles côté interface et les traitements de niveau système lors de la planification et du découpage en sprints.
+
+Le tableau~\ref{tab:product-backlog} présente le product backlog retenu pour notre projet.
+
+\input{tables/chapitre-02-product-backlog}
+
+\begingroup
+\renewcommand{\needspace}[1]{}%
+\subsection{Division du projet}
+Le projet est organisé en quatre sprints cohérents, GIMSI n’a pas été appliquée de façon séquentielle : l’identification des besoins et des KPI a été intégrée au Product Backlog dans une approche Scrum.
+Ainsi, une approche hybride Scrum–GIMSI a été adoptée.
+\endgroup
+
+La figure~\ref{fig:doc-ch2-division-projet} résume visuellement cette division en quatre sprints.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/chapitre-02/Division-du-projet.png}
+  \caption{Division du projet en sprints.}
+  \label{fig:doc-ch2-division-projet}
+\end{figure}
+
+\input{tables/chapitre-02-tab-gimsi-phases}
+
+\subsection{Planification des Sprints}
+
+Après finalisation du \emph{product backlog}, nous avons estimé l’effort et le temps requis pour chaque élément et regroupé ceux-ci en phases de développement cohérentes. Le projet a été découpé en \textbf{quatre sprints}, chacun visant un ensemble de fonctionnalités du backlog avec une durée définie.
+
+Le tableau~\ref{tab:ch02-planification-sprints} synthétise cette planification.
+
+\input{tables/chapitre-02-planification-sprints}
+
+
+\subsection{Diagramme de classe générale}
+
+La figure~\ref{fig:doc-ch2-3} illustre le diagramme de classe général de la solution. Le dictionnaire de données détaillant les attributs de ce schéma est fourni en annexe~B (tableau~\ref{tab:dictionnaire-donnees-classe}).
+
+\clearpage
+\newgeometry{margin=0pt}
+\begin{landscape}
+  \begingroup
+  % Page dédiée au diagramme (sans footer/numéro/logo) + image au maximum de la page.
+  \pagestyle{empty}
+  \thispagestyle{empty}
+  \captionsetup{aboveskip=2pt,belowskip=0pt,font=small}
+  \begin{figure}[p]
+    \thispagestyle{empty}
+    \centering
+    \includegraphics[
+      width=1.3\paperwidth,
+      height=\paperheight,
+      keepaspectratio
+    ]{figures/chapitre-02/diagramme-classe-general.png}
+    \caption{Diagramme de classe général.}
+    \label{fig:doc-ch2-3}
+  \end{figure}
+  \endgroup
+\end{landscape}
+\restoregeometry
+\clearpage
+\section{Architecture du système}
+
+L’architecture de la plateforme est conçue pour orchestrer la création, la validation et l’exploitation des données CSR de manière sécurisée. Après authentification, le flux principal se divise en deux branches.
+\par\addvspace{2ex}%
+
+L’architecture repose sur une approche en couches permettant d’assurer une séparation claire des responsabilités et une meilleure maintenabilité du système. Elle s’organise autour de plusieurs niveaux : la couche de présentation, la couche d’authentification, la couche applicative, la couche de données opérationnelles et la couche décisionnelle.
+\par\addvspace{2ex}%
+Au niveau de la couche de présentation, l’utilisateur interagit avec une application web développée en Angular. L’accès aux fonctionnalités est sécurisé grâce à un mécanisme d’authentification basé sur des tokens JWT, géré par une API Flask dédiée.
+\par\addvspace{2ex}%
+La couche applicative est assurée par une API REST développée avec Flask, structurée en plusieurs modules métiers (plans, activités, workflow, documents, audit). Cette couche implémente la logique métier du système, notamment la validation des données, la gestion des droits d’accès et le pilotage des processus de workflow.
+\par\addvspace{2ex}% 
+Les données sont ensuite persistées dans une base de données MySQL via une couche ORM\footnote{ORM : \emph{Object-Relational Mapping} (mapping objet-relationnel). Il s’agit d’une approche de persistance qui met en correspondance les objets manipulés dans le code applicatif et les enregistrements d’une base relationnelle, afin de structurer les accès aux données et de limiter le SQL ad hoc~\cite{orm-wikipedia}. Dans ce projet, cette couche est assurée par SQLAlchemy et Flask-SQLAlchemy~\cite{sqlalchemy-docs}.}
+, garantissant une abstraction efficace entre l’application et la base de données. Les fichiers et documents associés sont stockés dans un espace de stockage dédié.
+\par\addvspace{2ex}%
+Par ailleurs, la plateforme intègre un mécanisme de communication en temps réel via Socket.IO, permettant la diffusion instantanée des notifications et des mises à jour vers l’interface utilisateur.
+\par\addvspace{2ex}%
+
+Enfin, une couche décisionnelle vient compléter l’architecture. Les données issues de la base opérationnelle sont extraites, transformées et chargées via SSIS vers un Data Warehouse. Ce dernier est exploité à l’aide de SSMS pour la modélisation et l’analyse, puis connecté à Power BI pour la création de tableaux de bord interactifs et avancés. Cette séparation entre les systèmes transactionnels (OLTP) et analytiques (OLAP) permet d’optimiser les performances globales et de faciliter la prise de décision.
+
+La figure~\ref{fig:doc-ch2-system-architecture} illustre l'architecture globale du système.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/chapitre-02/architecture-systeme-csr.png}
+  \caption{Architecture globale du système.}
+  \label{fig:doc-ch2-system-architecture}
+\end{figure}
+\footnote{SSIS : \emph{SQL Server Integration Services}. Il s’agit de la composante ETL (\emph{Extract, Transform, Load}) de SQL Server permettant de concevoir des flux d’intégration entre sources de données hétérogènes, de transformer et charger des données, puis d’orchestrer et de déployer ces traitements sous forme de packages~\cite{ssis-docs}.}
+\footnote{SSMS : \emph{SQL Server Management Studio}. Il s’agit de l’outil graphique fourni par Microsoft pour administrer une instance SQL Server : exécution de requêtes T-SQL, gestion des bases et des schémas, configuration de la sécurité, sauvegardes et surveillance~\cite{ssms-docs}.}
+\section{Choix des technologies}
+
+Dans le cadre du développement de notre projet, nous avons retenu une pile technologique répondant aux exigences de \textbf{performance}, de \textbf{sécurité} (authentification, contrôle d’accès, cloisonnement par site) et de \textbf{scalabilité}. Chaque technologie a été choisie pour un rôle précis afin d’assurer une implémentation robuste et une maintenance aisée.
+
+
+\subsection{Backend}
+
+\vspace{0.35em}
+\textbf{Python }\cite{python-docs} est un langage de programmation polyvalent, largement utilisé pour le développement web et l’intégration de services. 
+
+La figure~\ref{fig:doc-ch2-tech-python-logo} présente le logo officiel de Python.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/python.png}
+  \caption[Logo de Python.]{Logo de Python.}
+  \label{fig:doc-ch2-tech-python-logo}
+\end{figure}
+
+\vspace{0.35em}
+\textbf{Flask }\cite{flask-docs} est un micro-framework Python \emph{open source} permettant de développer des applications web et des API REST de façon modulaire (blueprints, extensions). 
+
+La figure~\ref{fig:doc-ch2-tech-flask-logo} présente le logo officiel de Flask.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/flask.png}
+  \caption[Logo de Flask.]{Logo de Flask.}
+  \label{fig:doc-ch2-tech-flask-logo}
+\end{figure}
+
+\vspace{0.35em}
+\textbf{MySQL}\cite{mysql-docs} est un système de gestion de base de données relationnelle fondé sur SQL, adapté au stockage structuré des entités métier et aux requêtes d’analyse.
+
+La figure~\ref{fig:doc-ch2-tech-mysql-logo} présente le logo officiel de MySQL.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/MySQL.png}
+  \caption[Logo de MySQL.]{Logo de MySQL.}
+  \label{fig:doc-ch2-tech-mysql-logo}
+\end{figure}
+
+\subsection{Frontend}
+
+\vspace{0.2em}
+\textbf{Angular }\cite{angular-docs} est un framework front-end basé sur des composants, proposant routage et injection de dépendances pour structurer une application web. 
+
+La figure~\ref{fig:doc-ch2-tech-angular-logo} présente le logo officiel d’Angular.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/angular.png}
+  \caption[Logo d’Angular.]{Logo d’Angular.}
+  \label{fig:doc-ch2-tech-angular-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{TypeScript }\cite{typescript-docs} est un sur-ensemble typé de JavaScript, améliorant la robustesse du code (typage statique, outillage). 
+
+La figure~\ref{fig:doc-ch2-tech-typescript-logo} présente le logo officiel de TypeScript.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/TypeScript.png}
+  \caption[Logo de TypeScript.]{Logo de TypeScript.}
+  \label{fig:doc-ch2-tech-typescript-logo}
+\end{figure}
+
+\subsection{Interface utilisateur}
+
+\vspace{0.2em}
+\textbf{Tailwind CSS }\cite{tailwind-docs} est un framework utilitaire de styles permettant de composer rapidement des interfaces cohérentes. 
+
+La figure~\ref{fig:doc-ch2-tech-tailwind-logo} présente le logo officiel de Tailwind CSS.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/tailwind-css.png}
+  \caption[Logo de Tailwind CSS.]{Logo de Tailwind CSS.}
+  \label{fig:doc-ch2-tech-tailwind-logo}
+\end{figure}
+
+\vspace{0.2em}
+
+\subsection{Communication temps réel}
+
+\vspace{0.2em}
+\textbf{Socket.IO }\cite{socketio-docs} est une bibliothèque de communication temps réel (événements) reposant sur WebSocket avec mécanismes de repli. 
+
+La figure~\ref{fig:doc-ch2-tech-socketio-logo} présente le logo officiel de Socket.IO.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/socket-io.png}
+  \caption[Logo de Socket.IO.]{Logo de Socket.IO.}
+  \label{fig:doc-ch2-tech-socketio-logo}
+\end{figure}
+
+\subsection{Outil de test}
+
+\vspace{0.2em}
+\textbf{Postman}\cite{postman-docs} est l’outil utilisé pour tester les API REST de la plateforme. Il permet de construire des requêtes, vérifier les réponses (succès/erreur) et valider les scénarios fonctionnels des endpoints backend.
+
+La figure~\ref{fig:doc-ch2-tech-postman-logo} présente le logo de Postman.
+\begin{figure}[H]
+  \centering
+  \IfFileExists{figures/chapitre-02/Postmam.png}{%
+    \includegraphics[height=2.cm]{figures/chapitre-02/Postmam.png}
+  }{%
+    \fbox{\parbox{4.6cm}{\centering\textit{Logo Postman à insérer}\\\texttt{figures/chapitre-02/Postmam.png}}}
+  }
+  \caption[Logo de Postman.]{Logo de Postman.}
+  \label{fig:doc-ch2-tech-postman-logo}
+\end{figure}
+
+\section{Environnement et outils de développement}
+
+Cette section décrit l’\textbf{environnement matériel} et l’\textbf{environnement logiciel} mobilisés pour concevoir, tester et documenter la plateforme.
+
+\subsection{Environnement matériel}
+
+Le développement a été réalisé sur \textbf{deux postes de travail}. 
+
+Le tableau~\ref{tab:ch2-materiel} récapitule leurs caractéristiques principales.
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Environnement matériel utilisé pour le développement.}
+  \label{tab:ch2-materiel}
+  \PFETableSetup
+  \PFETableRowColors
+  \PFETableArrayStretch
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.2cm}p{5.0cm}p{5.0cm}@{}}
+    \tableHeaderStyle \tableHeaderCell{Élément} & \tableHeaderCell{MacBook Pro M1} & \tableHeaderCell{HP Vectus 15} \\
+    Processeur (CPU) & M1 8 c\oe urs  & AMD Ryzen 5 5600H \\
+    Carte graphique (GPU) & 8 c\oe urs (Apple GPU) & Nvidia GeForce GTX 1650 \\
+    Neural Engine & 16 c\oe urs & 16 c\oe urs \\
+    Mémoire vive & 8~Go & 24~Go RAM \\
+    Stockage & SSD 256~Go & SSD 512~Go \\
+    Système d’exploitation & macOS 26.3.1 (Tahoe) & Windows 11 (64 bits) \\
+  \end{tabular}
+\end{table}
+
+\subsection{Environnement logiciel}
+
+Notre projet s’appuie sur un ensemble d’outils logiciels adaptés aux phases de conception, de développement, de collaboration et de reporting. Chaque outil répond à un besoin précis afin d’assurer une mise en œuvre efficace et une documentation de qualité.
+
+\subsection{Conception et architecture}
+
+\vspace{0.2em}
+\textbf{draw.io }\cite{diagrams-net-docs} est un outil de création de diagrammes (schémas d’architecture, diagrammes UML, organigrammes) avec export vers plusieurs formats. 
+
+La figure~\ref{fig:doc-ch2-drawio-logo} présente le logo officiel de draw.io.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.4cm]{figures/chapitre-02/draw-io.png}
+  \caption[Logo de draw.io.]{Logo de draw.io.}
+  \label{fig:doc-ch2-drawio-logo}
+\end{figure}
+
+\subsection{Gestion de versions et collaboration}
+
+\vspace{0.2em}
+\textbf{Git }\cite{git-docs} est un système de contrôle de version distribué permettant de suivre l’historique, gérer des branches et faciliter le travail collaboratif. 
+
+La figure~\ref{fig:doc-ch2-git-logo} montre le logo officiel de Git.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.4cm]{figures/chapitre-02/Git.png}
+  \caption[Logo de Git.]{Logo de Git.}
+  \label{fig:doc-ch2-git-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{GitHub }\cite{github-docs} est une plateforme d’hébergement de dépôts Git offrant des fonctionnalités de collaboration (issues, pull requests, revue de code). 
+
+La figure~\ref{fig:doc-ch2-github-logo} montre le logo officiel de GitHub.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.4cm]{figures/chapitre-02/github.png}
+  \caption[Logo de GitHub.]{Logo de GitHub.}
+  \label{fig:doc-ch2-github-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{Monday.com }\cite{monday-docs} est un outil de gestion de projet et de travail collaboratif basé sur des tableaux visuels, facilitant l’organisation des tâches, le suivi de l’avancement et la coordination des équipes.
+
+La figure~\ref{fig:doc-ch2-monday-logo} présente le logo officiel de Monday.com.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=8cm]{figures/chapitre-02/Monday_logo.svg.png}
+  \caption[Logo de Monday.com.]{Logo de Monday.com.}
+  \label{fig:doc-ch2-monday-logo}
+\end{figure}
+
+\subsection{Développement}
+
+\vspace{0.2em}
+\textbf{Visual Studio Code }\cite{vscode-docs} est un éditeur de code extensible et multiplateforme proposant notamment l’auto-complétion, le débogage et l’intégration Git. 
+
+La figure~\ref{fig:doc-ch2-vscode-logo} présente le logo officiel de Visual Studio Code.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=3cm]{figures/chapitre-02/visual-studio-code.jpeg}
+  \caption[Logo de Visual Studio Code.]{Logo de Visual Studio Code.}
+  \label{fig:doc-ch2-vscode-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{Microsoft Visual Studio } \cite{visualstudio-docs} est un environnement de développement intégré (IDE) permettant de concevoir, compiler, tester et déboguer des applications. 
+
+La figure~\ref{fig:doc-ch2-visualstudio-logo} présente le logo officiel de Microsoft Visual Studio.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.4cm]{figures/chapitre-02/Microsoft-Visual-Studio.png}
+  \caption[Logo de Microsoft Visual Studio.]{Logo de Microsoft Visual Studio.}
+  \label{fig:doc-ch2-visualstudio-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{Microsoft SQL Server } \cite{sqlserver-docs} est un système de gestion de base de données relationnelle (SGBDR) développé par Microsoft, destiné au stockage et à l’analyse de données. 
+
+La figure~\ref{fig:doc-ch2-sqlserver-logo} présente le logo officiel de Microsoft SQL Server.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.4cm]{figures/chapitre-02/sql-serveur.png}
+  \caption[Logo de Microsoft SQL Server.]{Logo de Microsoft SQL Server.}
+  \label{fig:doc-ch2-sqlserver-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{Mapping objet-relationnel (ORM)} \cite{orm-wikipedia} désigne une approche de persistance qui établit une correspondance entre les objets manipulés dans le code applicatif et les tables (ou vues) d’une base relationnelle, afin de structurer les accès aux données et de réduire le SQL répétitif. Dans le backend de la plateforme CSR, cette couche est assurée par \textbf{SQLAlchemy} \cite{sqlalchemy-docs} (avec Flask-SQLAlchemy comme pont vers l’API Flask). 
+
+La figure~\ref{fig:doc-ch2-sqlalchemy-logo} présente le logo de SQLAlchemy.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.4cm]{figures/chapitre-02/sqlalchemy.png}
+  \caption[Logo de SQLAlchemy (ORM et accès SQL).]{Logo de SQLAlchemy (ORM et accès SQL).}
+  \label{fig:doc-ch2-sqlalchemy-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{XAMPP }\cite{xampp-docs} est une distribution regroupant un serveur web (Apache) et des composants associés (dont MySQL/MariaDB et PHP), utilisée pour mettre en place rapidement un environnement serveur local. 
+
+La figure~\ref{fig:doc-ch2-xampp-logo} montre le logo officiel de XAMPP.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.4cm]{figures/chapitre-02/Xampp.png}
+  \caption[Logo de XAMPP.]{Logo de XAMPP.}
+  \label{fig:doc-ch2-xampp-logo}
+\end{figure}
+
+\subsection{Reporting et documentation}
+
+\vspace{0.2em}
+\textbf{Power BI }\cite{powerbi-docs} est une plateforme de \emph{business intelligence} permettant de créer des rapports et tableaux de bord interactifs. 
+
+La figure~\ref{fig:doc-ch2-powerbi-logo} montre le logo officiel de Power BI.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/power-bi.png}
+  \caption[Logo de Power BI.]{Logo de Power BI.}
+  \label{fig:doc-ch2-powerbi-logo}
+\end{figure}
+
+\vspace{0.2em}
+\textbf{LaTeX } \cite{latex-docs} est un système de composition de documents basé sur \TeX, permettant de produire des documents structurés avec une typographie stable. 
+
+La figure~\ref{fig:doc-ch2-latex-logo} présente le logo officiel de \LaTeX.
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=1.8cm]{figures/chapitre-02/LaTeX_project_logo_bird.png}
+  \caption[Logo de \LaTeX.]{Logo de \LaTeX.}
+  \label{fig:doc-ch2-latex-logo}
+\end{figure}
+
+\section{Conclusion}
+
+Ce chapitre a posé les bases du projet : exigences fonctionnelles, démarche Scrum, formalisation du \emph{product backlog} et des \emph{user stories}, planification et chronologie des sprints, puis architecture et choix technologiques. Les environnements matériel et logiciel mobilisés pour concevoir la plateforme CSR ont également été décrits. Les chapitres suivants présentent successivement les quatre sprints retenus — \emph{Authentification \& Fondations}, \emph{Plans \& activités}, \emph{Workflow transverse}, \emph{BI \& KPI} — et leur mise en œuvre.

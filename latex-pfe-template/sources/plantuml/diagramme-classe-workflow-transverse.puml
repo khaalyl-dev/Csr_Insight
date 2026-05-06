@@ -1,0 +1,67 @@
+@startuml
+!theme plain
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+title Diagramme de classes — Demandes, notifications, audit
+
+class User {
+  +id : UUID
+  +email : String
+}
+
+class Site {
+  +id : UUID
+  +code : String
+}
+
+class ChangeRequest {
+  +id : UUID
+  +entityType : EntityType
+  +entityId : UUID
+  +year : int
+  +status : ValidationStatus
+  +reason : String
+}
+
+class Notification {
+  +id : UUID
+  +title : String
+  +message : String
+  +type : String
+  +isRead : boolean
+}
+
+class AuditLog {
+  +id : UUID
+  +action : String
+  +entityType : EntityType
+  +entityId : UUID
+  +description : String
+  +createdAt : DateTime
+}
+
+class EntityHistory {
+  +id : UUID
+  +entityType : EntityType
+  +entityId : UUID
+  +oldData : JSON
+  +newData : JSON
+}
+
+Site "1" <-- "n" ChangeRequest
+User "1" <-- "n" ChangeRequest : requestedBy
+User "0..1" <-- "n" ChangeRequest : reviewedBy
+
+User "1" <-- "n" Notification
+Site "0..1" <-- "n" Notification
+
+User "0..1" <-- "n" AuditLog
+Site "0..1" <-- "n" AuditLog
+AuditLog ..> EntityHistory : peut référencer
+
+note right of ChangeRequest
+  Circuit site → corporate
+  avec déverrouillage
+  contrôlé du plan
+end note
+@enduml

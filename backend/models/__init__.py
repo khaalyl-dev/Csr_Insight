@@ -17,6 +17,7 @@ from .realized_activity import RealizedCsr
 from .csr_objective import CsrObjective
 from .csr_completed_objective import CsrCompletedObjective
 from .csr_attachment import CsrAttachment
+from .activity_kpi import ActivityKpi
 from .validation import Validation
 from .change_request import ChangeRequest
 from .document import Document
@@ -40,6 +41,7 @@ __all__ = [
     "CsrObjective",
     "CsrCompletedObjective",
     "CsrAttachment",
+    "ActivityKpi",
     "Validation",
     "ChangeRequest",
     "Document",

@@ -78,6 +78,34 @@
       </div>
     </div>
 
+    <div *ngIf="activity()!.kpi?.has_realized_data && activity()!.kpi as kpi" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Safety</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ kpi.incidents_count ?? 0 }}</p>
+        <p class="text-xs text-gray-500">Incidents</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">People</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.involvement_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpi.participants_actual_sum ?? 0 }} / {{ kpi.employees_planned ?? 0 }}</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Quality</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.action_delivery_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpi.completed_objectives_count ?? 0 }} / {{ kpi.announced_objectives_count ?? 0 }} objectives</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">Cost</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.budget_control_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ formatMoney(kpi.realized_budget_sum) }} / {{ formatMoney(kpi.planned_budget_amount) }}</p>
+      </div>
+      <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500 uppercase">% Employees</p>
+        <p class="mt-1 text-2xl font-bold text-gray-800">{{ formatPercent(kpi.participants_vs_total_hc_rate) }}</p>
+        <p class="text-xs text-gray-500">{{ kpi.participants_actual_sum ?? 0 }} / {{ kpi.plan_total_hc ?? 0 }}</p>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <!-- Planned details (same visual language as realized detail comparison, single value column) -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden xl:col-span-2">
@@ -108,6 +136,16 @@
               </div>
             </div>
 
+            <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'PLAN_DETAIL.ORGANISATION' | translate }}</div>
+            <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
+              <div class="text-sm font-semibold text-gray-900">{{ activity()!.organization ?? '–' }}</div>
+            </div>
+
+            <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'PLANNED_ACTIVITY_DETAIL.CONTRACT_TYPE' | translate }}</div>
+            <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
+              <div class="text-sm font-semibold text-gray-900">{{ activity()!.contract_type ?? '–' }}</div>
+            </div>
+
             <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'PLAN_DETAIL.TARGET_IMPACT' | translate }}</div>
             <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
               <div class="text-sm text-gray-900">
@@ -132,11 +170,40 @@
               <div class="text-sm text-gray-900">{{ activity()!.action_impact_duration || '–' }}</div>
             </div>
 
+            <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ 'REALIZED_DETAIL.PARTICIPANTS' | translate }}</div>
+            <div class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
+              <div class="text-sm text-gray-900">
+                <span class="font-semibold">{{ activity()!.employees_planned != null ? activity()!.employees_planned : '–' }}</span>
+                <span class="text-gray-500"> / </span>
+                <span class="font-semibold">{{ activity()!.kpi?.participants_actual_sum != null ? activity()!.kpi?.participants_actual_sum : '–' }}</span>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">
+                {{ 'PLANNED_ACTIVITY_DETAIL.SECTION_INFO_PLANNED' | translate }} / {{ 'REALIZED_DETAIL.REALIZATION_INFO' | translate }}
+              </div>
+            </div>
+
             <div *ngIf="activity()!.is_off_plan" class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
               {{ 'PLANNED_ACTIVITY_DETAIL.VALIDATION_MODE' | translate }}
             </div>
             <div *ngIf="activity()!.is_off_plan" class="rounded-xl border border-gray-200 p-3 bg-blue-50/30">
               <div class="text-sm text-gray-900">{{ validationModeLabel(activity()!.off_plan_validation_mode) }}</div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-2xl border border-gray-200 p-4">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{{ 'PLANNED_ACTIVITY_DETAIL.ANNOUNCED_OBJECTIVES' | translate }}</div>
+              <ul *ngIf="activity()!.planned_objectives?.length" class="list-disc list-inside text-sm text-gray-800 space-y-1">
+                <li *ngFor="let o of activity()!.planned_objectives">{{ o }}</li>
+              </ul>
+              <p *ngIf="!activity()!.planned_objectives?.length" class="text-sm text-gray-500">–</p>
+            </div>
+            <div class="rounded-2xl border border-gray-200 p-4">
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{{ 'PLANNED_ACTIVITY_DETAIL.COMPLETED_OBJECTIVES' | translate }}</div>
+              <ul *ngIf="activity()!.completed_objectives?.length" class="list-disc list-inside text-sm text-gray-800 space-y-1">
+                <li *ngFor="let o of activity()!.completed_objectives">{{ o }}</li>
+              </ul>
+              <p *ngIf="!activity()!.completed_objectives?.length" class="text-sm text-gray-500">–</p>
             </div>
           </div>
 
@@ -163,7 +230,89 @@
             </div>
             <div class="rounded-2xl border border-gray-200 p-4">
               <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{{ 'PLAN_DETAIL.NUMBER_EXTERNAL_PARTNERS' | translate }}</div>
-              <div class="text-sm font-semibold text-gray-900">{{ activity()!.number_external_partners != null ? activity()!.number_external_partners : '–' }}</div>
+              <div class="text-sm font-semibold text-gray-900">{{ externalPartnersCount(activity()!.external_partner_name) || '–' }}</div>
+            </div>
+          </div>
+
+          <div class="mt-8 border-t border-gray-100 pt-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-1">{{ 'PLANNED_ACTIVITY_DETAIL.REALIZATIONS_TITLE' | translate }}</h3>
+            <p *ngIf="!(activity()!.realizations?.length)" class="text-sm text-gray-500">{{ 'PLANNED_ACTIVITY_DETAIL.NO_REALIZATIONS' | translate }}</p>
+            <div *ngFor="let r of (activity()!.realizations || []); let idx = index" class="mt-4 rounded-2xl border border-gray-200 p-4 bg-slate-50/80">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  {{ 'REALIZED_DETAIL.REALIZATION_FALLBACK' | translate }} #{{ idx + 1 }}
+                </span>
+                <a [routerLink]="['/realized-csr', r.id]"
+                  class="text-sm font-medium text-brand-900 hover:underline">
+                  {{ 'PLANNED_ACTIVITY_DETAIL.VIEW_REALIZATION' | translate }}
+                </a>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'REALIZED_DETAIL.REALIZATION_DATE' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ r.realization_date ? (r.realization_date | date:'dd/MM/yyyy') : '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'PLANNED_ACTIVITY_DETAIL.REALIZATION_STATUS' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ r.status ? csrStatusLabel(r.status) : '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'PLAN_DETAIL.BUDGET_REALIZED' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ r.realized_budget != null ? (r.realized_budget | number:'1.0-0') + ' €' : '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'REALIZED_DETAIL.PARTICIPANTS' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ r.participants != null ? r.participants : '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">Incidents</p>
+                  <p class="font-semibold text-gray-900">{{ r.incidents_number != null ? r.incidents_number : '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'PLAN_DETAIL.IMPACT_REALIZED' | translate }}</p>
+                  <p class="font-semibold text-gray-900">
+                    <span *ngIf="r.action_impact_actual != null">{{ r.action_impact_actual | number:'1.0-0' }}</span>
+                    <span *ngIf="r.action_impact_unit"> {{ r.action_impact_unit }}</span>
+                    <span *ngIf="r.action_impact_actual == null && !r.action_impact_unit">–</span>
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'PLANNED_ACTIVITY_DETAIL.CORPORATE_IMAGE' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ yesNo(r.corporate_image_improved) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'PLAN_DETAIL.BADGE_OFF_PLAN' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ yesNo(!!r.is_off_plan) }}</p>
+                </div>
+                <div *ngIf="r.is_off_plan" class="sm:col-span-2">
+                  <p class="text-xs text-gray-500 uppercase">{{ 'PLANNED_ACTIVITY_DETAIL.VALIDATION_MODE' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ validationModeLabel(r.off_plan_validation_mode) }} — step {{ r.off_plan_validation_step ?? '–' }}</p>
+                </div>
+                <div class="sm:col-span-2">
+                  <p class="text-xs text-gray-500 uppercase">{{ 'REALIZED_DETAIL.CONTACT_DEPARTMENT' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ r.contact_department ?? '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'REALIZED_DETAIL.CONTACT_NAME' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ r.contact_name ?? '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'REALIZED_DETAIL.CONTACT_EMAIL' | translate }}</p>
+                  <p class="font-semibold text-gray-900 break-all">{{ r.contact_email ?? '–' }}</p>
+                </div>
+                <div class="sm:col-span-2">
+                  <p class="text-xs text-gray-500 uppercase">{{ 'REALIZED_DETAIL.COMMENT' | translate }}</p>
+                  <p class="text-gray-800 whitespace-pre-wrap">{{ r.comment ?? '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'REALIZED_DETAIL.ENTERED_ON' | translate }}</p>
+                  <p class="font-semibold text-gray-900">{{ r.created_at ? (r.created_at | date:'dd/MM/yyyy HH:mm') : '–' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 uppercase">{{ 'PLANNED_ACTIVITY_DETAIL.ACTIVITY_NUMBER' | translate }} (report)</p>
+                  <p class="font-semibold text-gray-900">{{ r.activity_number ?? '–' }}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -189,6 +338,20 @@
             <div>
               <p class="text-gray-500 text-xs uppercase tracking-wider">{{ 'PLANNED_ACTIVITY_DETAIL.PLAN_STATUS_LABEL' | translate }}</p>
               <p class="text-gray-900 mt-0.5 font-semibold">{{ csrStatusLabel(activity()!.plan_status) }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500 text-xs uppercase tracking-wider">{{ 'PLANNED_ACTIVITY_DETAIL.PLAN_ALLOCATED_BUDGET' | translate }}</p>
+              <p class="text-gray-900 mt-0.5 font-semibold">
+                {{ activity()!.plan_allocated_budget != null ? (activity()!.plan_allocated_budget | number:'1.0-0') + ' €' : '–' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-gray-500 text-xs uppercase tracking-wider">{{ 'PLANNED_ACTIVITY_DETAIL.CATEGORY' | translate }} (id)</p>
+              <p class="text-gray-900 mt-0.5 font-mono text-xs break-all">{{ activity()!.category_id ?? '–' }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500 text-xs uppercase tracking-wider">{{ 'PLANNED_ACTIVITY_DETAIL.ACTIVITY_ID' | translate }}</p>
+              <p class="text-gray-900 mt-0.5 font-mono text-xs break-all">{{ activity()!.id }}</p>
             </div>
           </div>
         </div>

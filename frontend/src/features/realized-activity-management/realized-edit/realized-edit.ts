@@ -33,12 +33,16 @@ export class RealizedEditComponent implements OnInit {
   loading = false;
   loadingData = true;
   errorMsg = '';
+  plannedObjectives: string[] = [];
+  completedObjectives = new Set<string>();
 
   ngOnInit(): void {
     this.form = this.fb.group({
       // Planned activity (editable here too)
       activity_number: ['', Validators.required],
       title: ['', Validators.required],
+      organization: [''],
+      contract_type: [''],
       description: [''],
       planned_budget: [null as number | null],
       collaboration_nature: [''],
@@ -46,6 +50,7 @@ export class RealizedEditComponent implements OnInit {
       start_year: [null as number | null],
       edition: [null as number | null],
       organizer: [''],
+      employees_planned: [null as number | null],
       external_partner: [''],
       action_impact_target: [null as number | null],
       action_impact_unit_target: [''],
@@ -61,6 +66,9 @@ export class RealizedEditComponent implements OnInit {
       comment: [''],
       contact_name: [''],
       contact_email: [''],
+      contact_department: [''],
+      corporate_image_improved: [null as boolean | null],
+      incidents_number: [null as number | null],
     });
 
     const id = this.realizedId ?? this.route.snapshot.paramMap.get('id');
@@ -82,6 +90,8 @@ export class RealizedEditComponent implements OnInit {
         this.form.patchValue({
           activity_number: r.activity_number ?? '',
           title: r.activity_title ?? '',
+          organization: (r as any).organization ?? '',
+          contract_type: (r as any).contract_type ?? '',
           description: r.activity_description ?? '',
           planned_budget: r.planned_budget ?? null,
           collaboration_nature: r.collaboration_nature ?? '',
@@ -89,6 +99,7 @@ export class RealizedEditComponent implements OnInit {
           start_year: r.start_year ?? null,
           edition: r.edition ?? null,
           organizer: r.organizer ?? '',
+          employees_planned: (r as any).employees_planned ?? null,
           external_partner: r.external_partner_name ?? '',
           action_impact_target: r.action_impact_target ?? null,
           action_impact_unit_target: r.action_impact_unit_target ?? '',
@@ -103,7 +114,14 @@ export class RealizedEditComponent implements OnInit {
           comment: r.comment ?? '',
           contact_name: r.contact_name ?? '',
           contact_email: r.contact_email ?? '',
+          contact_department: r.contact_department ?? '',
+          corporate_image_improved: r.corporate_image_improved ?? null,
+          incidents_number: r.incidents_number ?? null,
         });
+        this.plannedObjectives = Array.isArray(r.planned_objectives) ? r.planned_objectives.filter(Boolean) : [];
+        this.completedObjectives = new Set(
+          Array.isArray(r.completed_objectives) ? r.completed_objectives.filter(Boolean) : [],
+        );
         this.loadingData = false;
         this.cdr.markForCheck();
       },
@@ -128,6 +146,8 @@ export class RealizedEditComponent implements OnInit {
       category_id: this.realized.category_id ?? '',
       activity_number: raw.activity_number?.trim() || '',
       title: raw.title?.trim() || '',
+      organization: raw.organization?.trim() || null,
+      contract_type: raw.contract_type?.trim() || null,
       description: raw.description?.trim() || null,
       collaboration_nature: raw.collaboration_nature?.trim() || null,
       periodicity: raw.periodicity?.trim() || null,
@@ -136,6 +156,7 @@ export class RealizedEditComponent implements OnInit {
       action_impact_unit: raw.action_impact_unit_target?.trim() || null,
       action_impact_duration: raw.action_impact_duration?.trim() || null,
       organizer: raw.organizer?.trim() || null,
+      employees_planned: raw.employees_planned != null && raw.employees_planned !== '' ? Number(raw.employees_planned) : null,
       edition: raw.edition != null && raw.edition !== '' ? Number(raw.edition) : null,
       start_year: raw.start_year != null && raw.start_year !== '' ? Number(raw.start_year) : null,
       external_partner: raw.external_partner?.trim() || null,
@@ -148,8 +169,12 @@ export class RealizedEditComponent implements OnInit {
       action_impact_unit: raw.action_impact_unit?.trim() || null,
       realization_date: raw.realization_date?.trim() ? raw.realization_date.substring(0, 10) : null,
       comment: raw.comment?.trim() || null,
+      completed_objectives: Array.from(this.completedObjectives),
+      corporate_image_improved: raw.corporate_image_improved,
+      incidents_number: raw.incidents_number != null && raw.incidents_number !== '' ? Number(raw.incidents_number) : null,
       contact_name: raw.contact_name?.trim() || null,
       contact_email: raw.contact_email?.trim() || null,
+      contact_department: raw.contact_department?.trim() || null,
     };
 
     this.activitiesApi
@@ -177,5 +202,15 @@ export class RealizedEditComponent implements OnInit {
   cancel(): void {
     if (this.sidebarMode) this.closed.emit();
     else this.location.back();
+  }
+
+  isObjectiveCompleted(objective: string): boolean {
+    return this.completedObjectives.has(objective);
+  }
+
+  toggleCompletedObjective(objective: string): void {
+    if (this.completedObjectives.has(objective)) this.completedObjectives.delete(objective);
+    else this.completedObjectives.add(objective);
+    this.cdr.markForCheck();
   }
 }

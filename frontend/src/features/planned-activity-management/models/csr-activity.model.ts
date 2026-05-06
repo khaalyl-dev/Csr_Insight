@@ -26,6 +26,25 @@ export interface CsrActivity {
   planned_objectives?: string[];
   completed_objectives?: string[];
   external_partner_name?: string | null;
+  /** Execution progress from activity_kpis (distinct from validation status). */
+  lifecycle_status?: 'DRAFT' | 'PLANNED' | 'PENDING' | 'COMPLETED' | string | null;
+  kpi?: {
+    has_realized_data?: boolean;
+    lifecycle_status?: 'DRAFT' | 'PLANNED' | 'PENDING' | 'COMPLETED' | string | null;
+    incidents_count?: number | null;
+    participants_actual_sum?: number | null;
+    employees_planned?: number | null;
+    involvement_rate?: number | null;
+    announced_objectives_count?: number | null;
+    completed_objectives_count?: number | null;
+    action_delivery_rate?: number | null;
+    realized_budget_sum?: number | null;
+    planned_budget_amount?: number | null;
+    budget_control_rate?: number | null;
+    plan_total_hc?: number | null;
+    participants_vs_total_hc_rate?: number | null;
+    updated_at?: string | null;
+  } | null;
   off_plan_validation_mode?: string | null;
   off_plan_validation_step?: number | null;
 }

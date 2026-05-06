@@ -1,0 +1,54 @@
+@startuml
+!theme plain
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+title Diagramme de classes — Données agrégées & snapshots reporting
+
+class Site {
+  +id : UUID
+  +name : String
+  +code : String
+}
+
+class CsrPlan {
+  +id : UUID
+  +year : int
+  +status : PlanStatus
+  +totalBudget : Decimal
+}
+
+class PlannedActivity {
+  +id : UUID
+  +plannedBudget : Decimal
+  +status : ActivityStatus
+}
+
+class RealizedActivity {
+  +id : UUID
+  +realizedBudget : Decimal
+  +participants : int
+  +status : ActivityStatus
+}
+
+class CsrSnapshot {
+  +id : UUID
+  +year : int
+  +month : int
+  +totalBudget : Decimal
+  +totalRealized : Decimal
+  +totalActivities : int
+  +completionRate : Decimal
+  +createdAt : DateTime
+}
+
+Site "1" o-- "n" CsrPlan
+CsrPlan "1" *-- "n" PlannedActivity
+PlannedActivity "1" <-- "0..n" RealizedActivity : réalisations
+Site "1" o-- "n" CsrSnapshot : agrégats\nmensuels
+
+note bottom of CsrSnapshot
+  Alimentation tableaux
+  de bord web & flux
+  vers Power BI
+end note
+@enduml
