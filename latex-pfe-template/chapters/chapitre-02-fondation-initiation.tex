@@ -3,7 +3,7 @@
 
 \section{Introduction}
 
-Ce chapitre présente la \textbf{conception} et l’\textbf{architecture} de la plateforme CSR : \textbf{exigences fonctionnelles et non fonctionnelles}, \textbf{gestion de projet Scrum} (\emph{product backlog}, sprints et chronologie), schémas \textbf{UML}\footnote{UML : \emph{Unified Modeling Language} (langage de modélisation unifié). Il s’agit d’un ensemble de notations graphiques standardisées pour représenter, analyser et concevoir des systèmes logiciels orientés objet (cas d’utilisation, classes, séquences, etc.).} (cas d’utilisation, diagramme de classes), puis \textbf{choix technologiques} et \textbf{environnements} matériel et logiciel de développement.
+Ce chapitre est consacré à la conception et à l’architecture de la plateforme CSR. Il présente les exigences fonctionnelles et non fonctionnelles du projet, ainsi que l’organisation de la gestion du projet selon la méthodologie Scrum, à travers le product backlog, les sprints et la chronologie des travaux. Il aborde également la modélisation du système à l’aide des diagrammes UML\footnote{UML : \emph{Unified Modeling Language} (langage de modélisation unifié). Il s’agit d’un ensemble de notations graphiques standardisées pour représenter, analyser et concevoir des systèmes logiciels orientés objet (cas d’utilisation, classes, séquences, etc.).}. Enfin, il présente les choix technologiques ainsi que les environnements matériel et logiciel utilisés pour le développement de la plateforme.
 
 \section{Spécification des exigences}
 
@@ -13,7 +13,7 @@ Les exigences fonctionnelles suivantes spécifient les fonctionnalités que le s
 
 \textbf{Gestion des utilisateurs et des sites}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet, itemsep=0.15ex, parsep=0pt, topsep=0pt, partopsep=0pt]
   \item Assurer l’authentification des utilisateurs via un mécanisme sécurisé.
   \item Émettre des jetons d’accès (JWT) et gérer les sessions (rafraîchissement des jetons).
   \item Gérer des profils utilisateurs distincts (Utilisateur Site, Utilisateur Corporate).
@@ -24,40 +24,44 @@ Les exigences fonctionnelles suivantes spécifient les fonctionnalités que le s
 
 \textbf{Gestion du plan annuel CSR}
 
-\begin{itemize}
-  \item Créer des plans annuels CSR (un plan par couple site/année) avec gestion des statuts (brouillon, soumis, validé, rejeté, etc.).
-  \item Prendre en charge les modes de validation 101 et 111 (chaîne de validation adaptée aux processus groupe/site).
+\begin{itemize}[label=\textbullet, itemsep=0.15ex, parsep=0pt, topsep=0pt, partopsep=0pt]
+  \item Créer des plans annuels CSRavec gestion des statuts (brouillon, soumis, validé, rejeté, etc.).
+  \item Prendre en charge les modes de validation (chaîne de validation adaptée aux processus par site/plan).
   \item Ajouter et modifier des activités planifiées rattachées au plan (catégorie, budget prévisionnel, responsable, dates, partenaire externe, impact cible, etc.).
-  \item Intégrer la gestion des activités hors plan lorsque le modèle le prévoit.
-  \item Gérer le cycle de vie du plan (modification, soumission, validation, rejet, verrouillage).
+  \item Intégrer la gestion des activités hors plan.
+  \item Gérer le cycle de vie des plans et des activités (modification, soumission, validation, rejet, verrouillage).
   \item Autoriser la modification tant que le plan est en état modifiable (brouillon ou période de déverrouillage).
   \item Permettre la soumission du plan pour validation.
-  \item Assurer l’approbation ou le rejet par les acteurs corporate, avec validation multi-niveaux si nécessaire.
-  \item Verrouiller le plan après validation définitive ou en dehors de la fenêtre de modification.
-  \item Importer des fichiers Excel consolidés avec prévisualisation, contrôles (région/pays/site), détection de conflits et paramétrage par plan.
+  \item Assurer l’approbation ou le rejet par les acteurs corporate, avec validation multi-niveaux.
+  \item Verrouiller le plan après validation définitive.
+  \item Importer des fichiers Excel consolidés avec prévisualisation, contrôles (région/pays/site), détection de conflits et paramétrage par site/plan.
+  \item Calculer et suivre les indicateurs clés de performance (KPI) de réalisation du plan (taux d’exécution, budget consommé...).
 \end{itemize}
 
-\textbf{Gestion des activités CSR réalisées}
+\textbf{Gestion des activités CSR}
 
-\begin{itemize}
-  \item Enregistrer la réalisation des activités planifiées.
-  \item Ajouter des activités hors plan.
-  \item Autoriser la modification des activités tant qu’elles ne sont pas validées.
-  \item Soumettre les activités pour validation corporate.
+\begin{itemize}[label=\textbullet, itemsep=0.15ex, parsep=0pt, topsep=0pt, partopsep=0pt]
+  \item Planifier les activités CSR avec saisie des données prévisionnelles.
+  \item Enregistrer la réalisation des activités planifiées via des enregistrements (records) datés, incluant les valeurs réelles.
+  \item Ajouter des activités hors plan et permettre leur soumission/validation avec les mêmes règles de traçabilité.
+  \item Autoriser la modification des activités et des réalisations tant qu’elles sont dans un état modifiable, puis verrouiller après validation.
+  \item Associer des pièces justificatives (documents, photos, rapports) aux activités et aux réalisations pour faciliter l’audit.
+  \item Calculer automatiquement les KPI d’exécution à partir des données planifiées et réalisées.
+  \item Assurer le suivi des écarts planifié/réalisé et la mise à jour des indicateurs après chaque création ou modification de record.
 \end{itemize}
 
 \textbf{Comparaison Planifié vs Réalisé}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet, itemsep=0.15ex, parsep=0pt, topsep=0pt, partopsep=0pt]
   \item Comparer automatiquement les budgets prévisionnels et les budgets réels.
-  \item Calculer le taux de réalisation des activités.
+  \item Calculer les taux kpi des activités.
   \item Identifier les écarts budgétaires.
   \item Mettre en évidence les activités en dépassement de budget.
 \end{itemize}
 
 \textbf{Gestion des demandes de modification}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet, itemsep=0.15ex, parsep=0pt, topsep=0pt, partopsep=0pt]
   \item Permettre la soumission de demandes de modification pour les plans ou activités verrouillés (avec justification et pièces jointes).
   \item Permettre aux acteurs corporate de consulter, approuver ou rejeter les demandes.
   \item Définir une durée de déverrouillage lorsque le processus l’exige.
@@ -66,7 +70,7 @@ Les exigences fonctionnelles suivantes spécifient les fonctionnalités que le s
 
 \textbf{Gestion des tableaux de bord}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet, itemsep=0.15ex, parsep=0pt, topsep=0pt, partopsep=0pt]
   \item Visualiser les données CSR sous forme de tableaux de bord interactifs.
   \item Afficher les indicateurs clés de performance (KPI) liés aux activités CSR.
   \item Suivre et comparer les budgets planifiés et réalisés.
@@ -80,7 +84,7 @@ Les exigences fonctionnelles suivantes spécifient les fonctionnalités que le s
 \end{itemize}
 
 \textbf{Fonctionnalités transverses}
-\begin{itemize}
+\begin{itemize}[label=\textbullet]
   \item Gérer le dépôt et la consultation des documents liés aux sites ou aux entités métier.
   \item Notifier les utilisateurs (validation, rejet, rappels, etc.).
   \item Enregistrer les actions significatives dans un journal d’audit.
@@ -94,7 +98,7 @@ Afin d’assurer le bon fonctionnement du système, les exigences non fonctionne
 
 \textbf{Sécurité}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet]
   \item Protéger les données d’authentification (hachage des mots de passe, absence de stockage en clair).
   \item Authentifier les utilisateurs par jetons et contrôler systématiquement les requêtes API.
   \item Séparer les droits d’accès (Corporate vs Site) et limiter l’accès aux données autorisées.
@@ -103,7 +107,7 @@ Afin d’assurer le bon fonctionnement du système, les exigences non fonctionne
 
 \textbf{Fiabilité}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet]
   \item Garantir la cohérence des règles métier (statuts, validations, verrouillages).
   \item Gérer les erreurs côté API et fournir des retours explicites côté interface utilisateur.
   \item Assurer la persistance des données dans une base MySQL avec contraintes d’intégrité.
@@ -111,14 +115,14 @@ Afin d’assurer le bon fonctionnement du système, les exigences non fonctionne
 
 \textbf{Performance}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet]
   \item Garantir des temps de réponse acceptables pour les usages courants (consultation, tableaux de bord, import de fichiers volumineux).
   \item Assurer la montée en charge via une architecture client/serveur (Angular + API Flask).
 \end{itemize}
 \newpage
 \textbf{Traçabilité}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet]
   \item Enregistrer les opérations importantes dans un journal d’audit (création, modification, validation, suppression, etc.).
   \item Conserver l’historique des validations et des demandes de modification.
   \item Assurer l’horodatage et l’identification des acteurs.
@@ -126,7 +130,7 @@ Afin d’assurer le bon fonctionnement du système, les exigences non fonctionne
 
 \textbf{Ergonomie et maintenabilité}
 
-\begin{itemize}
+\begin{itemize}[label=\textbullet]
   \item Proposer une interface web responsive avec une navigation structurée par modules.
   \item Organiser le code en modules fonctionnels côté backend (Flask) et frontend (Angular) pour faciliter la maintenance et l’évolution.
 \end{itemize}
@@ -203,7 +207,7 @@ La figure~\ref{fig:doc-ch2-3} illustre le diagramme de classe général de la so
 \begin{landscape}
   \begingroup
   % Page dédiée au diagramme (sans footer/numéro/logo) + image au maximum de la page.
-  \pagestyle{empty}
+  % \thispagestyle suffit ici: \pagestyle{empty} désactive l'en-tête globalement.
   \thispagestyle{empty}
   \captionsetup{aboveskip=2pt,belowskip=0pt,font=small}
   \begin{figure}[p]

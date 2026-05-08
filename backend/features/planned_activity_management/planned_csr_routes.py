@@ -631,6 +631,7 @@ def create_plan_realized_draft_with_realization():
         return jsonify({"message": "Catégorie introuvable"}), 400
 
     include_planned_details = True
+    is_off_plan = _bool_val("is_off_plan", default=False)
     collaboration_nature = _str_val("collaboration_nature")
     if collaboration_nature and len(collaboration_nature) > 30:
         collaboration_nature = collaboration_nature[:30]
@@ -671,13 +672,12 @@ def create_plan_realized_draft_with_realization():
 
     consumed_budget_raw = data.get("consumed_budget")
     planned_budget_raw = data.get("planned_budget")
-    if (consumed_budget_raw is None or consumed_budget_raw == "") and (
+    if not is_off_plan and (consumed_budget_raw is None or consumed_budget_raw == "") and (
         planned_budget_raw is None or planned_budget_raw == ""
     ):
         return jsonify({"message": "consumed_budget est obligatoire"}), 400
 
     required_numbers = [
-        ("action_impact_target", "action_impact_target est obligatoire"),
         ("start_year", "start_year est obligatoire"),
         ("edition", "edition est obligatoire"),
         ("employees_actual", "employees_actual est obligatoire"),
@@ -685,6 +685,8 @@ def create_plan_realized_draft_with_realization():
         ("action_impact_actual", "action_impact_actual est obligatoire"),
         ("incidents_number", "incidents_number est obligatoire"),
     ]
+    if not is_off_plan:
+        required_numbers.insert(0, ("action_impact_target", "action_impact_target est obligatoire"))
     for key, err in required_numbers:
         raw_v = data.get(key)
         if raw_v is None or raw_v == "":
@@ -721,10 +723,10 @@ def create_plan_realized_draft_with_realization():
             return jsonify({"message": "month doit être entre 1 et 12"}), 400
 
     rb = _num("realized_budget")
-    planned_budget = _num("consumed_budget")
-    if planned_budget is None:
+    planned_budget = 0.0 if is_off_plan else _num("consumed_budget")
+    if not is_off_plan and planned_budget is None:
         planned_budget = _num("planned_budget")
-    action_impact_target = _num("action_impact_target")
+    action_impact_target = 0.0 if is_off_plan else _num("action_impact_target")
 
     a = CsrActivity(
         plan_id=plan_id,
@@ -741,9 +743,9 @@ def create_plan_realized_draft_with_realization():
         start_year=start_year,
         planned_budget=planned_budget if planned_budget is not None else rb,
         action_impact_target=action_impact_target,
-        action_impact_unit=_str_val("action_impact_unit"),
+        action_impact_unit=None if is_off_plan else _str_val("action_impact_unit"),
         action_impact_duration=_str_val("action_impact_duration"),
-        employees_planned=_int_val("employees_planned"),
+        employees_planned=0 if is_off_plan else _int_val("employees_planned"),
         external_partner_id=external_partner_id,
         nb_of_external_partner=nb_external or 0,
         status="DRAFT",
@@ -760,7 +762,7 @@ def create_plan_realized_draft_with_realization():
         incidents_number=_int_val("incidents_number"),
         action_impact_actual=_num("action_impact_actual"),
         action_impact_unit=_str_val("action_impact_unit_realized"),
-        is_off_plan=False,
+        is_off_plan=is_off_plan,
         off_plan_validation_mode=None,
         off_plan_validation_step=None,
         status="DRAFT",

@@ -40,6 +40,7 @@ export class RealizedCreateSidebarComponent implements OnInit {
   plans: CsrPlan[] = [];
   editablePlans: CsrPlan[] = [];
   activities: PlannedActivityListItem[] = [];
+  selectedActivityDetail: PlannedActivityListItem | null = null;
   plannedObjectives: string[] = [];
   completedObjectives = new Set<string>();
   currentYear = new Date().getFullYear();
@@ -52,6 +53,27 @@ export class RealizedCreateSidebarComponent implements OnInit {
   get selectedPlan(): CsrPlan | null {
     const id = this.form.get('plan_id')?.value;
     return this.plans.find((p) => p.id === id) ?? null;
+  }
+
+  get isSelectedOffPlanActivity(): boolean {
+    return Boolean(this.selectedActivityDetail?.is_off_plan);
+  }
+
+  get missingOffPlanMetadataLabels(): string[] {
+    if (!this.isSelectedOffPlanActivity || !this.selectedActivityDetail) return [];
+    const fieldMap: Array<{ key: keyof PlannedActivityListItem; label: string }> = [
+      { key: 'collaboration_nature', label: 'Collaboration type' },
+      { key: 'periodicity', label: 'Periodicity' },
+      { key: 'action_impact_duration', label: 'Action Impact Duration' },
+      { key: 'start_year', label: 'Start year' },
+      { key: 'edition', label: 'Edition' },
+    ];
+    return fieldMap
+      .filter(({ key }) => {
+        const value = this.selectedActivityDetail?.[key];
+        return value == null || (typeof value === 'string' && value.trim().length === 0);
+      })
+      .map(({ label }) => label);
   }
 
   /** Date de réalisation : uniquement dans l'année civile du plan sélectionné. */
@@ -133,6 +155,7 @@ export class RealizedCreateSidebarComponent implements OnInit {
   private onPlanChange(planId: string): void {
     this.form.patchValue({ activity_id: '' });
     this.activities = [];
+    this.selectedActivityDetail = null;
     this.plannedObjectives = [];
     this.completedObjectives.clear();
     if (!planId) {
@@ -156,6 +179,7 @@ export class RealizedCreateSidebarComponent implements OnInit {
   }
 
   private onActivityChange(activityId: string): void {
+    this.selectedActivityDetail = null;
     this.plannedObjectives = [];
     this.completedObjectives.clear();
     if (!activityId) {
@@ -166,6 +190,7 @@ export class RealizedCreateSidebarComponent implements OnInit {
       timeout(LOAD_TIMEOUT_MS),
       catchError(() => of(null)),
     ).subscribe((activity) => {
+      this.selectedActivityDetail = activity;
       const list = Array.isArray(activity?.planned_objectives) ? activity.planned_objectives : [];
       this.plannedObjectives = list.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
       this.form.patchValue({
@@ -225,6 +250,12 @@ export class RealizedCreateSidebarComponent implements OnInit {
   submit(): void {
     this.submitError = '';
     this.fileTouched = true;
+    const missingOffPlanMetadata = this.missingOffPlanMetadataLabels;
+    if (missingOffPlanMetadata.length > 0) {
+      this.submitError = `Off-plan activity requires planned fields before submission: ${missingOffPlanMetadata.join(', ')}.`;
+      this.cdr.markForCheck();
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

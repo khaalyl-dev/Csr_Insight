@@ -58,11 +58,19 @@ def create_app(config_class=Config) -> Flask:
         apply_schema_patches(db)
 
     # Allow the Angular frontend (running on port 4200) to call our API from a different origin
+    extra_origins_raw = (os.environ.get("FRONTEND_ORIGINS") or "").strip()
+    extra_origins = [o.strip() for o in extra_origins_raw.split(",") if o.strip()]
+    allowed_origins = [
+        "http://localhost:4200",
+        "http://127.0.0.1:4200",
+        *extra_origins,
+    ]
+
     CORS(
         app,
         resources={
             r"/api/*": {
-                "origins": ["http://localhost:4200", "http://127.0.0.1:4200"],
+                "origins": allowed_origins,
                 "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization", "Accept"],
                 "expose_headers": ["Content-Type", "Authorization"],

@@ -65,6 +65,11 @@ export class RealizedActivitySidebarComponent implements OnInit {
     return this.submissionMode === 'off_plan';
   }
 
+  get shouldRequirePlanningFields(): boolean {
+    // In plan_realized_draft flow, backend still expects planning metadata even if off-plan is selected.
+    return this.submissionMode === 'plan_realized_draft' || !this.isOffPlanSelected();
+  }
+
   isCorporateUser(): boolean {
     return this.authStore.userRole() === 'corporate';
   }
@@ -142,12 +147,26 @@ export class RealizedActivitySidebarComponent implements OnInit {
       'start_year',
       'edition',
     ];
-    const required = !this.isOffPlanSelected();
+    const required = this.shouldRequirePlanningFields;
     for (const field of planningFields) {
       const ctrl = this.form.get(field);
       if (!ctrl) continue;
       ctrl.setValidators(required ? [Validators.required] : []);
       if (!required) ctrl.setValue(null, { emitEvent: false });
+      ctrl.updateValueAndValidity({ emitEvent: false });
+    }
+    // When marked off-plan, these planning metrics must be blocked and defaulted.
+    const blockedWhenOffPlan = ['consumed_budget', 'action_impact_target', 'action_impact_unit', 'employees_planned'];
+    for (const field of blockedWhenOffPlan) {
+      const ctrl = this.form.get(field);
+      if (!ctrl) continue;
+      if (this.isOffPlanSelected()) {
+        if (field === 'action_impact_unit') ctrl.setValue(null, { emitEvent: false });
+        else ctrl.setValue(0, { emitEvent: false });
+        ctrl.disable({ emitEvent: false });
+      } else {
+        ctrl.enable({ emitEvent: false });
+      }
       ctrl.updateValueAndValidity({ emitEvent: false });
     }
   }
@@ -243,7 +262,8 @@ export class RealizedActivitySidebarComponent implements OnInit {
 
   private buildPayload(categoryId: string): OffPlanRealizationPayload {
     const raw = this.form.getRawValue();
-    const includePlannedDetails = this.submissionMode === 'plan_realized_draft' ? !this.isOffPlanSelected() : false;
+    const isOffPlan = this.isOffPlanSelected();
+    const includePlannedDetails = this.submissionMode === 'plan_realized_draft' ? true : false;
     const planY = this.planYear ?? this.currentYear;
     let month = new Date().getMonth() + 1;
     const rd = raw.realization_date?.trim();
@@ -253,6 +273,7 @@ export class RealizedActivitySidebarComponent implements OnInit {
     }
     return {
       plan_id: this.planId,
+      is_off_plan: this.isOffPlanSelected(),
       validation_mode: this.submissionMode === 'plan_realized_draft' ? '101' : raw.validation_mode,
       include_planned_details: includePlannedDetails,
       activity_number: String(raw.activity_number).trim(),
@@ -263,11 +284,11 @@ export class RealizedActivitySidebarComponent implements OnInit {
       category_id: categoryId,
       collaboration_nature: raw.collaboration_nature?.trim() || null,
       periodicity: includePlannedDetails ? (raw.periodicity?.trim() || null) : null,
-      consumed_budget: includePlannedDetails && raw.consumed_budget != null && raw.consumed_budget !== '' ? Number(raw.consumed_budget) : null,
-      action_impact_target: includePlannedDetails && raw.action_impact_target != null && raw.action_impact_target !== '' ? Number(raw.action_impact_target) : null,
-      action_impact_unit: raw.action_impact_unit?.trim() || null,
+      consumed_budget: includePlannedDetails ? (isOffPlan ? 0 : (raw.consumed_budget != null && raw.consumed_budget !== '' ? Number(raw.consumed_budget) : null)) : null,
+      action_impact_target: includePlannedDetails ? (isOffPlan ? 0 : (raw.action_impact_target != null && raw.action_impact_target !== '' ? Number(raw.action_impact_target) : null)) : null,
+      action_impact_unit: isOffPlan ? null : (raw.action_impact_unit?.trim() || null),
       action_impact_duration: raw.action_impact_duration?.trim() || null,
-      employees_planned: raw.employees_planned != null && raw.employees_planned !== '' ? Number(raw.employees_planned) : null,
+      employees_planned: isOffPlan ? 0 : (raw.employees_planned != null && raw.employees_planned !== '' ? Number(raw.employees_planned) : null),
       planned_objectives: [...this.plannedObjectives],
       start_year: raw.start_year != null && raw.start_year !== '' ? Number(raw.start_year) : null,
       edition: raw.edition != null && raw.edition !== '' ? Number(raw.edition) : null,

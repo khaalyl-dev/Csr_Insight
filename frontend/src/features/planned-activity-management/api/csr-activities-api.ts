@@ -54,6 +54,7 @@ export interface CreateCsrActivityPayload {
 /** Off-plan create: activity + realized row; year/month optional (backend defaults to plan year + current month). */
 export interface OffPlanRealizationPayload {
   plan_id: string;
+  is_off_plan?: boolean;
   validation_mode: '101' | '111';
   /** Past-year plan flow: when true, save planned fields too. */
   include_planned_details?: boolean;

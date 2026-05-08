@@ -425,6 +425,7 @@ OUTPUT main.toc
 INPUT ./main.lof
 INPUT ./main.lof
 INPUT main.lof
+INPUT /Users/khalil/Library/Application Support/MiKTeX/texmfs/install/fonts/tfm/public/newtx/ntx-Regular-tlf-t1.tfm
 OUTPUT main.lof
 INPUT ./chapters/liste-abreviations.tex
 INPUT ./chapters/liste-abreviations.tex
@@ -475,7 +476,6 @@ INPUT /Users/khalil/Library/Application Support/MiKTeX/texmfs/install/tex/latex/
 INPUT /Users/khalil/Library/Application Support/MiKTeX/texmfs/install/tex/latex/newtx/ts1ntxtlf.fd
 INPUT /Users/khalil/Library/Application Support/MiKTeX/texmfs/install/tex/latex/newtx/ts1ntxtlf.fd
 INPUT /Users/khalil/Library/Application Support/MiKTeX/texmfs/install/fonts/tfm/public/tex-gyre/ts1-qtmr.tfm
-INPUT /Users/khalil/Library/Application Support/MiKTeX/texmfs/install/fonts/tfm/public/newtx/ntx-Regular-tlf-t1.tfm
 INPUT ./image/COFICAB-LOGO.png
 INPUT ./image/COFICAB-LOGO.png
 INPUT ./image/COFICAB-LOGO.png
@@ -634,6 +634,3 @@ INPUT ./tables/chapitre-02-product-backlog.tex
 INPUT ./tables/chapitre-02-product-backlog.tex
 INPUT tables/chapitre-02-product-backlog.tex
 INPUT /Users/khalil/Library/Application Support/MiKTeX/texmfs/install/fonts/tfm/public/newtx/ntx-Italic-tlf-t1.tfm
-INPUT ./image/COFICAB-LOGO.png
-INPUT ./image/COFICAB-LOGO.png
-INPUT ./image/COFICAB-LOGO.png

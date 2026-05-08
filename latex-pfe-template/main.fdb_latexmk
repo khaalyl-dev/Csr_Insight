@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1777809175.93331 "main.tex" "main.pdf" "main" 1777809183.12974 2
+["pdflatex"] 1778064591.42552 "main.tex" "main.pdf" "main" 1778064599.1969 2
   "/Library/Application Support/MiKTeX/texmfs/install/fonts/tfm/jknappen/ec/ecrm1200.tfm" 1764797245.08269 3152 4850ff0163852b7fab34bd55e1197f28 ""
   "/Library/Application Support/MiKTeX/texmfs/install/fonts/tfm/public/cm/cmr12.tfm" 1764797239.51985 1288 655e228510b4c2a1abe905c368440826 ""
   "/Library/Application Support/MiKTeX/texmfs/install/tex/context/base/mkii/supp-pdf.mkii" 1764797454.87195 71627 94eb9990bed73c364d7f53f960cc8c5b ""
@@ -204,7 +204,7 @@
   "/Users/khalil/Library/Application Support/MiKTeX/texmfs/install/tex/latex/xpatch/xpatch.sty" 1776300086.22205 8510 9829c50ab36366d4da41fdc87e7d0699 ""
   "/Users/khalil/Library/Application Support/MiKTeX/texmfs/install/tex/latex/xstring/xstring.sty" 1764804645.45064 123 a302f2c651a95033260db60e51527ae8 ""
   "chapters/chapitre-01-etude-prealable.tex" 1777625838.80576 27619 486362836e5bac3f80028a8bbaebd840 ""
-  "chapters/chapitre-02-fondation-initiation.tex" 1777660008.19683 28341 fc82670050f9811d7786bfc3e58afcef ""
+  "chapters/chapitre-02-fondation-initiation.tex" 1777809730.02122 28343 56903a5345be4ac1ae6b512a317fa024 ""
   "chapters/chapitre-dedicaces-khalil.tex" 1776298093.76058 138 d2c6a7eae479e93a4f4e5f08a3a7acfb ""
   "chapters/chapitre-dedicaces-malek.tex" 1776298086.92128 137 646e00b6f63a66af04f2395d62bed749 ""
   "chapters/chapitre-remerciements.tex" 1776116939.73477 143 ce39d0876d42457320cec7bc4331e799 ""
@@ -221,14 +221,14 @@
   "figures/chapitre-01/scrum-process.png" 1776185557.63502 451461 b8e7f5bfdff41fe24b5d7dfb986d60e0 ""
   "figures/chapitre-02/diagramme_de_cas_utilisation_global.png" 1777808893.80332 2757881 5fc6824202e5b0011f975f22c1bb8302 ""
   "image/COFICAB-LOGO.png" 1776114928.53242 37053 5dd04c1840a4f0b15beeb308f59a7072 ""
-  "main.aux" 1777809182.82067 25985 413076e108d600cd9cea59ffb30b5e5d "pdflatex"
-  "main.lof" 1777809177.3179 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "main.tex" 1777611750.63774 17400 e109ae8610213421a9cce1640968f4ef ""
-  "main.toc" 1777809177.31311 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.aux" 1778064598.77884 25169 97c799071e72f5f0d236ebf8649d6dbd "pdflatex"
+  "main.lof" 1778064592.96483 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.tex" 1778064586.12478 17695 19224bc494cfe0c833858946b1326616 ""
+  "main.toc" 1778064592.94131 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
   "tables/chapitre-01-tab-analyse.tex" 1777625466.92371 1084 884ff5711eebc0d5b9325fc146d2d6f8 ""
   "tables/chapitre-01-tab-comparaison.tex" 1776197079.14133 1068 3c3766b8e76e96bcff45d8f21558607b ""
   "tables/chapitre-01-tab-synthese.tex" 1776197079.14133 1421 ecca24effc75d2a586940b63b83180e5 ""
-  "tables/chapitre-02-product-backlog.tex" 1777809171.7909 14776 3af563fd354312d4f68cdb69b6496595 ""
+  "tables/chapitre-02-product-backlog.tex" 1778059895.84445 10577 8954a6ff8644c33ddd035e654da6cb17 ""
   (generated)
   "main.aux"
   "main.lof"

@@ -3,73 +3,77 @@
 \contentsline {figure}{\numberline {1.1}{\ignorespaces Organigramme du groupe Elloumi.}}{2}{figure.caption.7}%
 \contentsline {figure}{\numberline {1.2}{\ignorespaces Logo de COFICAB.}}{3}{figure.caption.8}%
 \contentsline {figure}{\numberline {1.3}{\ignorespaces Implantations géographiques de COFICAB.}}{3}{figure.caption.9}%
-\contentsline {figure}{\numberline {1.4}{\ignorespaces Aperçu de l’interface de statistiques de Generous Connect.}}{7}{figure.caption.10}%
-\contentsline {figure}{\numberline {1.5}{\ignorespaces Aperçu du tableau de bord de la plateforme Optimy.}}{8}{figure.caption.11}%
-\contentsline {figure}{\numberline {1.6}{\ignorespaces Comparaison Agile vs Scrum.}}{11}{figure.caption.13}%
-\contentsline {figure}{\numberline {1.7}{\ignorespaces Vue d’ensemble du processus Scrum.}}{12}{figure.caption.14}%
-\contentsline {figure}{\numberline {1.8}{\ignorespaces Phases principales de la méthodologie RUP.}}{13}{figure.caption.15}%
-\contentsline {figure}{\numberline {1.9}{\ignorespaces Étapes principales de la méthodologie GIMSI.}}{13}{figure.caption.16}%
+\contentsline {figure}{\numberline {1.4}{\ignorespaces Tableau du plan annuel CSR utilisé pour la planification des activités.}}{6}{figure.caption.10}%
+\contentsline {figure}{\numberline {1.5}{\ignorespaces Formulaire du rapport des activités de contribution sociale}}{7}{figure.caption.11}%
+\contentsline {figure}{\numberline {1.6}{\ignorespaces Tableau consolidé des activités CSR réalisées}}{7}{figure.caption.12}%
+\contentsline {figure}{\numberline {1.7}{\ignorespaces Exemple des KPIs calculés à partir du tableau consolidé.}}{8}{figure.caption.13}%
+\contentsline {figure}{\numberline {1.8}{\ignorespaces Processus actuel de gestion des activités RSE chez COFICAB.}}{8}{figure.caption.14}%
+\contentsline {figure}{\numberline {1.9}{\ignorespaces Aperçu de l’interface de statistiques de Generous Connect.}}{9}{figure.caption.15}%
+\contentsline {figure}{\numberline {1.10}{\ignorespaces Aperçu du tableau de bord de la plateforme Optimy.}}{10}{figure.caption.16}%
+\contentsline {figure}{\numberline {1.11}{\ignorespaces Vue d’ensemble du processus Scrum.}}{14}{figure.caption.18}%
+\contentsline {figure}{\numberline {1.12}{\ignorespaces Vue d’ensemble du processus Kanban.}}{14}{figure.caption.19}%
+\contentsline {figure}{\numberline {1.13}{\ignorespaces Phases principales de la méthodologie RUP.}}{15}{figure.caption.20}%
+\contentsline {figure}{\numberline {1.14}{\ignorespaces Étapes principales de la méthodologie GIMSI.}}{15}{figure.caption.21}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {2.1}{\ignorespaces Diagramme de cas d’utilisation général.}}{23}{figure.caption.19}%
-\contentsline {figure}{\numberline {2.2}{\ignorespaces Division du projet en sprints.}}{28}{figure.caption.20}%
-\contentsline {figure}{\numberline {2.3}{\ignorespaces Diagramme de classe général.}}{31}{figure.caption.23}%
-\contentsline {figure}{\numberline {2.4}{\ignorespaces Architecture globale du système.}}{33}{figure.caption.24}%
-\contentsline {figure}{\numberline {2.5}{\ignorespaces Logo de Python.}}{34}{figure.caption.25}%
-\contentsline {figure}{\numberline {2.6}{\ignorespaces Logo de Flask.}}{34}{figure.caption.26}%
-\contentsline {figure}{\numberline {2.7}{\ignorespaces Logo de MySQL.}}{34}{figure.caption.27}%
-\contentsline {figure}{\numberline {2.8}{\ignorespaces Logo d’Angular.}}{35}{figure.caption.28}%
-\contentsline {figure}{\numberline {2.9}{\ignorespaces Logo de TypeScript.}}{35}{figure.caption.29}%
-\contentsline {figure}{\numberline {2.10}{\ignorespaces Logo de Tailwind CSS.}}{35}{figure.caption.30}%
-\contentsline {figure}{\numberline {2.11}{\ignorespaces Logo de Socket.IO.}}{35}{figure.caption.31}%
-\contentsline {figure}{\numberline {2.12}{\ignorespaces Logo de Postman.}}{36}{figure.caption.32}%
-\contentsline {figure}{\numberline {2.13}{\ignorespaces Logo de draw.io.}}{37}{figure.caption.34}%
-\contentsline {figure}{\numberline {2.14}{\ignorespaces Logo de Git.}}{37}{figure.caption.35}%
-\contentsline {figure}{\numberline {2.15}{\ignorespaces Logo de GitHub.}}{37}{figure.caption.36}%
-\contentsline {figure}{\numberline {2.16}{\ignorespaces Logo de Monday.com.}}{37}{figure.caption.37}%
-\contentsline {figure}{\numberline {2.17}{\ignorespaces Logo de Visual Studio Code.}}{38}{figure.caption.38}%
-\contentsline {figure}{\numberline {2.18}{\ignorespaces Logo de Microsoft Visual Studio.}}{38}{figure.caption.39}%
-\contentsline {figure}{\numberline {2.19}{\ignorespaces Logo de Microsoft SQL Server.}}{38}{figure.caption.40}%
-\contentsline {figure}{\numberline {2.20}{\ignorespaces Logo de SQLAlchemy (ORM et accès SQL).}}{38}{figure.caption.41}%
-\contentsline {figure}{\numberline {2.21}{\ignorespaces Logo de XAMPP.}}{39}{figure.caption.42}%
-\contentsline {figure}{\numberline {2.22}{\ignorespaces Logo de Power BI.}}{39}{figure.caption.43}%
-\contentsline {figure}{\numberline {2.23}{\ignorespaces Logo de \LaTeX .}}{39}{figure.caption.44}%
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Diagramme de cas d’utilisation général.}}{24}{figure.caption.23}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Division du projet en sprints.}}{30}{figure.caption.24}%
+\contentsline {figure}{\numberline {2.3}{\ignorespaces Diagramme de classe général.}}{33}{figure.caption.27}%
+\contentsline {figure}{\numberline {2.4}{\ignorespaces Architecture globale du système.}}{35}{figure.caption.28}%
+\contentsline {figure}{\numberline {2.5}{\ignorespaces Logo de Python.}}{36}{figure.caption.29}%
+\contentsline {figure}{\numberline {2.6}{\ignorespaces Logo de Flask.}}{36}{figure.caption.30}%
+\contentsline {figure}{\numberline {2.7}{\ignorespaces Logo de MySQL.}}{36}{figure.caption.31}%
+\contentsline {figure}{\numberline {2.8}{\ignorespaces Logo d’Angular.}}{37}{figure.caption.32}%
+\contentsline {figure}{\numberline {2.9}{\ignorespaces Logo de TypeScript.}}{37}{figure.caption.33}%
+\contentsline {figure}{\numberline {2.10}{\ignorespaces Logo de Tailwind CSS.}}{37}{figure.caption.34}%
+\contentsline {figure}{\numberline {2.11}{\ignorespaces Logo de Socket.IO.}}{37}{figure.caption.35}%
+\contentsline {figure}{\numberline {2.12}{\ignorespaces Logo de Postman.}}{38}{figure.caption.36}%
+\contentsline {figure}{\numberline {2.13}{\ignorespaces Logo de draw.io.}}{39}{figure.caption.38}%
+\contentsline {figure}{\numberline {2.14}{\ignorespaces Logo de Git.}}{39}{figure.caption.39}%
+\contentsline {figure}{\numberline {2.15}{\ignorespaces Logo de GitHub.}}{39}{figure.caption.40}%
+\contentsline {figure}{\numberline {2.16}{\ignorespaces Logo de Monday.com.}}{40}{figure.caption.41}%
+\contentsline {figure}{\numberline {2.17}{\ignorespaces Logo de Visual Studio Code.}}{40}{figure.caption.42}%
+\contentsline {figure}{\numberline {2.18}{\ignorespaces Logo de Microsoft Visual Studio.}}{40}{figure.caption.43}%
+\contentsline {figure}{\numberline {2.19}{\ignorespaces Logo de Microsoft SQL Server.}}{40}{figure.caption.44}%
+\contentsline {figure}{\numberline {2.20}{\ignorespaces Logo de SQLAlchemy (ORM et accès SQL).}}{41}{figure.caption.45}%
+\contentsline {figure}{\numberline {2.21}{\ignorespaces Logo de XAMPP.}}{41}{figure.caption.46}%
+\contentsline {figure}{\numberline {2.22}{\ignorespaces Logo de Power BI.}}{41}{figure.caption.47}%
+\contentsline {figure}{\numberline {2.23}{\ignorespaces Logo de \LaTeX .}}{41}{figure.caption.48}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {3.1}{\ignorespaces Diagramme de cas d’utilisation — Authentification \& Architecture de base.}}{45}{figure.caption.45}%
-\contentsline {figure}{\numberline {3.2}{\ignorespaces Diagramme de classe — Authentification \& Architecture de base}}{48}{figure.caption.48}%
-\contentsline {figure}{\numberline {3.3}{\ignorespaces Diagramme de séquence — «~S’authentifier~».}}{49}{figure.caption.49}%
-\contentsline {figure}{\numberline {3.4}{\ignorespaces Diagramme de séquence — «~Créer un site~».}}{50}{figure.caption.50}%
-\contentsline {figure}{\numberline {3.5}{\ignorespaces Diagramme de séquence — «~Créer un utilisateur~».}}{51}{figure.caption.51}%
-\contentsline {figure}{\numberline {3.6}{\ignorespaces Diagramme d’activité — «~S’authentifier~».}}{52}{figure.caption.52}%
-\contentsline {figure}{\numberline {3.7}{\ignorespaces Diagramme d’activité — «~Créer un site~».}}{53}{figure.caption.53}%
-\contentsline {figure}{\numberline {3.8}{\ignorespaces Diagramme d’activité — «~Créer un utilisateur~».}}{54}{figure.caption.54}%
-\contentsline {figure}{\numberline {3.9}{\ignorespaces Interface - gestion des utilisateurs.}}{55}{figure.caption.55}%
-\contentsline {figure}{\numberline {3.10}{\ignorespaces Interface - gestion des sites.}}{56}{figure.caption.56}%
-\contentsline {figure}{\numberline {3.11}{\ignorespaces Interface : gestion des documents.}}{56}{figure.caption.57}%
-\contentsline {figure}{\numberline {3.12}{\ignorespaces Tests Postman : authentification réussie.}}{59}{figure.caption.58}%
-\contentsline {figure}{\numberline {3.13}{\ignorespaces Tests Postman : authentification échouée.}}{59}{figure.caption.59}%
-\contentsline {figure}{\numberline {3.14}{\ignorespaces Tests Postman : création d'un utilisateur réussie.}}{60}{figure.caption.60}%
-\contentsline {figure}{\numberline {3.15}{\ignorespaces Tests Postman : création d'un utilisateur échouée.}}{61}{figure.caption.61}%
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Diagramme de cas d’utilisation — Authentification \& Architecture de base.}}{48}{figure.caption.49}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Diagramme de classe — Authentification \& Architecture de base}}{51}{figure.caption.52}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Diagramme de séquence — «~S’authentifier~».}}{52}{figure.caption.53}%
+\contentsline {figure}{\numberline {3.4}{\ignorespaces Diagramme de séquence — «~Créer un site~».}}{53}{figure.caption.54}%
+\contentsline {figure}{\numberline {3.5}{\ignorespaces Diagramme de séquence — «~Créer un utilisateur~».}}{54}{figure.caption.55}%
+\contentsline {figure}{\numberline {3.6}{\ignorespaces Diagramme d’activité — «~S’authentifier~».}}{55}{figure.caption.56}%
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Diagramme d’activité — «~Créer un site~».}}{56}{figure.caption.57}%
+\contentsline {figure}{\numberline {3.8}{\ignorespaces Diagramme d’activité — «~Créer un utilisateur~».}}{57}{figure.caption.58}%
+\contentsline {figure}{\numberline {3.9}{\ignorespaces Interface - gestion des utilisateurs.}}{58}{figure.caption.59}%
+\contentsline {figure}{\numberline {3.10}{\ignorespaces Interface - gestion des sites.}}{59}{figure.caption.60}%
+\contentsline {figure}{\numberline {3.11}{\ignorespaces Interface : gestion des documents.}}{59}{figure.caption.61}%
+\contentsline {figure}{\numberline {3.12}{\ignorespaces Tests Postman : authentification réussie.}}{62}{figure.caption.62}%
+\contentsline {figure}{\numberline {3.13}{\ignorespaces Tests Postman : authentification échouée.}}{62}{figure.caption.63}%
+\contentsline {figure}{\numberline {3.14}{\ignorespaces Tests Postman : création d'un utilisateur réussie.}}{63}{figure.caption.64}%
+\contentsline {figure}{\numberline {3.15}{\ignorespaces Tests Postman : création d'un utilisateur échouée.}}{64}{figure.caption.65}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces Diagramme de cas d'utilisation du deuxième sprint.}}{67}{figure.caption.62}%
-\contentsline {figure}{\numberline {4.2}{\ignorespaces Diagramme de classe -- Gestion des plans \& activités.}}{70}{figure.caption.65}%
-\contentsline {figure}{\numberline {4.3}{\ignorespaces Diagramme de séquence — «~Créer un plan CSR~».}}{71}{figure.caption.66}%
-\contentsline {figure}{\numberline {4.4}{\ignorespaces Diagramme de séquence — «~Modifier une activité planifiée~».}}{72}{figure.caption.67}%
-\contentsline {figure}{\numberline {4.5}{\ignorespaces Diagramme d’activité — «~Créer un plan CSR~».}}{73}{figure.caption.68}%
-\contentsline {figure}{\numberline {4.6}{\ignorespaces Diagramme d’activité — «~Modifier une activité planifiée~».}}{74}{figure.caption.69}%
-\contentsline {figure}{\numberline {4.7}{\ignorespaces Interface : liste des plans annuels CSR.}}{75}{figure.caption.70}%
-\contentsline {figure}{\numberline {4.8}{\ignorespaces Tests Postman — création de plan.}}{79}{figure.caption.71}%
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Diagramme de cas d'utilisation du deuxième sprint.}}{70}{figure.caption.66}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Diagramme de classe -- Gestion des plans \& activités.}}{73}{figure.caption.69}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Diagramme de séquence — «~Créer un plan CSR~».}}{74}{figure.caption.70}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Diagramme de séquence — «~Modifier une activité planifiée~».}}{75}{figure.caption.71}%
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Diagramme d’activité — «~Créer un plan CSR~».}}{76}{figure.caption.72}%
+\contentsline {figure}{\numberline {4.6}{\ignorespaces Diagramme d’activité — «~Modifier une activité planifiée~».}}{77}{figure.caption.73}%
+\contentsline {figure}{\numberline {4.7}{\ignorespaces Interface : liste des plans annuels CSR.}}{78}{figure.caption.74}%
+\contentsline {figure}{\numberline {4.8}{\ignorespaces Tests Postman — création de plan.}}{82}{figure.caption.75}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {5.1}{\ignorespaces Diagramme de cas d'utilisation — Gestion transverse des validations, notifications et traçabilité.}}{86}{figure.caption.72}%
-\contentsline {figure}{\numberline {5.2}{\ignorespaces Diagramme de classe — Gestion transverse des validations, notifications et traçabilité.}}{89}{figure.caption.75}%
-\contentsline {figure}{\numberline {5.3}{\ignorespaces Diagramme de séquence — demande de modification.}}{90}{figure.caption.76}%
-\contentsline {figure}{\numberline {5.4}{\ignorespaces Diagramme de séquence — notification et rafraîchissement des tâches.}}{90}{figure.caption.77}%
-\contentsline {figure}{\numberline {5.5}{\ignorespaces Interface de validation des plans annuels.}}{91}{figure.caption.78}%
-\contentsline {figure}{\numberline {5.6}{\ignorespaces Interface de rejet d'un plan.}}{92}{figure.caption.79}%
-\contentsline {figure}{\numberline {5.7}{\ignorespaces Interface de demande de modification d'une activité.}}{93}{figure.caption.80}%
-\contentsline {figure}{\numberline {5.8}{\ignorespaces Interface du journal d'audit.}}{94}{figure.caption.81}%
-\contentsline {figure}{\numberline {5.9}{\ignorespaces Tests Postman : demandes de modification.}}{97}{figure.caption.82}%
-\contentsline {figure}{\numberline {5.10}{\ignorespaces Tests Postman : notifications.}}{97}{figure.caption.83}%
-\contentsline {figure}{\numberline {5.11}{\ignorespaces Tests Postman : tâches.}}{98}{figure.caption.84}%
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Diagramme de cas d'utilisation — Gestion transverse des validations, notifications et traçabilité.}}{89}{figure.caption.76}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Diagramme de classe — Gestion transverse des validations, notifications et traçabilité.}}{92}{figure.caption.79}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Diagramme de séquence — demande de modification.}}{93}{figure.caption.80}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces Diagramme de séquence — notification et rafraîchissement des tâches.}}{93}{figure.caption.81}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Interface de validation des plans annuels.}}{94}{figure.caption.82}%
+\contentsline {figure}{\numberline {5.6}{\ignorespaces Interface de rejet d'un plan.}}{95}{figure.caption.83}%
+\contentsline {figure}{\numberline {5.7}{\ignorespaces Interface de demande de modification d'une activité.}}{96}{figure.caption.84}%
+\contentsline {figure}{\numberline {5.8}{\ignorespaces Interface du journal d'audit.}}{97}{figure.caption.85}%
+\contentsline {figure}{\numberline {5.9}{\ignorespaces Tests Postman : demandes de modification.}}{100}{figure.caption.86}%
+\contentsline {figure}{\numberline {5.10}{\ignorespaces Tests Postman : notifications.}}{100}{figure.caption.87}%
+\contentsline {figure}{\numberline {5.11}{\ignorespaces Tests Postman : tâches.}}{101}{figure.caption.88}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {A.1}{\ignorespaces Matrice de Stacey.}}{106}{figure.caption.88}%
 \addvspace {10\p@ }

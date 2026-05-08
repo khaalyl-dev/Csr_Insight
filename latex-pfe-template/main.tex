@@ -23,7 +23,7 @@
 \usepackage{needspace}% évite titres de section / sous-section isolés en bas de page
 % Force les notes de bas de page en bas de page (au-dessus du footer)
 \usepackage[bottom]{footmisc}
-\onehalfspacing
+\setstretch{1.25}
 % Pas d'indentation par défaut : on indentera seulement le 1er paragraphe après un titre.
 \setlength{\parindent}{0pt}
 
@@ -103,6 +103,7 @@
 }
 \usepackage{bookmark}
 \usepackage{tikz}
+\usepackage{pdfpages}
 \usepackage[absolute]{textpos}
 
 % --- En-têtes / pieds (filet épais + numéro seul, gras) ---
@@ -238,19 +239,49 @@
 \newcommand{\PFEFancyFootContent}{%
   \ifPFEmainmatter\PFEFooterBlock\fi
 }
+\newcommand{\PFEFancyHeadContent}{%
+  \ifPFEmainmatter
+    \textcolor{ISGGray}{\nouppercase{\leftmark}}%
+  \fi
+}
+\makeatletter
+\renewcommand{\chaptermark}[1]{%
+  \markboth{\chaptername~\thechapter~:~#1}{}%
+}
+\makeatother
 \pagestyle{fancy}
 \fancyhf{}
+\fancyhead[L]{\PFEFancyHeadContent}
 \fancyfoot[C]{\PFEFancyFootContent}
-\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\headrule}{%
+  \hbox to\headwidth{%
+    \color{ISGGray}\leaders\hrule height \headrulewidth\hfill
+  }%
+}
+\setlength{\headheight}{25pt}
+% Réduit l’espace entre l’en-tête et le début du texte.
+\setlength{\headsep}{10pt}
 % Séparation texte → notes (footnotes)
 \setlength{\skip\footins}{10pt}
 % Position du footer (augmente l’espace entre notes et pied de page)
 \setlength{\footskip}{40pt}
 \fancypagestyle{plain}{
   \fancyhf{}
+  \fancyhead[L]{\PFEFancyHeadContent}
+  \fancyfoot[C]{\PFEFancyFootContent}
+  \renewcommand{\headrulewidth}{0.6pt}
+}
+% Front-matter pages (remerciements, dédicaces, TdM, etc.) without headline.
+\fancypagestyle{frontmatter}{
+  \fancyhf{}
   \fancyfoot[C]{\PFEFancyFootContent}
   \renewcommand{\headrulewidth}{0pt}
 }
+\makeatletter
+\let\PFEPlainStyleMain\ps@plain
+\let\PFEPlainStyleFront\ps@frontmatter
+\makeatother
 \usepackage{longtable}
 \newlength{\PFEsavedtabcolsep}
 \AtBeginEnvironment{longtable}{%
@@ -263,7 +294,7 @@
 }
 \AtEndEnvironment{longtable}{%
   \setlength{\tabcolsep}{\PFEsavedtabcolsep}%
-  \onehalfspacing
+  \setstretch{1.0}
   \flushbottom
 }
 % Pour que les notes de bas de page se placent en bas de page (au-dessus du footer),
@@ -355,37 +386,6 @@
   justification=justified,
 }
 
-% =============================================================================
-% Variables à personnaliser
-% =============================================================================
-\newcommand{\PFEType}{RAPPORT DE STAGE DE FIN D'ÉTUDES}
-\newcommand{\PFEDiplomeIntro}{Pour l'obtention du diplôme de}
-\newcommand{\PFEDiplome}{La Licence Appliquée en Informatique Décisionnelle}
-\newcommand{\PFETitre}{Titre du rapport sur plusieurs lignes si nécessaire}
-\newcommand{\PFEEntrepriseLabel}{Entreprise d'accueil :}
-\newcommand{\PFEEntreprise}{Nom de l'entreprise}
-\newcommand{\PFEEncadrantPedago}{Prénom Nom}
-\newcommand{\PFEEncadrantPro}{Prénom Nom}
-\newcommand{\PFEAuteurs}{Prénom Nom}
-\newcommand{\PFEAnnee}{2025--2026}
-
-% Logo : fichier \texttt{figures/logo-isg.pdf} ou \texttt{.png} (créez le dossier \texttt{figures/}).
-\newcommand{\PFELogoFile}{figures/logo-isg}
-\newcommand{\PFECoverLogo}{%
-  \IfFileExists{\PFELogoFile.pdf}{%
-    \includegraphics[width=4.6cm]{\PFELogoFile.pdf}}{%
-  \IfFileExists{\PFELogoFile.png}{%
-    \includegraphics[width=4.6cm]{\PFELogoFile.png}}{%
-  \begin{minipage}[c]{4.8cm}
-    \centering
-    \textcolor{ISGTeal}{\rule{\linewidth}{5pt}}\\[3pt]
-    {\color{ISGGray}\footnotesize\textit{Logo : \texttt{\PFELogoFile.pdf/.png}}}\\[2pt]
-    \textcolor{ISGPink}{\rule{0.55\linewidth}{2pt}}
-  \end{minipage}%
-  }%
-  }%
-}
-
 % Page « Self-Archiving » TU Berlin (optionnel) — def/readMe, def/tuberlin.cls
 \newif\ifPFEIncludeTuberlinCover
 \PFEIncludeTuberlinCoverfalse
@@ -402,46 +402,16 @@
   \PFETuberlinSelfArchivingCover
 \fi
 
-% ----- Page de garde (sans numéro) -----
-\begin{titlepage}
-  \thispagestyle{empty}
-  \vspace*{-12mm}
-  \noindent{\color{ISGTeal}\rule{\linewidth}{2.8pt}}
-  \begin{center}
-    \vspace{0.9cm}
-    \PFECoverLogo\\[1.1cm]
-    {\color{ISGPink}\rule{0.42\textwidth}{1.1pt}}\\[1.1cm]
-    {\Large\bfseries\color{TitreGris}\PFEType}\\[0.75cm]
-    {\large\color{ISGGray}\PFEDiplomeIntro}\\[0.25cm]
-    {\large\bfseries\color{TitreGris}\PFEDiplome}\\[1.35cm]
-    {\LARGE\bfseries\color{TitreGris}\PFETitre}\\[1.85cm]
-    {\large\color{ISGGray}\PFEEntrepriseLabel}\\[0.15cm]
-    {\large\bfseries\color{TitreGris}\PFEEntreprise}\\[1.35cm]
-    \begin{minipage}[t]{0.45\textwidth}
-      \centering
-      \textbf{\color{TitreGris}Encadrant pédagogique}\\[0.35cm]
-      \color{ISGGray}\PFEEncadrantPedago
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.45\textwidth}
-      \centering
-      \textbf{\color{TitreGris}Encadrant professionnel}\\[0.35cm]
-      \color{ISGGray}\PFEEncadrantPro
-    \end{minipage}\\[1.35cm]
-    {\large\bfseries\color{TitreGris}Élaboré par}\\[0.25cm]
-    {\large\color{ISGGray}\PFEAuteurs}\\[1cm]
-    {\large\bfseries\color{TitreGris}Année universitaire}\\[0.15cm]
-    {\large\color{ISGGray}\PFEAnnee}
-    \vfill
-    {\color{ISGRed}\rule{\linewidth}{0.9pt}}
-  \end{center}
-\end{titlepage}
+% ----- Page de garde (fichier PDF fourni) -----
+\includepdf[pages=1,fitpaper=true,pagecommand={\thispagestyle{empty}}]{pageDeGardeLicence.pdf}
 
 \cleardoublepage
 \pagenumbering{roman}
 \setcounter{page}{1}
 
 % ----- Remerciements -----
+\pagestyle{frontmatter}
+\makeatletter\let\ps@plain\PFEPlainStyleFront\makeatother
 \input{chapters/chapitre-remerciements}
 
 \cleardoublepage
@@ -466,6 +436,8 @@
 \pagenumbering{arabic}
 \setcounter{page}{1}
 \PFEmainmattertrue
+\pagestyle{fancy}
+\makeatletter\let\ps@plain\PFEPlainStyleMain\makeatother
 \hypersetup{pageanchor=true}
 
 \input{chapters/chapitre-01-etude-prealable}

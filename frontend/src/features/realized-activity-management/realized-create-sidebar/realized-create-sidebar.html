@@ -51,6 +51,12 @@
         </div>
 
         <div *ngIf="selectedPlan && form.get('activity_id')?.value" class="space-y-5">
+          <div *ngIf="isSelectedOffPlanActivity && missingOffPlanMetadataLabels.length > 0"
+            class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Off-plan activity is missing required planned fields:
+            {{ missingOffPlanMetadataLabels.join(', ') }}.
+            Please complete them first before submitting realization.
+          </div>
           <div class="h-px bg-gray-100" role="presentation"></div>
           <div class="grid grid-cols-2 gap-x-3 gap-y-5">
             <div class="col-span-2">
