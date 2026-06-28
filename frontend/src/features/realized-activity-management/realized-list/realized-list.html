@@ -2,18 +2,24 @@
   <div class="flex justify-between items-center">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-gray-800">{{ 'REALIZED.TITLE' | translate }}</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ 'REALIZED.SUBTITLE' | translate }}</p>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition">
-      <p class="text-gray-500 text-sm">{{ 'REALIZED.TOTAL_REALIZATIONS' | translate }}</p>
-      <p class="text-3xl font-bold mt-2 text-gray-800">{{ totalRecords() }}</p>
-      <p class="text-xs text-gray-500 mt-2 leading-relaxed">{{ 'REALIZED.LIST_COMPLETED_ONLY_HINT' | translate }}</p>
+      <p class="text-gray-500 text-sm">{{ 'REALIZED.CARDS.TOTAL_PLANS' | translate }}</p>
+      <p class="text-3xl font-bold mt-2 text-gray-800">{{ totalPlans() }}</p>
     </div>
     <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition">
-      <p class="text-gray-500 text-sm">{{ 'REALIZED.TOTAL_BUDGET_REALIZED' | translate }}</p>
-      <p class="text-3xl font-bold mt-2 text-green-600">{{ totalBudget() | number:'1.0-0' }} €</p>
+      <p class="text-gray-500 text-sm">{{ 'REALIZED.CARDS.BUDGET_CONSUMED' | translate }}</p>
+      <p class="text-3xl font-bold mt-2 text-green-600">{{ totalBudgetConsumed() | number:'1.0-0' }} €</p>
+    </div>
+    <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition">
+      <p class="text-gray-500 text-sm">{{ 'REALIZED.CARDS.AVG_EXECUTION' | translate }}</p>
+      <p class="text-3xl font-bold mt-2 text-brand-900">
+        {{ avgExecutionRate() != null ? (avgExecutionRate()! | number:'1.0-1') + '%' : '–' }}
+      </p>
     </div>
   </div>
 
@@ -21,9 +27,9 @@
     <div class="px-6 py-4 border-b border-gray-100">
       <div class="flex flex-wrap items-center gap-4">
         <h2 class="font-semibold text-gray-700 text-base flex items-center gap-2 flex-shrink-0">
-          {{ 'REALIZED.TITLE' | translate }}
+          {{ 'REALIZED.SECTION_TITLE' | translate }}
           <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-brand-900/10 text-brand-900">
-            {{ filteredList().length }}
+            {{ filteredPlans().length }}
           </span>
         </h2>
         <div class="relative flex-1 min-w-[220px]">
@@ -36,29 +42,24 @@
             class="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-full"
             (input)="search.set($any($event.target).value)" />
         </div>
-        <div class="relative w-[200px] flex-shrink-0">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4 text-gray-500">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
-            </svg>
-          </div>
+        <div class="relative w-[180px] flex-shrink-0">
           <select
-            class="pl-9 pr-10 py-2.5 w-full bg-gray-100 border-0 rounded-xl text-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-all appearance-none cursor-pointer hover:bg-gray-200"
-            [value]="selectedPlanId() ?? ''"
-            (change)="selectedPlanId.set($any($event.target).value || null)">
-            <option value="">{{ 'REALIZED.ALL_PLANS' | translate }}</option>
-            <option *ngFor="let p of plans()" [value]="p.plan_id">{{ p.site_name }} – {{ p.year }}</option>
+            class="pl-3 pr-9 py-2.5 w-full bg-gray-100 border-0 rounded-xl text-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none appearance-none cursor-pointer hover:bg-gray-200"
+            [value]="selectedYear() ?? ''"
+            (change)="selectedYear.set($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">{{ 'REALIZED.ALL_YEARS' | translate }}</option>
+            <option [value]="y" *ngFor="let y of filterYears()">{{ y }}</option>
           </select>
-          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 text-gray-500">
+          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
             </svg>
           </div>
         </div>
         <div class="relative w-[180px] flex-shrink-0">
           <select
-            class="pl-3 pr-9 py-2.5 w-full bg-gray-100 border-0 rounded-xl text-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-all appearance-none cursor-pointer hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            [disabled]="exporting() || filteredList().length === 0"
+            class="pl-3 pr-9 py-2.5 w-full bg-gray-100 border-0 rounded-xl text-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none appearance-none cursor-pointer hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            [disabled]="exporting() || filteredPlans().length === 0"
             (change)="exportRows($any($event.target).value); $any($event.target).value='';">
             <option value="">{{ 'REALIZED.EXPORT' | translate }}</option>
             <option value="xlsx">{{ 'REALIZED.EXPORT_XLSX' | translate }}</option>
@@ -74,130 +75,215 @@
         </div>
       </div>
     </div>
+
     <div *ngIf="loading()" class="p-8 text-center text-gray-500">{{ 'REALIZED.LOADING' | translate }}</div>
 
-    <table *ngIf="!loading()" class="w-full text-sm">
-      <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
-        <tr>
-          <th (click)="sortBy('activity_number')"
-            class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none min-w-[8rem] w-[8rem]">
-            <div class="flex items-center gap-2">
-              <span>{{ 'REALIZED.NUMBER' | translate }}</span>
-              <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'activity_number'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
-            </div>
-          </th>
-          <th (click)="sortBy('activity_title')"
-            class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
-            <div class="flex items-center gap-2">
-              <span>{{ 'REALIZED.ACTIVITY' | translate }}</span>
-              <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'activity_title'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
-            </div>
-          </th>
-          <th (click)="sortBy('site_name')"
-            class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
-            <div class="flex items-center gap-2">
-              <span>{{ 'REALIZED.SITE' | translate }}</span>
-              <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'site_name'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
-            </div>
-          </th>
-          <th (click)="sortBy('realization_date')"
-            class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
-            <div class="flex items-center gap-2">
-              <span>{{ 'REALIZED_DETAIL.REALIZATION_DATE' | translate }}</span>
-              <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'realization_date'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
-            </div>
-          </th>
-          <th (click)="sortBy('realized_budget')"
-            class="p-4 text-right cursor-pointer hover:bg-gray-100 transition select-none">
-            <div class="flex items-center justify-end gap-2">
-              <span>{{ 'REALIZED.BUDGET_REALIZED' | translate }}</span>
-              <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'realized_budget'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
-            </div>
-          </th>
-          <th (click)="sortBy('participants')"
-            class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
-            <div class="flex items-center justify-center gap-2">
-              <span>{{ 'REALIZED.PARTICIPANTS' | translate }}</span>
-              <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'participants'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
-            </div>
-          </th>
-          <th class="p-4 text-center w-24">{{ 'COMMON.ACTION' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let r of filteredList(); let isLast = last" class="border-t hover:bg-gray-50 transition duration-200 cursor-pointer h-16" (click)="goToDetail(r)">
-          <td class="p-4 align-middle font-medium text-gray-800 min-w-[8rem] w-[8rem] whitespace-nowrap">{{ r.activity_number ?? '–' }}</td>
-          <td class="p-4 align-middle">
-            <span class="font-medium text-gray-800">{{ r.activity_title ?? '–' }}</span>
-          </td>
-          <td class="p-4 align-middle text-gray-700">{{ r.site_name ?? '-' }}</td>
-          <td class="p-4 align-middle font-semibold text-gray-800">{{ r.realization_date ? (r.realization_date | date:'yyyy-MM-dd') : '–' }}</td>
-          <td class="p-4 align-middle text-right text-gray-700">
-            {{ r.realized_budget != null ? (r.realized_budget | number:'1.0-0') + ' €' : '–' }}
-          </td>
-          <td class="p-4 align-middle text-center text-gray-600">{{ r.participants ?? '–' }}</td>
-          <td class="p-4 align-middle text-center" (click)="$event.stopPropagation()">
-            <div class="flex items-center justify-center gap-1">
-              <button *ngIf="canManageRealized(r)" type="button" (click)="toggleMenu(r, $event, isLast)"
-                class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                <i class="fas fa-ellipsis-vertical text-sm"></i>
-              </button>
-              <button *ngIf="canRequestChange(r)" type="button" (click)="toggleRequestChangeMenu(r, $event, isLast)"
-                class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                [attr.title]="'CHANGE_REQUEST.REQUEST_ACTIVITY_CHANGE' | translate">
-                <i class="fas fa-lock-open text-sm"></i>
-              </button>
-              <span *ngIf="!r.plan_editable && !canRequestChange(r)" class="p-2 text-gray-400 cursor-default" [attr.title]="'PLAN_LOCKED_TITLE' | translate">
-                <i class="fas fa-lock text-sm"></i>
-              </span>
-            </div>
-          </td>
-        </tr>
-        <tr *ngIf="!loading() && filteredList().length === 0" class="border-t">
-          <td colspan="7" class="p-8 text-center text-gray-500">
-            {{ 'REALIZED.NO_RECORDS' | translate }}
-            <button *ngIf="canCreateRealized()" type="button" (click)="openCreateSidebar()" class="text-brand-700 hover:underline">{{ 'REALIZED.CREATE_REALIZATION' | translate }}</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div *ngIf="!loading()" class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[1200px]">
+        <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
+          <tr>
+            <th class="p-4 w-10"></th>
+            <th (click)="sortBy('site_name')" class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center gap-2">
+                <span>{{ 'ANNUAL_PLANS.TABLE.SITE' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'site_name'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('site_country')" class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center gap-2">
+                <span>{{ 'ANNUAL_PLANS.TABLE.COUNTRY' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'site_country'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('year')" class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center gap-2">
+                <span>{{ 'ANNUAL_PLANS.TABLE.YEAR' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'year'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('allocated_budget')" class="p-4 text-right cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-end gap-2">
+                <span>{{ 'ANNUAL_PLANS.TABLE.TOTAL_BUDGET' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'allocated_budget'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('budget_consumed')" class="p-4 text-right cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-end gap-2">
+                <span>{{ 'ANNUAL_PLANS.TABLE.BUDGET_SPENT' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'budget_consumed'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('realization_progress')" class="p-4 text-left cursor-pointer hover:bg-gray-100 transition select-none min-w-[120px]">
+              <div class="flex items-center gap-2">
+                <span>{{ 'REALIZED.TABLE.EXECUTION' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'realization_progress'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('activities_count')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'ANNUAL_PLANS.TABLE.ACTIVITIES' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'activities_count'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('kpi_incidents_sum')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'REALIZED.KPI.SAFETY' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'kpi_incidents_sum'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('kpi_involvement_rate')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'REALIZED.KPI.PEOPLE' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'kpi_involvement_rate'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('kpi_action_delivery_rate')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'REALIZED.KPI.QUALITY' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'kpi_action_delivery_rate'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('kpi_action_execution_rate')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'REALIZED.KPI.VOLUME' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'kpi_action_execution_rate'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('kpi_budget_control_rate')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'REALIZED.KPI.COST' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'kpi_budget_control_rate'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('kpi_external_partners_sum')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'REALIZED.KPI.PARTNERS' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'kpi_external_partners_sum'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+            <th (click)="sortBy('kpi_participants_vs_total_hc_rate')" class="p-4 text-center cursor-pointer hover:bg-gray-100 transition select-none">
+              <div class="flex items-center justify-center gap-2">
+                <span>{{ 'REALIZED.KPI.HC_RATE' | translate }}</span>
+                <span class="inline-flex w-3 justify-center text-xs leading-none" [class.opacity-0]="sortColumn() !== 'kpi_participants_vs_total_hc_rate'">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let plan of filteredPlans()">
+            <tr class="border-t hover:bg-gray-50 transition duration-200 cursor-pointer h-16" (click)="goToDetail(plan)">
+              <td class="p-4 align-middle text-center" (click)="$event.stopPropagation()">
+                <button type="button" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                  (click)="toggleExpanded(plan.id, $event)"
+                  [attr.aria-expanded]="isExpanded(plan.id)">
+                  <i class="fas text-xs" [class.fa-chevron-down]="!isExpanded(plan.id)" [class.fa-chevron-up]="isExpanded(plan.id)"></i>
+                </button>
+              </td>
+              <td class="p-4 align-middle">
+                <span class="font-medium text-gray-800">{{ plan.site_name ?? plan.site_code ?? plan.site_id }}</span>
+                <span class="text-gray-400 text-xs ml-1" *ngIf="plan.site_code">({{ plan.site_code }})</span>
+              </td>
+              <td class="p-4 text-gray-700 align-middle">{{ plan.site_country ?? '–' }}</td>
+              <td class="p-4 font-semibold text-gray-800 align-middle">{{ plan.year }}</td>
+              <td class="p-4 text-right text-gray-700 align-middle">
+                {{ planPlannedBudget(plan) != null ? (planPlannedBudget(plan)! | number:'1.0-0') + ' €' : '–' }}
+              </td>
+              <td class="p-4 text-right text-gray-700 align-middle">
+                {{ plan.budget_consumed != null ? (plan.budget_consumed | number:'1.0-0') + ' €' : '–' }}
+              </td>
+              <td class="p-4 align-middle min-w-[120px]">
+                @if (executionProgressInfo(plan); as prog) {
+                  <span class="text-sm text-gray-700 tabular-nums font-medium">{{ prog.pct | number:'1.0-0' }}%</span>
+                } @else {
+                  <span class="text-gray-400 text-sm">–</span>
+                }
+              </td>
+              <td class="p-4 text-center text-gray-700 align-middle">
+                {{ plan.activities_realized_count ?? 0 }} / {{ plan.activities_count ?? 0 }}
+              </td>
+              <td class="p-4 text-center text-gray-700 align-middle tabular-nums">{{ plan.plan_kpis?.incidents_sum ?? 0 }}</td>
+              <td class="p-4 text-center text-gray-700 align-middle tabular-nums">{{ planKpiRate(plan.plan_kpis?.involvement_rate) }}</td>
+              <td class="p-4 text-center text-gray-700 align-middle tabular-nums">{{ planKpiRate(plan.plan_kpis?.action_delivery_rate) }}</td>
+              <td class="p-4 text-center text-gray-700 align-middle tabular-nums">{{ planKpiRate(plan.plan_kpis?.action_execution_rate) }}</td>
+              <td class="p-4 text-center text-gray-700 align-middle tabular-nums">{{ planKpiRate(plan.plan_kpis?.budget_control_rate) }}</td>
+              <td class="p-4 text-center text-gray-700 align-middle tabular-nums">{{ plan.plan_kpis?.external_partners_sum ?? 0 }}</td>
+              <td class="p-4 text-center text-gray-700 align-middle tabular-nums">{{ planKpiRate(plan.plan_kpis?.participants_vs_total_hc_rate) }}</td>
+            </tr>
+            <tr *ngIf="isExpanded(plan.id)" class="bg-gray-50/80 border-t border-gray-100">
+              <td colspan="15" class="p-4">
+                <div class="space-y-4">
+                  <div *ngIf="plan.plan_kpis as kpis" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+                    <div class="bg-white rounded-xl p-3 border border-gray-100">
+                      <p class="text-[10px] text-gray-500 uppercase">{{ 'REALIZED.KPI.SAFETY' | translate }}</p>
+                      <p class="text-lg font-bold text-gray-800">{{ kpis.incidents_sum ?? 0 }}</p>
+                      <p class="text-[10px] text-gray-500">{{ 'REALIZED.KPI.INCIDENTS' | translate }}</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-gray-100">
+                      <p class="text-[10px] text-gray-500 uppercase">{{ 'REALIZED.KPI.PEOPLE' | translate }}</p>
+                      <p class="text-lg font-bold text-gray-800">{{ planKpiRate(kpis.involvement_rate) }}</p>
+                      <p class="text-[10px] text-gray-500">{{ kpis.participants_estimated_sum ?? 0 }} / {{ kpis.participants_realized_sum ?? 0 }}</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-gray-100">
+                      <p class="text-[10px] text-gray-500 uppercase">{{ 'REALIZED.KPI.QUALITY' | translate }}</p>
+                      <p class="text-lg font-bold text-gray-800">{{ planKpiRate(kpis.action_delivery_rate) }}</p>
+                      <p class="text-[10px] text-gray-500">{{ kpis.completed_objectives_sum ?? 0 }} / {{ kpis.announced_objectives_sum ?? 0 }}</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-gray-100">
+                      <p class="text-[10px] text-gray-500 uppercase">{{ 'REALIZED.KPI.VOLUME' | translate }}</p>
+                      <p class="text-lg font-bold text-gray-800">{{ planKpiRate(kpis.action_execution_rate) }}</p>
+                      <p class="text-[10px] text-gray-500">{{ kpis.accomplished_actions ?? 0 }} / {{ kpis.planned_actions ?? 0 }}</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-gray-100">
+                      <p class="text-[10px] text-gray-500 uppercase">{{ 'REALIZED.KPI.COST' | translate }}</p>
+                      <p class="text-lg font-bold text-gray-800">{{ planKpiRate(kpis.budget_control_rate) }}</p>
+                      <p class="text-[10px] text-gray-500">{{ planKpiMoney(kpis.estimated_budget_sum) }} / {{ planKpiMoney(kpis.realized_budget_sum) }}</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-gray-100">
+                      <p class="text-[10px] text-gray-500 uppercase">{{ 'REALIZED.KPI.PARTNERS' | translate }}</p>
+                      <p class="text-lg font-bold text-gray-800">{{ kpis.external_partners_sum ?? 0 }}</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-gray-100">
+                      <p class="text-[10px] text-gray-500 uppercase">{{ 'REALIZED.KPI.HC_RATE' | translate }}</p>
+                      <p class="text-lg font-bold text-gray-800">{{ planKpiRate(kpis.participants_vs_total_hc_rate) }}</p>
+                    </div>
+                  </div>
+                  <div *ngIf="plan.plan_kpis?.category_percentages?.length" class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                    <div class="px-4 py-2 border-b border-gray-100 text-sm font-semibold text-gray-700">{{ 'REALIZED.CATEGORY_BREAKDOWN' | translate }}</div>
+                    <table class="w-full text-sm">
+                      <thead class="bg-gray-50 text-gray-600 text-xs">
+                        <tr>
+                          <th class="p-2 text-left">{{ 'REALIZED.CATEGORY' | translate }}</th>
+                          <th class="p-2 text-left">{{ 'REALIZED.CATEGORY_ACTIONS' | translate }}</th>
+                          <th class="p-2 text-left">{{ 'REALIZED.CATEGORY_PERCENT' | translate }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let c of plan.plan_kpis!.category_percentages" class="border-t border-gray-100">
+                          <td class="p-2">{{ c.category_name }}</td>
+                          <td class="p-2">{{ c.actions_count }}</td>
+                          <td class="p-2">{{ c.percentage != null ? (c.percentage | number:'1.0-1') + '%' : '–' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="flex justify-end">
+                    <button type="button" class="text-sm text-brand-700 hover:underline font-medium" (click)="goToDetail(plan); $event.stopPropagation()">
+                      {{ 'REALIZED.VIEW_PLAN_DETAIL' | translate }} →
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+          <tr *ngIf="!loading() && filteredPlans().length === 0" class="border-t">
+            <td colspan="15" class="p-8 text-center text-gray-500">{{ 'REALIZED.EMPTY' | translate }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
-<!-- Dropdown 3 points (Request change) - when plan locked and VALIDATED -->
-<div *ngIf="activeRequestChangeRealized"
-  class="fixed bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] w-56 py-1 overflow-hidden"
-  [style.top.px]="menuPosition.top"
-  [style.left.px]="menuPosition.left"
-  (click)="$event.stopPropagation()">
-  <button (click)="goToChangeRequest(activeRequestChangeRealized!)"
-    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-    <i class="fas fa-lock-open w-4 text-center text-brand-700"></i>
-    {{ 'CHANGE_REQUEST.REQUEST_ACTIVITY_CHANGE' | translate }}
-  </button>
-</div>
-
-<!-- Dropdown 3 points (Modifier, Supprimer) - only when plan_editable -->
-<div *ngIf="activeMenuRealized && canManageRealized(activeMenuRealized)"
-  data-realized-row-menu
-  class="fixed bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] w-44 py-1 overflow-x-hidden overflow-y-auto max-h-[min(24rem,70vh)]"
-  [style.top.px]="menuPosition.top"
-  [style.left.px]="menuPosition.left"
-  (click)="$event.stopPropagation()">
-  <button (click)="goToEdit(activeMenuRealized!)"
-    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-    <i class="fas fa-pen text-green-500 w-4 text-center"></i>
-    {{ 'COMMON.EDIT' | translate }}
-  </button>
-  <div class="border-t border-gray-100 my-1"></div>
-  <button (click)="deleteFromMenu(activeMenuRealized!)"
-    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
-    <i class="fas fa-trash w-4 text-center"></i>
-    {{ 'COMMON.DELETE' | translate }}
-  </button>
-</div>
-
-<!-- Realized create sidebar -->
 <div *ngIf="showCreateSidebar() && canCreateRealized()"
   class="fixed inset-0 z-50 flex"
   (click)="closeCreateSidebar()">
@@ -210,24 +296,6 @@
         (closed)="closeCreateSidebar()"
         (created)="onRealizedCreated()">
       </app-realized-create-sidebar>
-    </div>
-  </aside>
-</div>
-
-<!-- Edit realized sidebar -->
-<div *ngIf="showEditSidebar()"
-  class="fixed inset-0 z-50 flex"
-  (click)="closeEditSidebar()">
-  <div class="flex-1 bg-black/40 transition-opacity" aria-hidden="true"></div>
-  <aside class="w-full max-w-md bg-white shadow-2xl flex flex-col h-full min-h-0 overflow-hidden animate-slide-in-right"
-    (click)="$event.stopPropagation()">
-    <div class="flex-1 min-h-0 overflow-y-auto">
-    <app-realized-edit
-      [realizedId]="realizedIdToEdit()"
-      [sidebarMode]="true"
-      (closed)="closeEditSidebar()"
-      (updated)="onRealizedUpdated()">
-    </app-realized-edit>
     </div>
   </aside>
 </div>

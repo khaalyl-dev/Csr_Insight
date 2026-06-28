@@ -61,6 +61,8 @@
     "SUBMIT_MODIFICATIONS": "Soumettre les modifications pour validation",
     "SUBMIT_ACTIVITY_FOR_REVIEW": "Soumettre les changements pour validation",
     "SUBMIT_FOR_VALIDATION": "Soumettre pour validation",
+    "SUBMIT_REALIZATION_REPORT": "Soumettre en rapport CSR",
+    "SUBMIT_REALIZATION_REPORT_CONFIRM": "Soumettre ce plan en rapport CSR ? Il apparaîtra dans les Rapports CSR et sera verrouillé. Les activités sans données de réalisation sont acceptées.",
     "ACTIVITIES_COUNT": "Activités CSR",
     "REALIZATION_COL": "Statut",
     "STATUS_OFF_PLAN_LEGEND": "Hors plan (colonne Statut)",
@@ -150,6 +152,15 @@
   },
   "DASHBOARD": {
     "SUBTITLE": "Analytics et vue d'ensemble CSR",
+    "POWER_BI_LOADING": "Chargement du rapport Power BI…",
+    "POWER_BI_SIGN_IN_HINT": "Si le rapport reste vide, connectez-vous à Microsoft dans le cadre ci-dessous ou utilisez Ouvrir dans Power BI.",
+    "OPEN_IN_POWER_BI": "Ouvrir dans Power BI",
+    "POWER_BI_EMBED_BLOCKED_TITLE": "Ce rapport ne peut pas encore s'afficher dans l'application",
+    "POWER_BI_EMBED_BLOCKED_BODY": "Power BI interdit les liens de partage (/links/…) dans une iframe sur un autre site (« refused to connect »). Utilisez l'URL d'intégration sécurisée fournie par Power BI.",
+    "POWER_BI_EMBED_STEP_1": "Ouvrez le rapport dans Power BI Service (navigateur).",
+    "POWER_BI_EMBED_STEP_2": "Fichier → Intégrer le rapport → Site web ou portail, puis copiez le src de l'iframe (URL avec reportEmbed).",
+    "POWER_BI_EMBED_STEP_3": "Collez cette URL dans POWER_BI_IFRAME_URL dans frontend/src/features/dashboard-analytics/dashboard/power-bi.config.ts puis rechargez l'application.",
+    "POWER_BI_EMBED_CONFIG_HINT": "Exemple : https://app.powerbi.com/reportEmbed?reportId=…&autoAuth=true — voir la documentation Microsoft sur l'intégration sécurisée.",
     "ALL_YEARS": "Toutes années",
     "ALL_SITES": "Tous les sites",
     "ALL_CATEGORIES": "Toutes les catégories",
@@ -403,6 +414,7 @@
     "ACTIONS": {
       "TITLE": "Actions",
       "SUBMIT": "Soumettre",
+      "SUBMIT_REALIZATION_REPORT": "Soumettre en rapport CSR",
       "DELETE": "Supprimer",
       "DETAILS": "Détails",
       "CHANGE_REQUEST": "Demande de modification"
@@ -513,6 +525,7 @@
       "BULK_DELETE": "Supprimer définitivement {n} plan(s) et toutes leurs activités CSR ?",
       "RESUBMIT": "Soumettre les modifications pour validation ?",
       "SUBMIT_ONE": "Envoyer ce plan en validation ?",
+      "SUBMIT_REALIZATION_REPORT": "Soumettre ce plan en rapport CSR ? Il apparaîtra dans les Rapports CSR et sera verrouillé. Une réalisation partielle est acceptée.",
       "DELETE_ONE": "Supprimer définitivement ce plan et toutes ses activités CSR ?"
     }
   },
@@ -592,7 +605,13 @@
     "DESCRIPTION": "Description",
     "LINK": "Lien",
     "VIEW": "Voir",
+    "EXPORT": "Exporter le journal",
+    "EXPORT_XLSX": "Exporter XLSX",
     "EXPORT_CSV": "Exporter CSV",
+    "EXPORT_DOC": "Exporter DOC",
+    "EXPORT_PDF": "Exporter PDF",
+    "EXPORT_GENERATED_AT": "Généré le",
+    "EXPORT_EXPORTED_BY": "Exporté par",
     "EXPORT_ERROR": "Impossible d'exporter le journal d'audit.",
     "LOAD_ERROR": "Erreur lors du chargement du journal d'audit.",
     "DESC_PLAN_VALIDATED": "Plan {{year}} validé",
@@ -649,16 +668,17 @@
   },
   "REALIZED": {
     "TITLE": "Rapports CSR",
-    "SUBTITLE": "Saisie et suivi des rapports CSR",
+    "SUBTITLE": "Plans annuels approuvés des années passées avec KPI consolidés et données de réalisation",
+    "SECTION_TITLE": "Plans réalisés approuvés",
     "NEW_REALIZATION": "Nouveau rapport CSR",
     "TOTAL_REALIZATIONS": "Total rapports CSR",
     "LIST_COMPLETED_ONLY_HINT": "Uniquement les rapports CSR finalisés (hors brouillon) pour les activités au statut d’exécution « réalisé ».",
     "TOTAL_BUDGET_REALIZED": "Budget réalisé total",
-    "SEARCH_PLACEHOLDER": "Rechercher par activité CSR, site ou année...",
+    "SEARCH_PLACEHOLDER": "Rechercher par site, pays ou année...",
     "ALL_YEARS": "Toutes années",
     "ALL_PLANS": "Tous les plans annuels",
     "LOADING": "Chargement des rapports CSR...",
-    "EMPTY": "Aucun rapport CSR.",
+    "EMPTY": "Aucun plan réalisé approuvé trouvé.",
     "BACK_TO_LIST": "Retour à la liste",
     "NO_RECORDS": "Aucun rapport CSR.",
     "NUMBER": "N°",
@@ -672,15 +692,40 @@
     "ORGANIZER": "Organisateur",
     "PARTICIPANTS": "Participants",
     "ACTION": "Action",
-    "EXPORT": "Exporter activités CSR",
+    "EXPORT": "Exporter rapports CSR",
     "EXPORT_XLSX": "Exporter XLSX",
     "EXPORT_CSV": "Exporter CSV",
     "EXPORT_DOC": "Exporter DOC",
-    "EXPORT_PDF": "Exporter PDF"
+    "EXPORT_PDF": "Exporter PDF",
+    "VIEW_PLAN_DETAIL": "Ouvrir le détail du plan",
+    "CATEGORY_BREAKDOWN": "Répartition par catégorie",
+    "CATEGORY": "Catégorie",
+    "CATEGORY_ACTIONS": "Actions",
+    "CATEGORY_PERCENT": "Part du plan",
+    "CARDS": {
+      "TOTAL_PLANS": "Plans réalisés",
+      "BUDGET_CONSUMED": "Budget total consommé",
+      "AVG_EXECUTION": "Taux d'exécution moyen",
+      "VALIDATED": "Plans validés"
+    },
+    "TABLE": {
+      "EXECUTION": "Taux d'exécution"
+    },
+    "KPI": {
+      "SAFETY": "Sécurité",
+      "PEOPLE": "Personnes",
+      "QUALITY": "Qualité",
+      "VOLUME": "Volume",
+      "COST": "Coût",
+      "ACTUAL_BUDGET": "Budget réel",
+      "PARTNERS": "Partenaires",
+      "HC_RATE": "% ET",
+      "INCIDENTS": "Incidents"
+    }
   },
   "PLANNED_ACTIVITIES": {
     "TITLE": "Activités CSR",
-    "SUBTITLE": "Activités CSR des plans validés par le corporate (lecture seule)",
+    "SUBTITLE": "Toutes les activités CSR des plans annuels — planifiées et réalisées",
     "TOTAL_PLANNED": "Total activités CSR",
     "EXECUTION_STATUS": "Exécution",
     "EXEC_LIFECYCLE_DRAFT": "Brouillon",
@@ -892,7 +937,9 @@
     "VALIDATION_MODE": "Mode de validation",
     "REALIZED_ONLY_SECTION": "Données réalisées",
     "SUBMIT": "Envoyer",
-    "INCLUDE_PLANNED_DETAILS": "Inclure aussi les données planifiées de l’activité CSR"
+    "INCLUDE_PLANNED_DETAILS": "Inclure aussi les données planifiées de l’activité CSR",
+    "PLANNED_FIELDS_NA_TITLE": "Hors plan (Oui)",
+    "PLANNED_FIELDS_NA_HINT": "Le budget prévu, la cible d’impact, l’unité et l’effectif planifié ne s’appliquent pas : ils restent vides ou à zéro sur la ligne plan. Complétez la section réalisation (données réelles) ci-dessous."
   },
   "PLANNED_ACTIVITY_CREATE": {
     "AMENDMENT_TITLE": "Ajouter une activité CSR au plan",

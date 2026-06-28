@@ -102,6 +102,11 @@
         </select>
       </div>
 
+      <div *ngIf="isOffPlanSelected()" class="rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-xs text-amber-950 space-y-1">
+        <p class="font-semibold">{{ 'OFF_PLAN_SIDEBAR.PLANNED_FIELDS_NA_TITLE' | translate }}</p>
+        <p class="text-amber-900/95 leading-snug">{{ 'OFF_PLAN_SIDEBAR.PLANNED_FIELDS_NA_HINT' | translate }}</p>
+      </div>
+
       <div *ngIf="isOtherCategorySelected()">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ 'PLANNED_ACTIVITY_CREATE.NEW_CATEGORY_NAME' | translate }} <span class="text-red-500">*</span></label>
         <input type="text" formControlName="new_category_name" [placeholder]="'PLANNED_ACTIVITY_CREATE.PLACEHOLDER_CATEGORY' | translate"

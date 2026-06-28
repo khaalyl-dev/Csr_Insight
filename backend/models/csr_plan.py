@@ -54,6 +54,10 @@ class CsrPlan(db.Model):
         comment="Mode 111: 1=attente Level 1, 2=attente Level 2. Mode 101: 2=attente Level 2"
     )
     validated_at = db.Column(db.DateTime, nullable=True, comment="Date de validation finale")
+    realization_report_submitted_at = db.Column(
+        db.DateTime, nullable=True,
+        comment="Date de soumission du plan en rapport CSR (clôture anticipée, hors année passée)",
+    )
     unlock_until = db.Column(
         db.DateTime, nullable=True,
         comment="Date limite de modification (après approbation d'une demande de modification); au-delà le plan redevient verrouillé"

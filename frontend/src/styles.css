@@ -265,4 +265,9 @@ html.theme-dark .app-toast--error {
   border-color: #7f1d1d;
 }
 
+/* Power BI dashboard route: prevent page-level scroll / horizontal drift */
+body.dashboard-powerbi-active {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 

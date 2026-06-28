@@ -31,6 +31,10 @@
             class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold bg-white text-brand-900 border-2 border-brand-900 hover:bg-gray-50 active:bg-gray-100 shadow-sm hover:shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-900 focus:ring-offset-2">
             {{ submitButtonLabel() }}
           </button>
+          <button *ngIf="canSubmitPlanForRealization()" type="button" (click)="submitPlanForRealization()" [disabled]="actionLoading()"
+            class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-900 hover:opacity-90 active:opacity-95 shadow-sm hover:shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-900 focus:ring-offset-2">
+            {{ 'PLAN_DETAIL.SUBMIT_REALIZATION_REPORT' | translate }}
+          </button>
           <div *ngIf="plan()!.status === 'SUBMITTED' && (canApprove || canReject)" class="flex items-center gap-2">
             <button *ngIf="canApprove" type="button" (click)="openPlanApproveConfirm()" [disabled]="actionLoading()"
               class="inline-flex items-center justify-center min-w-[130px] px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-900 hover:opacity-90 active:opacity-95 shadow-sm hover:shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-900 focus:ring-offset-2">
@@ -62,7 +66,7 @@
       </div>
     </div>
 
-    <div *ngIf="plan()!.plan_kpis as kpis" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div *ngIf="showPlanKpis() && plan()!.plan_kpis as kpis" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       <div class="bg-white/70 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs text-gray-500 uppercase">Safety</p>
         <p class="mt-1 text-2xl font-bold text-gray-800">{{ kpis.incidents_sum ?? 0 }}</p>
@@ -105,7 +109,7 @@
       </div>
     </div>
 
-    <div *ngIf="plan()!.plan_kpis?.category_percentages?.length" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div *ngIf="showPlanKpis() && plan()!.plan_kpis?.category_percentages?.length" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800">Category percentage in plan</div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">

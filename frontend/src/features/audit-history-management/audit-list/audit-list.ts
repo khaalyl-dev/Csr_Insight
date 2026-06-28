@@ -165,7 +165,19 @@ export class AuditListComponent implements OnInit {
     return null;
   }
 
-  exportCsv(): void {
+  /** Full URL for export "Link" column (same paths as in-app links). */
+  private entityLinkAbsolute(log: AuditLog): string {
+    const path = this.entityLink(log);
+    if (!path) return '';
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return `${window.location.origin}${path}`;
+    }
+    return path;
+  }
+
+  exportLogs(format: string): void {
+    const fmt = format as 'csv' | 'xlsx' | 'doc' | 'pdf';
+    if (!fmt || !['csv', 'xlsx', 'doc', 'pdf'].includes(fmt) || this.exporting()) return;
     this.exporting.set(true);
     this.error.set(null);
     const params: AuditLogsParams = { limit: 500 };
@@ -178,35 +190,165 @@ export class AuditListComponent implements OnInit {
 
     this.auditApi.listLogs(params).subscribe({
       next: (rows) => {
-        const header = ['Date', 'Action', 'Type', 'Site', 'User', 'Description', 'Link'];
-        const lines = rows.map((log) => [
-          log.created_at ?? '',
-          this.actionLabel(log.action),
-          this.entityTypeLabel(log.entity_type),
-          log.site_name ?? log.site_id ?? '',
-          log.user_name ?? log.user_id ?? '',
-          this.descriptionLabel(log),
-          this.entityLink(log) ?? '',
-        ]);
-        const csv = [header, ...lines]
-          .map((row) => row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
-          .join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-        a.href = url;
-        a.download = `audit-log-${stamp}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        this.exporting.set(false);
+        const exportRows = this.buildExportRows(rows);
+        const finish = (): void => this.exporting.set(false);
+        try {
+          if (fmt === 'csv') {
+            this.exportAsCsv(exportRows);
+            finish();
+          } else if (fmt === 'xlsx') {
+            import('xlsx')
+              .then((XLSX) => {
+                try {
+                  this.exportAsXlsx(exportRows, XLSX);
+                } finally {
+                  finish();
+                }
+              })
+              .catch(() => {
+                this.error.set(this.translate.instant('AUDIT_LOG.EXPORT_ERROR'));
+                finish();
+              });
+            return;
+          } else if (fmt === 'doc') {
+            this.exportAsDoc(exportRows);
+            finish();
+          } else {
+            this.exportAsPdf(exportRows);
+            finish();
+          }
+        } catch {
+          this.error.set(this.translate.instant('AUDIT_LOG.EXPORT_ERROR'));
+          finish();
+        }
       },
       error: (err) => {
         this.error.set(err?.error?.message ?? this.translate.instant('AUDIT_LOG.EXPORT_ERROR'));
         this.exporting.set(false);
       },
     });
+  }
+
+  private exportColumns(): { key: string; label: string }[] {
+    return [
+      { key: 'date', label: this.translate.instant('AUDIT_LOG.DATE') },
+      { key: 'action', label: this.translate.instant('AUDIT_LOG.ACTION') },
+      { key: 'type', label: this.translate.instant('AUDIT_LOG.TYPE') },
+      { key: 'site', label: this.translate.instant('AUDIT_LOG.SITE') },
+      { key: 'user', label: this.translate.instant('AUDIT_LOG.USER') },
+      { key: 'description', label: this.translate.instant('AUDIT_LOG.DESCRIPTION') },
+      { key: 'link', label: this.translate.instant('AUDIT_LOG.LINK') },
+    ];
+  }
+
+  private buildExportRows(rows: AuditLog[]): Array<Record<string, string>> {
+    return rows.map((log) => ({
+      date: log.created_at ? new Date(log.created_at).toLocaleString() : '',
+      action: this.actionLabel(log.action),
+      type: this.entityTypeLabel(log.entity_type),
+      site: String(log.site_name ?? log.site_id ?? ''),
+      user: String(log.user_name ?? log.user_id ?? ''),
+      description: this.descriptionLabel(log),
+      link: this.entityLinkAbsolute(log),
+    }));
+  }
+
+  private exportAsCsv(rows: Array<Record<string, string>>): void {
+    const cols = this.exportColumns();
+    const headers = cols.map((c) => c.label);
+    const body = rows.map((row) =>
+      cols.map((c) => `"${String(row[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csv = [headers.join(','), ...body].join('\n');
+    this.downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), this.exportFilename('csv'));
+  }
+
+  private exportAsXlsx(rows: Array<Record<string, string>>, XLSX: typeof import('xlsx')): void {
+    const cols = this.exportColumns();
+    const normalized = rows.map((row) => {
+      const out: Record<string, string> = {};
+      cols.forEach((c) => {
+        out[c.label] = row[c.key] ?? '';
+      });
+      return out;
+    });
+    const worksheet = XLSX.utils.json_to_sheet(normalized);
+    const workbook = XLSX.utils.book_new();
+    const sheetTitle = this.translate.instant('AUDIT_LOG.TITLE').slice(0, 31) || 'Audit log';
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetTitle);
+    XLSX.writeFile(workbook, this.exportFilename('xlsx'));
+  }
+
+  private exportAsDoc(rows: Array<Record<string, string>>): void {
+    const cols = this.exportColumns();
+    const headerHtml = cols.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
+    const bodyHtml = rows
+      .map((row) => `<tr>${cols.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`)
+      .join('');
+    const title = this.escapeHtml(this.translate.instant('AUDIT_LOG.TITLE'));
+    const exportedAt = this.escapeHtml(this.exportTimestamp());
+    const exportedBy = this.escapeHtml(this.exportUserLabel());
+    const genAt = this.escapeHtml(this.translate.instant('AUDIT_LOG.EXPORT_GENERATED_AT'));
+    const genBy = this.escapeHtml(this.translate.instant('AUDIT_LOG.EXPORT_EXPORTED_BY'));
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body><h2>${title}</h2><p><strong>${genAt}:</strong> ${exportedAt}<br><strong>${genBy}:</strong> ${exportedBy}</p><table border="1" cellspacing="0" cellpadding="6"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
+    this.downloadBlob(new Blob([html], { type: 'application/msword' }), this.exportFilename('doc'));
+  }
+
+  private exportAsPdf(rows: Array<Record<string, string>>): void {
+    const cols = this.exportColumns();
+    const headerHtml = cols.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
+    const bodyHtml = rows
+      .map((row) => `<tr>${cols.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`)
+      .join('');
+    const title = this.escapeHtml(this.translate.instant('AUDIT_LOG.TITLE'));
+    const fname = this.exportFilename('pdf');
+    const exportedAt = this.escapeHtml(this.exportTimestamp());
+    const exportedBy = this.escapeHtml(this.exportUserLabel());
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${fname}</title><style>body{font-family:Arial,sans-serif;padding:20px}h1{font-size:18px;margin:0 0 12px}.meta{font-size:12px;color:#374151;margin:0 0 12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #d1d5db;padding:6px;text-align:left}th{background:#f3f4f6}</style></head><body><h1>${title}</h1><p class="meta">${exportedAt}<br>${exportedBy}</p><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`
+    );
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  private exportFilename(ext: 'csv' | 'xlsx' | 'doc' | 'pdf'): string {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    return `audit-log-${stamp}.${ext}`;
+  }
+
+  private exportTimestamp(): string {
+    return new Date().toLocaleString();
+  }
+
+  private exportUserLabel(): string {
+    const u = this.authStore.user();
+    if (!u) return '—';
+    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim();
+    if (name && u.email) return `${name} (${u.email})`;
+    if (name) return name;
+    return u.email ?? '—';
+  }
+
+  private downloadBlob(blob: Blob, filename: string): void {
+    const link = document.createElement('a');
+    const href = URL.createObjectURL(blob);
+    link.href = href;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

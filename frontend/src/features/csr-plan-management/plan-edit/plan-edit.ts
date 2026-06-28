@@ -35,7 +35,6 @@ export class PlanEditComponent implements OnInit, OnDestroy {
     this.planForm = this.fb.group({
       year: [this.currentYear, [Validators.required, Validators.min(2000), Validators.max(2100)]],
       validation_mode: ['101'],
-      allocated_budget: [null as number | null],
       total_hc: [null as number | null],
     });
 
@@ -57,7 +56,6 @@ export class PlanEditComponent implements OnInit, OnDestroy {
         this.planForm.patchValue({
           year: plan.year,
           validation_mode: plan.validation_mode || '101',
-          allocated_budget: plan.allocated_budget ?? null,
           total_hc: plan.total_hc ?? null,
         });
         this.loading = false;
@@ -90,7 +88,6 @@ export class PlanEditComponent implements OnInit, OnDestroy {
     const payload: UpdateCsrPlanPayload = {
       year: Number(raw.year),
       validation_mode: selectedMode,
-      allocated_budget: raw.allocated_budget != null && raw.allocated_budget !== '' ? Number(raw.allocated_budget) : null,
       total_hc: raw.total_hc != null && raw.total_hc !== '' ? Number(raw.total_hc) : null,
     };
     this.csrPlansApi.update(p.id, payload).subscribe({

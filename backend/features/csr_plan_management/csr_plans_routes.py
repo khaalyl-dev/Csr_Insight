@@ -77,6 +77,35 @@ def _require_plan_permission(action: str):
     return jsonify({"message": f"Permission refusée: plan.{action}"}), 403
 
 
+def _require_realized_activity_permission(action: str):
+    role = (getattr(request, "role", "") or "").upper()
+    if has_permission(getattr(request, "user_id", ""), role, "realized_activity", action):
+        return None
+    return jsonify({"message": f"Permission refusée: realized_activity.{action}"}), 403
+
+
+def _plan_can_submit_realization_report(plan: CsrPlan) -> Tuple[bool, str]:
+    """Current/future approved plan may be closed early as a CSR report (partial realization OK)."""
+    if plan.status != "VALIDATED":
+        return False, "Seuls les plans approuvés peuvent être soumis en rapport CSR"
+    if getattr(plan, "realization_report_submitted_at", None):
+        return False, "Ce plan a déjà été soumis en rapport CSR"
+    unlock_until = getattr(plan, "unlock_until", None)
+    if unlock_until and datetime.utcnow() <= unlock_until:
+        return (
+            False,
+            "Le plan est encore ouvert pour modification; soumettez d'abord les changements "
+            "ou attendez la fin de la période d'ouverture",
+        )
+    try:
+        plan_year = int(plan.year)
+    except (TypeError, ValueError):
+        return False, "Année du plan invalide"
+    if plan_year < datetime.utcnow().year:
+        return False, "Les plans des années passées apparaissent automatiquement dans les rapports CSR"
+    return True, ""
+
+
 def _is_corporate(role: str) -> bool:
     return (role or "").upper() in ("CORPORATE_USER", "CORPORATE")
 
@@ -203,6 +232,16 @@ def _plan_total_realized_budget(plan: CsrPlan):
     return float(total) if total is not None else None
 
 
+def _plan_computed_budget(plan: CsrPlan) -> float:
+    """Display budget: planned activity sum (current/future year) or consumed budget (past year)."""
+    current_year = datetime.utcnow().year
+    total_estimated = _plan_total_budget_from_activities(plan) or 0.0
+    budget_consumed = _plan_total_realized_budget(plan) or 0.0
+    if plan.year < current_year:
+        return float(budget_consumed)
+    return float(total_estimated)
+
+
 def _plan_activities_realized_count(plan_id: str) -> int:
     """Distinct planned activities in this plan that have at least one realization row."""
     from models import CsrActivity, RealizedCsr
@@ -241,18 +280,12 @@ def _submitter_display_name(plan: CsrPlan) -> Optional[str]:
 def _plan_to_json(plan: CsrPlan):
     """Serialize plan with budget fields.
 
-    - ``allocated_budget``: stored on the annual plan
+    - ``allocated_budget``: computed (planned sum or consumed sum; not manually stored)
     - ``budget_consumed``: computed from realizations
     """
-    current_year = datetime.utcnow().year
     total_estimated = _plan_total_budget_from_activities(plan)
     budget_consumed = _plan_total_realized_budget(plan)
-    if getattr(plan, "allocated_budget", None) is not None:
-        allocated_budget = float(plan.allocated_budget)
-    elif plan.year < current_year:
-        allocated_budget = budget_consumed
-    else:
-        allocated_budget = total_estimated
+    allocated_budget = _plan_computed_budget(plan)
     return {
         "id": plan.id,
         "site_id": plan.site_id,
@@ -270,6 +303,11 @@ def _plan_to_json(plan: CsrPlan):
         "total_estimated_budget": total_estimated,
         "submitted_at": plan.submitted_at.isoformat() if plan.submitted_at else None,
         "validated_at": plan.validated_at.isoformat() if plan.validated_at else None,
+        "realization_report_submitted_at": (
+            plan.realization_report_submitted_at.isoformat()
+            if getattr(plan, "realization_report_submitted_at", None)
+            else None
+        ),
         "rejected_comment": getattr(plan, "rejected_comment", None) or None,
         "rejected_activity_ids": _parse_rejected_activity_ids(plan),
         "unlock_until": plan.unlock_until.isoformat() if getattr(plan, "unlock_until", None) else None,
@@ -286,6 +324,28 @@ def _safe_rate(n: float, d: float) -> Optional[float]:
     if d == 0:
         return None
     return round((n / d) * 100.0, 2)
+
+
+def _is_past_year_plan(plan: CsrPlan) -> bool:
+    """Plan KPIs apply only to completed (past) annual plans."""
+    y = getattr(plan, "year", None)
+    if y is None:
+        return False
+    try:
+        return int(y) < datetime.utcnow().year
+    except (TypeError, ValueError):
+        return False
+
+
+def _is_csr_report_plan(plan: CsrPlan) -> bool:
+    """Plan appears in CSR Reports: past calendar year or early closure submitted."""
+    if getattr(plan, "realization_report_submitted_at", None):
+        return True
+    return _is_past_year_plan(plan)
+
+
+def _plan_shows_kpis(plan: CsrPlan) -> bool:
+    return _is_csr_report_plan(plan)
 
 
 def _plan_kpis(plan: CsrPlan) -> dict:
@@ -396,12 +456,35 @@ def _plan_kpis(plan: CsrPlan) -> dict:
     estimated_budget_sum = float(estimated_budget_sum or 0)
     participants_estimated_sum = int(participants_estimated_sum or 0)
     total_hc = int(getattr(plan, "total_hc", 0) or 0)
-    allocated_budget = float(getattr(plan, "allocated_budget", 0) or 0)
+
+    per_activity_budget = (
+        db.session.query(
+            CsrActivity.planned_budget,
+            func.coalesce(func.sum(RealizedCsr.realized_budget), 0),
+        )
+        .outerjoin(RealizedCsr, RealizedCsr.activity_id == CsrActivity.id)
+        .filter(CsrActivity.id.in_(activity_ids))
+        .group_by(CsrActivity.id, CsrActivity.planned_budget)
+        .all()
+    )
+    activity_budget_rates = []
+    for planned_budget, activity_realized_sum in per_activity_budget:
+        planned_amount = float(planned_budget or 0)
+        if planned_amount <= 0:
+            continue
+        activity_rate = _safe_rate(float(activity_realized_sum or 0), planned_amount)
+        if activity_rate is not None:
+            activity_budget_rates.append(activity_rate)
+    if activity_budget_rates:
+        budget_control_rate = round(sum(activity_budget_rates) / len(activity_budget_rates), 2)
+    elif estimated_budget_sum:
+        budget_control_rate = _safe_rate(realized_budget_sum, estimated_budget_sum)
+    else:
+        budget_control_rate = None
 
     involvement_rate = _safe_rate(float(realized_participants_sum), float(participants_estimated_sum)) if participants_estimated_sum else None
     action_delivery_rate = _safe_rate(float(completed_objectives_sum), float(announced_objectives_sum)) if announced_objectives_sum else None
     action_execution_rate = _safe_rate(float(accomplished_actions), float(planned_actions)) if planned_actions else None
-    budget_control_rate = _safe_rate(realized_budget_sum, allocated_budget) if allocated_budget else None
     participants_vs_total_hc_rate = _safe_rate(float(realized_participants_sum), float(total_hc)) if total_hc else None
 
     return {
@@ -514,7 +597,7 @@ def _compute_can_approve_off_plan_activity(a, user_id: str, role: str) -> bool:
 @bp.get("")
 @token_required
 def list_plans():
-    """List CSR plans. Optional query: site_id, year, status.
+    """List CSR plans. Optional query: site_id, year, status, plan_type (planned|realized), include_plan_kpis.
     Visibility: site users and non–globally-scoped corporate users only see plans for their assigned sites;
     corporate users with is_corporate_global see all plans."""
     denied = _require_plan_permission("read")
@@ -523,6 +606,8 @@ def list_plans():
     site_id = request.args.get("site_id")
     year = request.args.get("year", type=int)
     status = request.args.get("status")
+    plan_type = (request.args.get("plan_type") or "").strip().lower()
+    include_plan_kpis = (request.args.get("include_plan_kpis") or "").strip().lower() in ("1", "true", "yes")
 
     q = csr_plans_visible_query(request.user_id, getattr(request, "role", "") or "")
 
@@ -532,6 +617,20 @@ def list_plans():
         q = q.filter_by(year=year)
     if status:
         q = q.filter_by(status=status)
+    current_year = datetime.utcnow().year
+    if plan_type == "realized":
+        q = q.filter(
+            db.or_(
+                CsrPlan.year < current_year,
+                CsrPlan.realization_report_submitted_at.isnot(None),
+            )
+        )
+    elif plan_type == "planned":
+        q = q.filter(
+            CsrPlan.year >= current_year,
+            CsrPlan.year <= current_year + 1,
+            CsrPlan.realization_report_submitted_at.is_(None),
+        )
 
     from models import CsrActivity
     plans = q.order_by(CsrPlan.year.desc(), CsrPlan.created_at.desc()).all()
@@ -546,6 +645,8 @@ def list_plans():
             obj["can_approve"] = obj["can_reject"] = _compute_can_approve(p, user_id, role_str)
         else:
             obj["can_approve"] = obj["can_reject"] = False
+        if include_plan_kpis and _plan_shows_kpis(p):
+            obj["plan_kpis"] = _plan_kpis(p)
         result.append(obj)
     return jsonify(result), 200
 
@@ -587,13 +688,7 @@ def create_plan():
         return jsonify({"message": "Un plan existe déjà pour ce site et cette année"}), 400
 
     validation_mode = _normalize_validation_mode(data.get("validation_mode", "101"))
-    allocated_budget = data.get("allocated_budget")
     total_hc = data.get("total_hc")
-    if allocated_budget is not None:
-        try:
-            allocated_budget = float(allocated_budget)
-        except (TypeError, ValueError):
-            allocated_budget = None
     if total_hc is not None and total_hc != "":
         try:
             total_hc = int(total_hc)
@@ -609,7 +704,7 @@ def create_plan():
         year=year,
         validation_mode=validation_mode,
         status="DRAFT",
-        allocated_budget=allocated_budget,
+        allocated_budget=None,
         total_hc=total_hc,
         created_by=request.user_id,
     )
@@ -784,18 +879,6 @@ def update_plan(plan_id):
     if "validation_mode" in data and data["validation_mode"] is not None:
         plan.validation_mode = _normalize_validation_mode(data["validation_mode"])
 
-    if "allocated_budget" in data:
-        tb = data.get("allocated_budget")
-        if tb is None or tb == "":
-            plan.allocated_budget = None
-        else:
-            try:
-                tb_val = float(tb)
-            except (TypeError, ValueError):
-                return jsonify({"message": "Le budget total doit être un nombre"}), 400
-            if tb_val < 0:
-                return jsonify({"message": "Le budget total doit être >= 0"}), 400
-            plan.allocated_budget = tb_val
     recalc_plan_kpis = False
     if "total_hc" in data:
         thc = data.get("total_hc")
@@ -884,7 +967,8 @@ def get_plan(plan_id):
     if ensure_plan_activity_kpis(plan.id):
         db.session.commit()
     out = _plan_to_json(plan)
-    out["plan_kpis"] = _plan_kpis(plan)
+    if _plan_shows_kpis(plan):
+        out["plan_kpis"] = _plan_kpis(plan)
     role_str = (getattr(request, "role", "") or "").upper()
     out["can_approve"] = out["can_reject"] = _compute_can_approve(plan, request.user_id, role_str)
     if role_str in ("SITE_USER", "SITE"):
@@ -1110,6 +1194,40 @@ def submit_plan(plan_id):
         entity_id=plan.id,
         notification_category="csr_plan",
     )
+    return jsonify(_plan_json_with_approval_flags(plan, request.user_id, getattr(request, "role", ""))), 200
+
+
+@bp.patch("/<string:plan_id>/submit-realization-report")
+@token_required
+def submit_realization_report(plan_id):
+    """Clôturer un plan approuvé (année courante ou future) en rapport CSR. Réalisations partielles acceptées."""
+    denied = _require_realized_activity_permission("create")
+    if denied:
+        return denied
+    plan = CsrPlan.query.get(plan_id)
+    if not plan:
+        return jsonify({"message": "Plan introuvable"}), 404
+    role = (getattr(request, "role", "") or "").upper()
+    if role in ("SITE_USER", "SITE"):
+        if not _user_can_access_site(request.user_id, plan.site_id):
+            return jsonify({"message": "Vous n'avez pas accès à ce plan"}), 403
+    ok, msg = _plan_can_submit_realization_report(plan)
+    if not ok:
+        return jsonify({"message": msg}), 400
+    now = datetime.utcnow()
+    plan.realization_report_submitted_at = now
+    plan.status = "LOCKED"
+    plan.unlock_until = None
+    recompute_plan_activity_kpis(plan_id)
+    write_audit(
+        request.user_id,
+        plan.site_id,
+        "UPDATE",
+        "PLAN",
+        plan_id,
+        f"Soumission rapport CSR plan {plan.year}",
+    )
+    db.session.commit()
     return jsonify(_plan_json_with_approval_flags(plan, request.user_id, getattr(request, "role", ""))), 200
 
 

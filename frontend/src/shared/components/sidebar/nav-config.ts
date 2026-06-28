@@ -49,8 +49,8 @@ export const navItems: NavSection[] = [
     isDropdown: true,
     items: [
       { labelKey: 'NAV.ITEMS.ANNUAL_PLANS', path: '/csr-plans', roles: ['site', 'corporate'], icon: faList, permissionAny: ['plan.read'] },
-      { labelKey: 'NAV.ITEMS.PLANNED_ACTIVITIES', path: '/planned-activities', roles: ['site', 'corporate'], icon: faCalendarPlus, permissionAny: ['activity.read'] },
       { labelKey: 'NAV.ITEMS.REALIZED_ACTIVITIES', path: '/realized-csr', roles: ['site', 'corporate'], icon: faClipboardCheck, permissionAny: ['realized_activity.read'] },
+      { labelKey: 'NAV.ITEMS.PLANNED_ACTIVITIES', path: '/planned-activities', roles: ['site', 'corporate'], icon: faCalendarPlus, permissionAny: ['activity.read'] },
       { labelKey: 'NAV.ITEMS.DOCUMENTS', path: '/documents', roles: ['site', 'corporate'], icon: faFolderOpen, permissionAny: ['document.read'] },
     ],
   },

@@ -48,8 +48,15 @@
       </div>
     </header>
     <!-- Page content (smooth opacity transition on language change) -->
-    <div #mainScroll class="flex-1 bg-gray-50 p-4 overflow-auto i18n-content-transition"
-      [class.i18n-transitioning]="langTransitioning()">
+    <div
+      #mainScroll
+      class="flex-1 min-h-0 bg-gray-50 i18n-content-transition"
+      [class.i18n-transitioning]="langTransitioning()"
+      [class.p-4]="!isDashboardFullBleed()"
+      [class.overflow-auto]="!isDashboardFullBleed()"
+      [class.overflow-hidden]="isDashboardFullBleed()"
+      [class.p-0]="isDashboardFullBleed()"
+    >
       <router-outlet></router-outlet>
     </div>
   </div>

@@ -76,6 +76,12 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     return y != null && y < this.currentYear;
   }
 
+  /** Plan KPIs for past-year plans or plans submitted early as CSR reports. */
+  showPlanKpis(): boolean {
+    const p = this.plan();
+    return this.isPastYearPlan() || !!p?.realization_report_submitted_at;
+  }
+
   /** Plan is "planifié" (current or future year) → show only planned-activity columns. */
   get isPlanPlanned(): boolean {
     const y = this.planYearValue();
@@ -88,13 +94,26 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
     return y != null && y === this.currentYear;
   }
 
-  /** Submit realization data only for current-year plans that are approved (VALIDATED). */
+  /** Submit realization data only for current-year approved plans not yet closed as CSR report. */
   canSubmitRealizationDataOnPlan(): boolean {
     const p = this.plan();
     return (
       this.isPlanCalendarYearCurrent() &&
-      p?.status === 'VALIDATED'
+      p?.status === 'VALIDATED' &&
+      !p?.realization_report_submitted_at
     );
+  }
+
+  /** Submit entire plan as CSR report (current/future year, approved, locked, partial realization OK). */
+  canSubmitPlanForRealization(): boolean {
+    const p = this.plan();
+    if (!p || !this.canCreateRealizationPermission()) return false;
+    if (p.realization_report_submitted_at) return false;
+    const y = this.planYearValue();
+    if (y == null || y < this.currentYear) return false;
+    if (p.status !== 'VALIDATED') return false;
+    if (this.isUnlockUntilFuture()) return false;
+    return true;
   }
 
   /** True if this activity already has at least one realization row (hide “Submit data”). */
@@ -412,6 +431,36 @@ export class PlanDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.breadcrumb.clearContext();
+  }
+
+  submitPlanForRealization(): void {
+    const p = this.plan();
+    if (!p || !this.canSubmitPlanForRealization()) return;
+    this.openConfirm({
+      title: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('PLAN_DETAIL.SUBMIT_REALIZATION_REPORT_CONFIRM'),
+      onConfirm: () => {
+        this.actionLoading.set(true);
+        this.plansApi.submitRealizationReport(p.id).subscribe({
+          next: (updated) => {
+            this.plansApi.get(p.id).subscribe({
+              next: (detail) => {
+                this.plan.set(detail);
+                this.actionLoading.set(false);
+              },
+              error: () => {
+                this.plan.set({ ...p, ...updated });
+                this.actionLoading.set(false);
+              },
+            });
+          },
+          error: (err) => {
+            this.actionLoading.set(false);
+            this.errorMsg.set(err.error?.message || this.translate.instant('COMMON.ERROR'));
+          },
+        });
+      },
+    });
   }
 
   submitForValidation(): void {

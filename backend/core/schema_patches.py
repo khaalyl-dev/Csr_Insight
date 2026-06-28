@@ -214,6 +214,16 @@ def apply_schema_patches(db) -> None:
                 "AFTER status",
                 "csr_plans.allocated_budget",
             )
+            _apply_patch(
+                conn,
+                "csr_plans",
+                "realization_report_submitted_at",
+                "ALTER TABLE csr_plans "
+                "ADD COLUMN realization_report_submitted_at DATETIME NULL "
+                "COMMENT 'Date de soumission du plan en rapport CSR' "
+                "AFTER validated_at",
+                "csr_plans.realization_report_submitted_at",
+            )
             try:
                 if _column_exists(conn, "csr_plans", "total_budget"):
                     conn.execute(

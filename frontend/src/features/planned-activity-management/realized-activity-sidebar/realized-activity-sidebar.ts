@@ -169,6 +169,9 @@ export class RealizedActivitySidebarComponent implements OnInit {
       }
       ctrl.updateValueAndValidity({ emitEvent: false });
     }
+    if (this.submissionMode === 'plan_realized_draft') {
+      this.applyPlanRealizedDraftRequiredValidators();
+    }
   }
 
   private loadCategories(): void {
@@ -319,7 +322,16 @@ export class RealizedActivitySidebarComponent implements OnInit {
       'employees_actual','realized_budget','action_impact_actual','action_impact_unit_realized','organizer',
       'incidents_number','realization_date','comment','contact_name','contact_email','contact_department',
     ];
-    const planningFields = new Set(['collaboration_nature','consumed_budget','action_impact_target','action_impact_unit','action_impact_duration','start_year','edition']);
+    const planningFields = new Set([
+      'collaboration_nature',
+      'consumed_budget',
+      'action_impact_target',
+      'action_impact_unit',
+      'action_impact_duration',
+      'start_year',
+      'edition',
+      'employees_planned',
+    ]);
     for (const field of requiredFields) {
       const ctrl = this.form.get(field);
       if (!ctrl) continue;

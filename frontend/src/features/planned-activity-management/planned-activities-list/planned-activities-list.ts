@@ -446,7 +446,7 @@ export class PlannedActivitiesListComponent implements OnInit {
 
   refresh(): void {
     this.loading.set(true);
-    this.api.list().subscribe({
+    this.api.list({ exclude_realized: false }).subscribe({
       next: (data) => {
         this.list.set(data);
         this.loading.set(false);

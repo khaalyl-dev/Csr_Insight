@@ -83,6 +83,9 @@ export class MainLayout implements OnInit, OnDestroy {
   /** Brief opacity fade when language changes for a smoother transition. */
   langTransitioning = signal(false);
 
+  /** Power BI dashboard: no padding/scroll on main content area. */
+  isDashboardFullBleed = signal(false);
+
   constructor() {
     effect(() => {
       this.notificationSocket.syncAuthToken(this.authStore.token());
@@ -121,6 +124,7 @@ export class MainLayout implements OnInit, OnDestroy {
 
   private updateBreadcrumb(url: string): void {
     const path = url.split('?')[0];
+    this.isDashboardFullBleed.set(/\/dashboard(\/|$)/.test(path));
     const segments = path.split('/').filter(Boolean);
     const labels = segments.map((seg, i) => {
       const key = seg.toLowerCase();

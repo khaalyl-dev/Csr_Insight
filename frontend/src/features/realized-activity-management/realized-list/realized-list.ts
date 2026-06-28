@@ -1,263 +1,146 @@
-import { ChangeDetectorRef, Component, computed, signal, inject, OnInit, HostListener } from '@angular/core';
+import { Component, computed, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { RealizedCsrApi } from '../api/realized-csr-api';
-import type { RealizedCsr } from '../models/realized-csr.model';
+import { CsrPlansApi } from '@features/csr-plan-management/api/csr-plans-api';
+import type { CsrPlan } from '@features/csr-plan-management/models/csr-plan.model';
 import { RealizedCreateSidebarComponent } from '../realized-create-sidebar/realized-create-sidebar';
-import { RealizedEditComponent } from '../realized-edit/realized-edit';
 import { AuthStore } from '@core/services/auth-store';
-import {
-  initialFixedContextMenuLeft,
-  initialFixedContextMenuTopBelow,
-  scheduleFixedContextMenuPosition,
-} from '@core/utils/fixed-context-menu';
 
 @Component({
   selector: 'app-realized-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule, RealizedCreateSidebarComponent, RealizedEditComponent],
-  templateUrl: './realized-list.html'
+  imports: [CommonModule, RouterModule, TranslateModule, RealizedCreateSidebarComponent],
+  templateUrl: './realized-list.html',
 })
 export class RealizedListComponent implements OnInit {
-  private api = inject(RealizedCsrApi);
+  private plansApi = inject(CsrPlansApi);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private authStore = inject(AuthStore);
-  private cdr = inject(ChangeDetectorRef);
+
   private readonly exportColumns: Array<{ key: string; label: string }> = [
-    { key: 'activity_number', label: 'Activity N' },
-    { key: 'region', label: 'Region' },
+    { key: 'site_name', label: 'Site' },
     { key: 'country', label: 'Country' },
-    { key: 'site_name', label: 'Plant' },
-    { key: 'activity_title', label: 'Title' },
-    { key: 'activity_description', label: 'Description' },
-    { key: 'category_name', label: 'Category' },
-    { key: 'collaboration_nature', label: 'Nature of collaboration' },
     { key: 'year', label: 'Year' },
-    { key: 'start_year', label: 'Start year' },
-    { key: 'edition', label: 'Edition' },
-    { key: 'external_partner_name', label: 'External Partner' },
-    { key: 'total_hc', label: 'Total HC' },
-    { key: 'percentage_employees', label: '% of all HC' },
-    { key: 'planned_budget', label: 'Planned Budget (EUR)' },
-    { key: 'realized_budget', label: 'Realized Budget (EUR)' },
-    { key: 'action_impact_actual', label: 'Impact N' },
-    { key: 'action_impact_unit', label: 'Impact Unit' },
-    { key: 'organizer', label: 'Organizer' },
-    { key: 'external_partner_count', label: '# of External Partners' },
-    { key: 'is_off_plan', label: 'Is off plan' },
+    { key: 'validation_mode', label: 'Mode' },
+    { key: 'activities_count', label: 'Activities' },
+    { key: 'activities_realized_count', label: 'Activities with report' },
+    { key: 'allocated_budget', label: 'Allocated budget (EUR)' },
+    { key: 'budget_consumed', label: 'Budget consumed (EUR)' },
+    { key: 'incidents_sum', label: 'Safety – incidents' },
+    { key: 'involvement_rate', label: 'People – involvement (%)' },
+    { key: 'action_delivery_rate', label: 'Quality – delivery (%)' },
+    { key: 'action_execution_rate', label: 'Volume – execution (%)' },
+    { key: 'budget_control_rate', label: 'Cost – budget control (%)' },
+    { key: 'external_partners_sum', label: 'External partners' },
+    { key: 'participants_vs_total_hc_rate', label: '% of total HC' },
   ];
 
-  activeMenuRealized: RealizedCsr | null = null;
-  activeRequestChangeRealized: RealizedCsr | null = null;
-  menuPosition = { top: 0, left: 0 };
-
-  /** True if user can request a change for this realization (plan validated and locked, has plan_id and activity_id). */
-  canRequestChange(r: RealizedCsr): boolean {
-    if (this.authStore.isValidatorLevel()) return false;
-    if (this.isCorporateUser()) return false;
-    return !!(
-      !r.plan_editable &&
-      r.plan_status === 'VALIDATED' &&
-      r.plan_id &&
-      r.activity_id
-    );
-  }
-
-  private isCorporateUser(): boolean {
-    return (this.authStore.user()?.role ?? '').toLowerCase() === 'corporate';
-  }
-
-  canManageRealized(r: RealizedCsr): boolean {
-    return !this.authStore.isValidatorLevel() && !!r.plan_editable;
-  }
-
-  canCreateRealized(): boolean {
-    return !this.authStore.isValidatorLevel();
-  }
-
-  @HostListener('document:click')
-  onDocumentClick(): void {
-    this.closeMenu();
-    this.closeRequestChangeMenu();
-  }
-
-  toggleRequestChangeMenu(r: RealizedCsr, event: MouseEvent, openAbove: boolean): void {
-    event.stopPropagation();
-    if (this.activeRequestChangeRealized?.id === r.id) {
-      this.closeRequestChangeMenu();
-      return;
-    }
-    this.closeMenu();
-    const btn = event.currentTarget as HTMLElement;
-    const btnRect = btn.getBoundingClientRect();
-    const menuWidth = 224; // w-56
-    const left = initialFixedContextMenuLeft(btnRect, menuWidth);
-    this.menuPosition = { top: initialFixedContextMenuTopBelow(btnRect), left };
-    this.activeRequestChangeRealized = r;
-    const rid = r.id;
-    this.cdr.markForCheck();
-    scheduleFixedContextMenuPosition({
-      menuSelector: '[data-realized-request-change-menu]',
-      btnRect,
-      menuWidth,
-      openAbove,
-      initialLeft: left,
-      isAlive: () => this.activeRequestChangeRealized?.id === rid,
-      onApply: (top, l) => {
-        this.menuPosition = { top, left: l };
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  closeRequestChangeMenu(): void {
-    this.activeRequestChangeRealized = null;
-  }
-
-  goToChangeRequest(r: RealizedCsr): void {
-    if (!r.plan_id || !r.activity_id) return;
-    this.closeRequestChangeMenu();
-    this.router.navigate(['/changes/create'], { queryParams: { planId: r.plan_id, activityId: r.activity_id } });
-  }
-
-  goToDetail(r: RealizedCsr): void {
-    this.closeMenu();
-    this.closeRequestChangeMenu();
-    this.router.navigate(['/realized-csr', r.id]);
-  }
-
-  toggleMenu(r: RealizedCsr, event: MouseEvent, openAbove: boolean): void {
-    event.stopPropagation();
-    if (this.activeMenuRealized?.id === r.id) {
-      this.closeMenu();
-      return;
-    }
-    this.closeRequestChangeMenu();
-    const btn = event.currentTarget as HTMLElement;
-    const btnRect = btn.getBoundingClientRect();
-    const menuWidth = 176;
-    const left = initialFixedContextMenuLeft(btnRect, menuWidth);
-    this.menuPosition = { top: initialFixedContextMenuTopBelow(btnRect), left };
-    this.activeMenuRealized = r;
-    const rid = r.id;
-    this.cdr.markForCheck();
-    scheduleFixedContextMenuPosition({
-      menuSelector: '[data-realized-row-menu]',
-      btnRect,
-      menuWidth,
-      openAbove,
-      initialLeft: left,
-      isAlive: () => this.activeMenuRealized?.id === rid,
-      onApply: (top, l) => {
-        this.menuPosition = { top, left: l };
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  closeMenu(): void {
-    this.activeMenuRealized = null;
-  }
-
-  showEditSidebar = signal(false);
-  realizedIdToEdit = signal<string | null>(null);
-
-  goToEdit(r: RealizedCsr): void {
-    this.closeMenu();
-    this.realizedIdToEdit.set(r.id);
-    this.showEditSidebar.set(true);
-  }
-
-  closeEditSidebar(): void {
-    this.showEditSidebar.set(false);
-    this.realizedIdToEdit.set(null);
-  }
-
-  onRealizedUpdated(): void {
-    this.closeEditSidebar();
-    this.refresh();
-  }
-
-  deleteFromMenu(r: RealizedCsr): void {
-    if (!confirm('Supprimer définitivement cette réalisation ?')) return;
-    this.api.delete(r.id).subscribe({
-      next: () => {
-        this.list.update((list) => list.filter((x) => x.id !== r.id));
-        this.closeMenu();
-      },
-      error: () => {},
-    });
-  }
-
-  list = signal<RealizedCsr[]>([]);
+  plans = signal<CsrPlan[]>([]);
   loading = signal(true);
   exporting = signal(false);
-  selectedPlanId = signal<string | null>(null);
+  selectedYear = signal<number | null>(null);
   search = signal<string>('');
+  expandedPlanIds = signal<Set<string>>(new Set());
 
-  sortColumn = signal<string>('realization_date');
+  sortColumn = signal<string>('year');
   sortDirection = signal<'asc' | 'desc'>('desc');
 
-  /** Unique plans from current list (for filter dropdown). */
-  plans = computed(() => {
-    const items = this.list();
-    const seen = new Set<string>();
-    const out: { plan_id: string; site_name: string; year: number }[] = [];
-    for (const r of items) {
-      if (r.plan_id && !seen.has(r.plan_id)) {
-        seen.add(r.plan_id);
-        out.push({
-          plan_id: r.plan_id,
-          site_name: (r.site_name ?? '–') as string,
-          year: this._realizationYear(r) ?? 0,
-        });
-      }
-    }
-    return out.sort((a, b) => b.year - a.year || a.site_name.localeCompare(b.site_name));
-  });
+  showCreateSidebar = signal(false);
+  initialPlanIdForSidebar: string | null = null;
 
-  private _realizationYear(r: RealizedCsr): number | null {
-    const d = r.realization_date;
-    if (!d) return null;
-    const y = parseInt(String(d).slice(0, 4), 10);
-    return Number.isFinite(y) ? y : null;
+  ngOnInit(): void {
+    this.refresh();
+    this.route.queryParamMap.subscribe((params) => {
+      const planId = params.get('plan_id');
+      this.initialPlanIdForSidebar = planId || null;
+      if (planId) {
+        this.showCreateSidebar.set(true);
+        this.router.navigate([], { queryParams: { plan_id: null }, queryParamsHandling: 'merge', replaceUrl: true });
+      }
+    });
   }
 
-  filteredList = computed(() => {
-    const items = this.list();
-    const planId = this.selectedPlanId();
+  refresh(): void {
+    this.loading.set(true);
+    this.plansApi.list({ plan_type: 'realized', include_plan_kpis: true }).subscribe({
+      next: (data) => {
+        this.plans.set(Array.isArray(data) ? data.filter((p) => this.isApprovedPlan(p)) : []);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+  }
+
+  private isApprovedPlan(plan: CsrPlan): boolean {
+    return plan.status === 'VALIDATED' || plan.status === 'LOCKED';
+  }
+
+  private readonly currentYear = new Date().getFullYear();
+
+  filteredPlans = computed(() => {
+    const list = this.plans();
+    const year = this.selectedYear();
     const q = this.search().toLowerCase().trim();
-    const filtered = items.filter(item =>
-      (!planId || item.plan_id === planId) &&
-      (!q ||
-        (item.activity_title ?? '').toLowerCase().includes(q) ||
-        (item.activity_number ?? '').toLowerCase().includes(q) ||
-        (item.site_name ?? '').toLowerCase().includes(q) ||
-        (item.realization_date ?? '').toLowerCase().includes(q))
-    );
+    const filtered = list.filter((plan) => {
+      if (!this.isApprovedPlan(plan)) return false;
+      const planYear = plan.year != null ? Number(plan.year) : NaN;
+      const isPastYear = Number.isFinite(planYear) && planYear < this.currentYear;
+      const earlySubmitted = !!plan.realization_report_submitted_at;
+      if (!isPastYear && !earlySubmitted) return false;
+      const yearOk = !year || (Number.isFinite(planYear) && planYear === year) || plan.year === year;
+      return (
+        yearOk &&
+        (!q ||
+          (plan.site_name ?? '').toLowerCase().includes(q) ||
+          (plan.site_code ?? '').toLowerCase().includes(q) ||
+          (plan.site_country ?? '').toLowerCase().includes(q) ||
+          String(plan.year).includes(q))
+      );
+    });
     const col = this.sortColumn();
     const dir = this.sortDirection();
     return [...filtered].sort((a, b) => {
+      const kpiVal = (p: CsrPlan, field: string): number => {
+        const v = (p.plan_kpis as Record<string, unknown> | null | undefined)?.[field];
+        return typeof v === 'number' && Number.isFinite(v) ? v : -1;
+      };
+      if (col.startsWith('kpi_')) {
+        const field = col.slice(4);
+        const numA = kpiVal(a, field);
+        const numB = kpiVal(b, field);
+        if (numA < numB) return dir === 'asc' ? -1 : 1;
+        if (numA > numB) return dir === 'asc' ? 1 : -1;
+        return 0;
+      }
+      if (col === 'allocated_budget') {
+        const numA = this.planPlannedBudget(a) ?? -1;
+        const numB = this.planPlannedBudget(b) ?? -1;
+        if (numA < numB) return dir === 'asc' ? -1 : 1;
+        if (numA > numB) return dir === 'asc' ? 1 : -1;
+        return 0;
+      }
+      if (col === 'realization_progress') {
+        const score = (p: CsrPlan) => {
+          const rate = p.plan_kpis?.action_execution_rate;
+          if (rate != null && Number.isFinite(Number(rate))) return Number(rate);
+          const total = Number(p.activities_count ?? 0);
+          if (!Number.isFinite(total) || total <= 0) return -1;
+          const r = Number(p.activities_realized_count ?? 0);
+          return (Math.max(0, r) / total) * 100;
+        };
+        const numA = score(a);
+        const numB = score(b);
+        if (numA < numB) return dir === 'asc' ? -1 : 1;
+        if (numA > numB) return dir === 'asc' ? 1 : -1;
+        return 0;
+      }
       const valA = (a as any)[col]?.toString().toLowerCase() ?? '';
       const valB = (b as any)[col]?.toString().toLowerCase() ?? '';
-      let numA: number, numB: number;
-      if (col === 'activity_number') {
-        // Natural sort: extract numbers for comparison (CSR 1 < CSR 2 < CSR 10 < CSR 100)
-        const matchA = valA.match(/\d+/g);
-        const matchB = valB.match(/\d+/g);
-        numA = matchA?.length ? parseInt(matchA[matchA.length - 1], 10) : 0;
-        numB = matchB?.length ? parseInt(matchB[matchB.length - 1], 10) : 0;
-        if (numA !== numB) {
-          if (numA < numB) return dir === 'asc' ? -1 : 1;
-          if (numA > numB) return dir === 'asc' ? 1 : -1;
-        }
-        return dir === 'asc' ? (valA < valB ? -1 : valA > valB ? 1 : 0) : (valA < valB ? 1 : valA > valB ? -1 : 0);
-      }
-      numA = typeof (a as any)[col] === 'number' ? (a as any)[col] : parseFloat(valA) || 0;
-      numB = typeof (b as any)[col] === 'number' ? (b as any)[col] : parseFloat(valB) || 0;
-      if (col === 'planned_budget' || col === 'realized_budget' || col === 'participants' || col === 'total_hc') {
+      const numA = typeof (a as any)[col] === 'number' ? (a as any)[col] : parseFloat(valA) || 0;
+      const numB = typeof (b as any)[col] === 'number' ? (b as any)[col] : parseFloat(valB) || 0;
+      if (col === 'year' || col === 'budget_consumed' || col === 'activities_count') {
         if (numA < numB) return dir === 'asc' ? -1 : 1;
         if (numA > numB) return dir === 'asc' ? 1 : -1;
       } else {
@@ -268,17 +151,107 @@ export class RealizedListComponent implements OnInit {
     });
   });
 
+  filterYears = computed(() => {
+    const years = new Set(this.plans().map((p) => p.year).filter((y): y is number => y != null));
+    return Array.from(years).sort((a, b) => b - a);
+  });
+
+  totalPlans = computed(() => this.filteredPlans().length);
+  totalBudgetConsumed = computed(() =>
+    this.filteredPlans().reduce((sum, p) => sum + (p.budget_consumed ?? p.plan_kpis?.actual_budget_sum ?? 0), 0)
+  );
+  avgExecutionRate = computed(() => {
+    const rates = this.filteredPlans()
+      .map((p) => p.plan_kpis?.action_execution_rate)
+      .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+      .map(Number);
+    if (!rates.length) return null;
+    return rates.reduce((a, b) => a + b, 0) / rates.length;
+  });
+
   sortBy(column: string): void {
     if (this.sortColumn() === column) {
-      this.sortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+      this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       this.sortColumn.set(column);
-      this.sortDirection.set(column === 'year' ? 'desc' : 'asc');
+      this.sortDirection.set(column === 'year' || column === 'realization_progress' ? 'desc' : 'asc');
     }
   }
 
-  totalRecords = computed(() => this.filteredList().length);
-  totalBudget = computed(() => this.filteredList().reduce((sum, r) => sum + (r.realized_budget ?? 0), 0));
+  executionProgressInfo(plan: CsrPlan): { pct: number; barWidth: number } | null {
+    const rate = plan.plan_kpis?.action_execution_rate;
+    if (rate != null && Number.isFinite(Number(rate))) {
+      const pct = Number(rate);
+      return { pct, barWidth: Math.min(100, Math.max(0, pct)) };
+    }
+    const total = Number(plan.activities_count ?? 0);
+    if (!Number.isFinite(total) || total <= 0) return null;
+    const raw = Number(plan.activities_realized_count ?? 0);
+    const realized = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+    const pct = (realized / total) * 100;
+    return { pct, barWidth: Math.min(100, Math.max(0, pct)) };
+  }
+
+  /** Allocated budget in CSR reports = sum of each activity's planned budget. */
+  planPlannedBudget(plan: CsrPlan): number | null {
+    const fromPlan = plan.total_estimated_budget;
+    if (fromPlan != null && Number.isFinite(Number(fromPlan))) return Number(fromPlan);
+    const fromKpi = plan.plan_kpis?.estimated_budget_sum;
+    if (fromKpi != null && Number.isFinite(Number(fromKpi))) return Number(fromKpi);
+    return null;
+  }
+
+  validationModeLabel(mode: string): string {
+    if (mode === '311') return 'Level 3';
+    if (mode === '211') return 'Level 2';
+    if (mode === '111') return 'Level 1';
+    return 'Corporate only';
+  }
+
+  planKpiRate(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toFixed(1)}%`;
+  }
+
+  planKpiMoney(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(Number(value))) return '–';
+    return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })} €`;
+  }
+
+  goToDetail(plan: CsrPlan): void {
+    this.router.navigate(['/csr-plans', plan.id]);
+  }
+
+  toggleExpanded(planId: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.expandedPlanIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(planId)) next.delete(planId);
+      else next.add(planId);
+      return next;
+    });
+  }
+
+  isExpanded(planId: string): boolean {
+    return this.expandedPlanIds().has(planId);
+  }
+
+  canCreateRealized(): boolean {
+    return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('realized_activity.create');
+  }
+
+  openCreateSidebar(): void {
+    if (!this.canCreateRealized()) return;
+    this.showCreateSidebar.set(true);
+  }
+
+  closeCreateSidebar(): void {
+    this.showCreateSidebar.set(false);
+  }
+
+  onRealizedCreated(): void {
+    this.refresh();
+  }
 
   exportRows(format: 'csv' | 'xlsx' | 'doc' | 'pdf'): void {
     const rows = this.buildExportRows();
@@ -294,37 +267,27 @@ export class RealizedListComponent implements OnInit {
     }
   }
 
-  private buildExportRows(): Array<Record<string, unknown>> {
-    return this.filteredList().map((r) => ({
-      activity_number: r.activity_number ?? '',
-      region: (r as any).region ?? (r as any).site_region ?? '',
-      country: (r as any).country ?? (r as any).site_country ?? '',
-      site_name: r.site_name ?? '',
-      activity_title: r.activity_title ?? '',
-      activity_description: r.activity_description ?? '',
-      category_name: r.category_name ?? '',
-      collaboration_nature: r.collaboration_nature ?? '',
-      year: this._realizationYear(r) ?? '',
-      start_year: r.start_year ?? '',
-      edition: r.edition ?? '',
-      external_partner_name: r.external_partner_name ?? '',
-      total_hc: r.total_hc ?? '',
-      percentage_employees: (r as any).percentage_employees ?? '',
-      planned_budget: this.formatMoney(r.planned_budget),
-      realized_budget: this.formatMoney(r.realized_budget),
-      action_impact_actual: r.action_impact_actual ?? '',
-      action_impact_unit: r.action_impact_unit ?? '',
-      organizer: r.organizer ?? '',
-      external_partner_count: this.countExternalPartners(r.external_partner_name ?? ''),
-      is_off_plan: r.is_off_plan ? 'Yes' : 'No',
-    }));
-  }
-
-  private countExternalPartners(value: string): number {
-    return value
-      .split(',')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0).length;
+  private buildExportRows(): Array<Record<string, string | number>> {
+    return this.filteredPlans().map((plan) => {
+      const kpis = plan.plan_kpis;
+      return {
+        site_name: plan.site_name ?? plan.site_code ?? plan.site_id,
+        country: plan.site_country ?? '',
+        year: plan.year ?? '',
+        validation_mode: this.validationModeLabel(plan.validation_mode),
+        activities_count: plan.activities_count ?? 0,
+        activities_realized_count: plan.activities_realized_count ?? 0,
+        allocated_budget: this.formatMoney(this.planPlannedBudget(plan)),
+        budget_consumed: this.formatMoney(plan.budget_consumed ?? kpis?.actual_budget_sum),
+        incidents_sum: kpis?.incidents_sum ?? 0,
+        involvement_rate: kpis?.involvement_rate ?? '',
+        action_delivery_rate: kpis?.action_delivery_rate ?? '',
+        action_execution_rate: kpis?.action_execution_rate ?? '',
+        budget_control_rate: kpis?.budget_control_rate ?? '',
+        external_partners_sum: kpis?.external_partners_sum ?? 0,
+        participants_vs_total_hc_rate: kpis?.participants_vs_total_hc_rate ?? '',
+      };
+    });
   }
 
   private formatMoney(amount: number | null | undefined): string {
@@ -332,7 +295,7 @@ export class RealizedListComponent implements OnInit {
     return Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 });
   }
 
-  private exportAsCsv(rows: Array<Record<string, unknown>>): void {
+  private exportAsCsv(rows: Array<Record<string, string | number>>): void {
     const headers = this.exportColumns.map((c) => c.label);
     const body = rows.map((row) =>
       this.exportColumns.map((c) => `"${String(row[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
@@ -341,55 +304,51 @@ export class RealizedListComponent implements OnInit {
     this.downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), this.exportFilename('csv'));
   }
 
-  private exportAsXlsx(rows: Array<Record<string, unknown>>): void {
+  private exportAsXlsx(rows: Array<Record<string, string | number>>): void {
     import('xlsx').then((XLSX) => {
       const normalized = rows.map((row) => {
-        const out: Record<string, string | number | boolean> = {};
-        this.exportColumns.forEach((c) => (out[c.label] = (row[c.key] as string | number | boolean) ?? ''));
+        const out: Record<string, string | number> = {};
+        this.exportColumns.forEach((c) => (out[c.label] = row[c.key] ?? ''));
         return out;
       });
       const worksheet = XLSX.utils.json_to_sheet(normalized);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Realized Activities');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'CSR Reports');
       XLSX.writeFile(workbook, this.exportFilename('xlsx'));
     });
   }
 
-  private exportAsDoc(rows: Array<Record<string, unknown>>): void {
+  private exportAsDoc(rows: Array<Record<string, string | number>>): void {
     const headerHtml = this.exportColumns.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
-    const bodyHtml = rows.map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`).join('');
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Realized Activities</title></head><body><h2>Realized activities export</h2><p><strong>Generated at:</strong> ${this.escapeHtml(this.exportTimestamp())}<br><strong>Generated by:</strong> ${this.escapeHtml(this.exportUserLabel())}</p><table border="1" cellspacing="0" cellpadding="6"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
+    const bodyHtml = rows
+      .map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`)
+      .join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>CSR Reports</title></head><body><h2>CSR reports export</h2><p><strong>Generated at:</strong> ${this.escapeHtml(this.exportTimestamp())}</p><table border="1" cellspacing="0" cellpadding="6"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
     this.downloadBlob(new Blob([html], { type: 'application/msword' }), this.exportFilename('doc'));
   }
 
-  private exportAsPdf(rows: Array<Record<string, unknown>>): void {
+  private exportAsPdf(rows: Array<Record<string, string | number>>): void {
     const headerHtml = this.exportColumns.map((c) => `<th>${this.escapeHtml(c.label)}</th>`).join('');
-    const bodyHtml = rows.map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`).join('');
+    const bodyHtml = rows
+      .map((row) => `<tr>${this.exportColumns.map((c) => `<td>${this.escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`)
+      .join('');
     const title = this.exportFilename('pdf');
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}h1{font-size:18px;margin:0 0 12px}.meta{font-size:12px;color:#374151;margin:0 0 12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #d1d5db;padding:6px;text-align:left}th{background:#f3f4f6}</style></head><body><h1>Realized activities export</h1><p class="meta"><strong>Generated at:</strong> ${this.escapeHtml(this.exportTimestamp())}<br><strong>Generated by:</strong> ${this.escapeHtml(this.exportUserLabel())}</p><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`);
+    printWindow.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}table{border-collapse:collapse;width:100%;font-size:10px}th,td{border:1px solid #d1d5db;padding:4px;text-align:left}th{background:#f3f4f6}</style></head><body><h1>CSR reports export</h1><p><strong>Generated at:</strong> ${this.escapeHtml(this.exportTimestamp())}</p><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`
+    );
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
   }
 
   private exportFilename(ext: 'csv' | 'xlsx' | 'doc' | 'pdf'): string {
-    const stamp = new Date().toISOString().slice(0, 10);
-    return `realized_activities_${stamp}.${ext}`;
+    return `csr_reports_${new Date().toISOString().slice(0, 10)}.${ext}`;
   }
 
   private exportTimestamp(): string {
     return new Date().toLocaleString();
-  }
-
-  private exportUserLabel(): string {
-    const u = this.authStore.user();
-    if (!u) return 'Unknown user';
-    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim();
-    if (name && u.email) return `${name} (${u.email})`;
-    if (name) return name;
-    return u.email ?? 'Unknown user';
   }
 
   private downloadBlob(blob: Blob, filename: string): void {
@@ -410,44 +369,5 @@ export class RealizedListComponent implements OnInit {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-  }
-
-  showCreateSidebar = signal(false);
-  initialPlanIdForSidebar: string | null = null;
-
-  ngOnInit(): void {
-    this.refresh();
-    this.route.queryParamMap.subscribe((params) => {
-      const planId = params.get('plan_id');
-      this.initialPlanIdForSidebar = planId || null;
-      if (planId) {
-        this.showCreateSidebar.set(true);
-        this.router.navigate([], { queryParams: { plan_id: null }, queryParamsHandling: 'merge', replaceUrl: true });
-      }
-    });
-  }
-
-  openCreateSidebar(): void {
-    if (!this.canCreateRealized()) return;
-    this.showCreateSidebar.set(true);
-  }
-
-  closeCreateSidebar(): void {
-    this.showCreateSidebar.set(false);
-  }
-
-  onRealizedCreated(): void {
-    this.refresh();
-  }
-
-  refresh(): void {
-    this.loading.set(true);
-    this.api.list().subscribe({
-      next: (data) => {
-        this.list.set(data);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
   }
 }

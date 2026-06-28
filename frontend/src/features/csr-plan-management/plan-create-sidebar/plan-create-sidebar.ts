@@ -40,7 +40,6 @@ export class PlanCreateSidebarComponent implements OnInit {
       site_id: ['', Validators.required],
       year: [new Date().getFullYear(), [Validators.required, Validators.min(2000), Validators.max(2100)]],
       validation_mode: ['101'],
-      allocated_budget: [null as number | null],
       total_hc: [null as number | null],
     });
     this.loadSites();
@@ -106,7 +105,6 @@ export class PlanCreateSidebarComponent implements OnInit {
       site_id: raw.site_id,
       year: Number(raw.year),
       validation_mode: selectedMode,
-      allocated_budget: raw.allocated_budget != null && raw.allocated_budget !== '' ? Number(raw.allocated_budget) : null,
       total_hc: raw.total_hc != null && raw.total_hc !== '' ? Number(raw.total_hc) : null,
     };
     this.csrPlansApi.create(payload).pipe(

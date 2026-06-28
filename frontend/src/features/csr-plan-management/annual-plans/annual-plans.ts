@@ -272,11 +272,8 @@ export class AnnualPlansComponent implements OnInit {
   plans = signal<CsrPlan[]>([]);
   loading = signal(true);
   exporting = signal(false);
-  selectedYear = signal<number | null>(null);
   selectedStatus = signal<string>('');
   search = signal<string>('');
-  /** Filter by plan type: 'planned' (current+next year), 'realized' (past years), 'all'. */
-  planTypeFilter = signal<'planned' | 'realized' | 'all'>('all');
 
   sortColumn = signal<string>('year');
   sortDirection = signal<'asc' | 'desc'>('desc');
@@ -299,24 +296,17 @@ export class AnnualPlansComponent implements OnInit {
 
   filteredPlans = computed(() => {
     const list = this.plans();
-    const year = this.selectedYear();
     const status = this.selectedStatus();
     const q = this.search().toLowerCase().trim();
-    const planFilter = this.planTypeFilter();
     const currentYear = new Date().getFullYear();
-    const filtered = list.filter(plan => {
-      if (planFilter === 'planned' && (plan.year == null || plan.year < currentYear || plan.year > currentYear + 1)) return false;
-      if (planFilter === 'realized' && (plan.year == null || plan.year >= currentYear)) return false;
-      const planYear = plan.year != null ? Number(plan.year) : NaN;
-      const yearOk = !year || (Number.isFinite(planYear) && planYear === year) || plan.year === year;
-      return yearOk &&
-        this.planMatchesStatus(plan, status) &&
-        (!q ||
-          (plan.site_name ?? '').toLowerCase().includes(q) ||
-          (plan.site_code ?? '').toLowerCase().includes(q) ||
-          (plan.site_country ?? '').toLowerCase().includes(q) ||
-          String(plan.year).includes(q));
-    });
+    const filtered = list.filter(plan =>
+      this.planMatchesStatus(plan, status) &&
+      (!q ||
+        (plan.site_name ?? '').toLowerCase().includes(q) ||
+        (plan.site_code ?? '').toLowerCase().includes(q) ||
+        (plan.site_country ?? '').toLowerCase().includes(q) ||
+        String(plan.year).includes(q))
+    );
     const col = this.sortColumn();
     const dir = this.sortDirection();
     const realizationProgressScore = (p: CsrPlan): number => {
@@ -389,20 +379,11 @@ export class AnnualPlansComponent implements OnInit {
     };
   }
 
-  /** Unique years from plans + current year and next year (for filter). */
-  filterYears = computed(() => {
-    const currentYear = new Date().getFullYear();
-    const years = new Set(this.plans().map(p => p.year).filter((y): y is number => y != null));
-    years.add(currentYear);
-    years.add(currentYear + 1);
-    return Array.from(years).sort((a, b) => b - a);
-  });
-
-  totalPlans = computed(() => this.plans().length);
-  submittedPlans = computed(() => this.plans().filter(p => p.status === 'SUBMITTED').length);
-  approvedPlans = computed(() => this.plans().filter(p => p.status === 'VALIDATED').length);
+  totalPlans = computed(() => this.filteredPlans().length);
+  submittedPlans = computed(() => this.filteredPlans().filter(p => p.status === 'SUBMITTED').length);
+  approvedPlans = computed(() => this.filteredPlans().filter(p => p.status === 'VALIDATED').length);
   totalBudget = computed(() =>
-    this.plans().reduce((sum, p) => sum + (p.allocated_budget ?? 0), 0)
+    this.filteredPlans().reduce((sum, p) => sum + (p.allocated_budget ?? 0), 0)
   );
 
   selectedCount = computed(() => this.selectedPlanIds().size);
@@ -564,11 +545,28 @@ export class AnnualPlansComponent implements OnInit {
     return false;
   }
 
+  private canCreateRealizationPermission(): boolean {
+    return !this.authStore.isValidatorLevel() && this.authStore.hasPermission('realized_activity.create');
+  }
+
+  canSubmitPlanForRealization(plan: CsrPlan): boolean {
+    if (!plan || !this.canCreateRealizationPermission()) return false;
+    if (plan.realization_report_submitted_at) return false;
+    const y = Number(plan.year);
+    const currentYear = new Date().getFullYear();
+    if (!Number.isFinite(y) || y < currentYear) return false;
+    if (plan.status !== 'VALIDATED') return false;
+    const u = plan.unlock_until;
+    if (u && new Date(u) > new Date()) return false;
+    return true;
+  }
+
   canOpenRowMenu(plan: CsrPlan): boolean {
     if (!plan) return false;
     return !!(
       this.isPlanEditable(plan) ||
       this.canSubmitFromList(plan) ||
+      this.canSubmitPlanForRealization(plan) ||
       (this.canDeletePlans() && (this.isCorporateUser() || plan.status === 'DRAFT' || plan.status === 'REJECTED')) ||
       plan.can_approve ||
       plan.can_reject
@@ -654,6 +652,27 @@ export class AnnualPlansComponent implements OnInit {
 
   goToChangeRequest(planId: string): void {
     this.router.navigate(['/changes/create'], { queryParams: { planId } });
+  }
+
+  submitRealizationReportFromMenu(plan: CsrPlan): void {
+    if (!this.canSubmitPlanForRealization(plan)) return;
+    this.openConfirm({
+      title: this.i18n.t('COMMON.CONFIRM'),
+      message: this.i18n.t('ANNUAL_PLANS.CONFIRM.SUBMIT_REALIZATION_REPORT'),
+      onConfirm: () => {
+        this.menuActionLoading.set(plan.id);
+        this.csrPlansApi.submitRealizationReport(plan.id).subscribe({
+          next: () => {
+            this.menuActionLoading.set(null);
+            this.closeMenu();
+            this.refreshPlans();
+          },
+          error: () => {
+            this.menuActionLoading.set(null);
+          },
+        });
+      },
+    });
   }
 
   submitFromMenu(plan: CsrPlan): void {

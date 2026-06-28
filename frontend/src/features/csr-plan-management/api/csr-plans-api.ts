@@ -109,11 +109,19 @@ export class CsrPlansApi {
    * List CSR plans. Optional filters: site_id, year, status.
    * SITE_USER only receives plans for their assigned sites.
    */
-  list(params?: { site_id?: string; year?: number; status?: string }): Observable<CsrPlan[]> {
+  list(params?: {
+    site_id?: string;
+    year?: number;
+    status?: string;
+    plan_type?: 'planned' | 'realized';
+    include_plan_kpis?: boolean;
+  }): Observable<CsrPlan[]> {
     let httpParams = new HttpParams();
     if (params?.site_id) httpParams = httpParams.set('site_id', params.site_id);
     if (params?.year != null) httpParams = httpParams.set('year', params.year.toString());
     if (params?.status) httpParams = httpParams.set('status', params.status);
+    if (params?.plan_type) httpParams = httpParams.set('plan_type', params.plan_type);
+    if (params?.include_plan_kpis) httpParams = httpParams.set('include_plan_kpis', '1');
     return this.http.get<CsrPlan[]>(`${this.apiUrl}/csr-plans`, { params: httpParams });
   }
 
@@ -137,6 +145,11 @@ export class CsrPlansApi {
 
   submitForValidation(planId: string): Observable<CsrPlan> {
     return this.http.patch<CsrPlan>(`${this.apiUrl}/csr-plans/${planId}/submit`, {});
+  }
+
+  /** Close an approved current/future-year plan as a CSR report (partial realization allowed). */
+  submitRealizationReport(planId: string): Observable<CsrPlan> {
+    return this.http.patch<CsrPlan>(`${this.apiUrl}/csr-plans/${planId}/submit-realization-report`, {});
   }
 
   approve(planId: string): Observable<CsrPlan> {

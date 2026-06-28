@@ -32,7 +32,6 @@ export class PlanEditSidebarComponent implements OnInit {
     this.form = this.fb.group({
       year: [this.plan.year, [Validators.required, Validators.min(2000), Validators.max(2100)]],
       validation_mode: [this.plan.validation_mode || '101'],
-      allocated_budget: [this.plan.allocated_budget ?? null],
       total_hc: [this.plan.total_hc ?? null],
     });
   }
@@ -58,7 +57,6 @@ export class PlanEditSidebarComponent implements OnInit {
     const payload: UpdateCsrPlanPayload = {
       year: Number(raw.year),
       validation_mode: selectedMode,
-      allocated_budget: raw.allocated_budget != null && raw.allocated_budget !== '' ? Number(raw.allocated_budget) : null,
       total_hc: raw.total_hc != null && raw.total_hc !== '' ? Number(raw.total_hc) : null,
     };
 

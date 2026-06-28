@@ -84,14 +84,24 @@
       {{ 'AUDIT_LOG.FILTER_BUTTON' | translate }}
     </button>
     @if (canExport) {
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 flex-shrink-0 disabled:opacity-50"
-        (click)="exportCsv()"
-        [disabled]="exporting()"
-      >
-        {{ exporting() ? ('COMMON.SAVING' | translate) : ('AUDIT_LOG.EXPORT_CSV' | translate) }}
-      </button>
+      <div class="relative w-[200px] flex-shrink-0">
+        <select
+          class="pl-5 pr-10 py-2.5 w-full bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium shadow-sm focus:ring-2 focus:ring-brand-700 focus:outline-none appearance-none cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          [disabled]="exporting() || loading()"
+          (change)="exportLogs($any($event.target).value); $any($event.target).value = ''"
+        >
+          <option value="">{{ exporting() ? ('COMMON.SAVING' | translate) : ('AUDIT_LOG.EXPORT' | translate) }}</option>
+          <option value="xlsx">{{ 'AUDIT_LOG.EXPORT_XLSX' | translate }}</option>
+          <option value="csv">{{ 'AUDIT_LOG.EXPORT_CSV' | translate }}</option>
+          <option value="doc">{{ 'AUDIT_LOG.EXPORT_DOC' | translate }}</option>
+          <option value="pdf">{{ 'AUDIT_LOG.EXPORT_PDF' | translate }}</option>
+        </select>
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+          </svg>
+        </div>
+      </div>
     }
   </div>
 

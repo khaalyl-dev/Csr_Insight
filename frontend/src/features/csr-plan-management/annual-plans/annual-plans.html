@@ -383,21 +383,6 @@
             (input)="search.set($any($event.target).value)" />
         </div>
         <div class="relative w-[180px] flex-shrink-0">
-          <select
-            class="pl-3 pr-9 py-2.5 w-full bg-gray-100 border-0 rounded-xl text-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none appearance-none cursor-pointer hover:bg-gray-200"
-            [value]="planTypeFilter()"
-            (change)="planTypeFilter.set($any($event.target).value)">
-            <option value="all">{{ 'ANNUAL_PLANS.FILTER.ALL_PLANS' | translate }}</option>
-            <option value="planned">{{ 'ANNUAL_PLANS.FILTER.PLANNED' | translate }}</option>
-            <option value="realized">{{ 'ANNUAL_PLANS.FILTER.REALIZED' | translate }}</option>
-          </select>
-          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
-            </svg>
-          </div>
-        </div>
-        <div class="relative w-[180px] flex-shrink-0">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -414,26 +399,6 @@
             <option value="VALIDATED_LOCKED">{{ 'ANNUAL_PLANS.STATUS.VALIDATED' | translate }}</option>
             <option value="VALIDATED_OPEN">{{ 'ANNUAL_PLANS.STATUS.UNLOCKED' | translate }}</option>
             <option value="REJECTED">{{ 'ANNUAL_PLANS.STATUS.REJECTED' | translate }}</option>
-          </select>
-          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
-            </svg>
-          </div>
-        </div>
-
-        <div class="relative w-[180px] flex-shrink-0">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-            </svg>
-          </div>
-          <select
-            class="pl-9 pr-10 py-2.5 w-full bg-gray-100 border-0 rounded-xl text-sm text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none appearance-none cursor-pointer hover:bg-gray-200"
-            [value]="selectedYear() ?? ''"
-            (change)="selectedYear.set($any($event.target).value ? +$any($event.target).value : null)">
-            <option value="">{{ 'ANNUAL_PLANS.FILTER.ALL_YEARS' | translate }}</option>
-            <option [value]="y" *ngFor="let y of filterYears()">{{ y }}</option>
           </select>
           <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -564,21 +529,7 @@
               </span>
             } @else {
               @if (realizationProgressInfo(plan); as prog) {
-                <div class="space-y-1">
-                  <div
-                    class="h-2.5 rounded-full bg-gray-200 overflow-hidden"
-                    role="progressbar"
-                    [attr.aria-valuemin]="0"
-                    [attr.aria-valuemax]="100"
-                    [attr.aria-valuenow]="prog.barWidth"
-                    [attr.aria-label]="'ANNUAL_PLANS.TABLE.REALIZATION_PROGRESS' | translate">
-                    <div
-                      class="h-full rounded-full bg-emerald-600 transition-all duration-300"
-                      [style.min-width]="prog.barWidth > 0 ? '2px' : '0'"
-                      [style.width.%]="prog.barWidth"></div>
-                  </div>
-                  <div class="text-xs text-gray-600 tabular-nums font-medium">{{ prog.pct | number:'1.0-0' }}%</div>
-                </div>
+                <span class="text-sm text-gray-700 tabular-nums font-medium">{{ prog.pct | number:'1.0-0' }}%</span>
               } @else {
                 <span class="text-gray-400 text-sm">–</span>
               }
@@ -631,6 +582,12 @@
     class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
     <i class="fas fa-paper-plane text-brand-700 w-4 text-center"></i>
     {{ 'ANNUAL_PLANS.ACTIONS.SUBMIT' | translate }}
+  </button>
+
+  <button *ngIf="canSubmitPlanForRealization(activeMenuPlan!)" (click)="submitRealizationReportFromMenu(activeMenuPlan!)"
+    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-brand-900 hover:bg-brand-50 transition-colors">
+    <i class="fas fa-clipboard-check text-brand-700 w-4 text-center"></i>
+    {{ 'ANNUAL_PLANS.ACTIONS.SUBMIT_REALIZATION_REPORT' | translate }}
   </button>
 
   <div *ngIf="activeMenuPlan!.can_approve || activeMenuPlan!.can_reject" class="border-t border-gray-100 my-1"></div>

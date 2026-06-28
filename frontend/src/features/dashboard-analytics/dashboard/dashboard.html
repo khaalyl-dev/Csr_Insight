@@ -1,8 +1,51 @@
-<div class="p-8 bg-gray-50 min-h-screen">
-  <div class="mx-auto max-w-7xl">
-    <h1 class="text-2xl font-bold tracking-tight text-gray-800">{{ 'BREADCRUMB.DASHBOARD' | translate }}</h1>
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-8 text-sm text-gray-500">
-      {{ 'COMMON.NO_DATA' | translate }}
+<div class="dashboard-shell">
+  @if (canEmbed && powerBiSafeUrl) {
+    <button
+      type="button"
+      (click)="openPowerBi()"
+      class="powerbi-open-btn"
+      [attr.title]="'DASHBOARD.OPEN_IN_POWER_BI' | translate"
+    >
+      <i class="fas fa-external-link-alt text-[10px]" aria-hidden="true"></i>
+      {{ 'DASHBOARD.OPEN_IN_POWER_BI' | translate }}
+    </button>
+    <div class="powerbi-frame-wrap" [style.--powerbi-zoom]="powerBiZoom">
+      @if (iframeLoading()) {
+        <p class="powerbi-loading" aria-live="polite">
+          {{ 'DASHBOARD.POWER_BI_LOADING' | translate }}
+        </p>
+      }
+      @if (loadHint()) {
+        <p class="powerbi-auth-hint">
+          {{ 'DASHBOARD.POWER_BI_SIGN_IN_HINT' | translate }}
+        </p>
+      }
+      <iframe
+        [src]="powerBiSafeUrl"
+        (load)="onIframeLoad()"
+        title="CSR_PFE2"
+        allowfullscreen
+      ></iframe>
     </div>
-  </div>
+  } @else {
+    <div class="dashboard-fallback border-t border-amber-200 bg-amber-50/80">
+      <i class="fas fa-chart-pie mb-4 text-4xl text-amber-600/80" aria-hidden="true"></i>
+      <h2 class="text-lg font-semibold text-gray-800">{{ 'DASHBOARD.POWER_BI_EMBED_BLOCKED_TITLE' | translate }}</h2>
+      <p class="mt-2 max-w-xl text-sm text-gray-600">{{ 'DASHBOARD.POWER_BI_EMBED_BLOCKED_BODY' | translate }}</p>
+      <ol class="mt-6 max-w-lg list-decimal space-y-2 text-left text-sm text-gray-700">
+        <li>{{ 'DASHBOARD.POWER_BI_EMBED_STEP_1' | translate }}</li>
+        <li>{{ 'DASHBOARD.POWER_BI_EMBED_STEP_2' | translate }}</li>
+        <li>{{ 'DASHBOARD.POWER_BI_EMBED_STEP_3' | translate }}</li>
+      </ol>
+      <p class="mt-4 max-w-lg text-xs text-gray-500">{{ 'DASHBOARD.POWER_BI_EMBED_CONFIG_HINT' | translate }}</p>
+      <button
+        type="button"
+        (click)="openPowerBi()"
+        class="mt-8 inline-flex items-center gap-2 rounded-lg bg-[#1B3C53] px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-[#234C6A]"
+      >
+        <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+        {{ 'DASHBOARD.OPEN_IN_POWER_BI' | translate }}
+      </button>
+    </div>
+  }
 </div>
