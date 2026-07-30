@@ -1,0 +1,1215 @@
+openapi: 3.0.3
+info:
+  title: CSR Insight API
+  description: |
+    REST API for the CSR Insight platform — COFICAB Corporate Social Responsibility management system.
+
+    ## Authentication
+    All endpoints except `POST /api/auth/login` and `GET /api/health` require a JWT bearer token:
+    ```
+    Authorization: Bearer <token>
+    ```
+
+    ## Roles
+    - **SITE_USER** — Access limited to assigned sites
+    - **CORPORATE_USER** — Cross-site access and admin features
+  version: 1.0.0
+  contact:
+    name: CSR Insight Team
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:5001
+    description: Local development
+  - url: https://your-backend.onrender.com
+    description: Production (Render)
+
+tags:
+  - name: Health
+    description: Service health checks
+  - name: Auth
+    description: Authentication and profile
+  - name: Users
+    description: User management (corporate only)
+  - name: Sites
+    description: Site and category management
+  - name: CSR Plans
+    description: Annual CSR plans and Excel import
+  - name: Activities
+    description: Planned and realized CSR activities
+  - name: Change Requests
+    description: Unlock and modification requests
+  - name: Documents
+    description: File upload and management
+  - name: Audit
+    description: Audit trail (corporate only)
+  - name: Notifications
+    description: User notifications
+  - name: Tasks
+    description: Aggregated task inbox
+  - name: Dashboard
+    description: KPIs and analytics
+  - name: Chatbot
+    description: AI assistant with RAG
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate user
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and revoke token
+      operationId: logout
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current session user
+      operationId: getMe
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserMinimal'
+
+  /api/auth/profile:
+    get:
+      tags: [Auth]
+      summary: Get full user profile
+      operationId: getProfile
+      responses:
+        '200':
+          description: User profile with sites and preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    put:
+      tags: [Auth]
+      summary: Update user profile
+      operationId: updateProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Updated profile
+
+  /api/auth/change-password:
+    put:
+      tags: [Auth]
+      summary: Change password
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Password changed
+
+  /api/auth/profile-photo:
+    post:
+      tags: [Auth]
+      summary: Upload profile photo
+      operationId: uploadProfilePhoto
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatar_url:
+                    type: string
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List all users
+      operationId: listUsers
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      tags: [Users]
+      summary: Create user
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+
+  /api/users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      operationId: getUser
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        '200':
+          description: User detail
+    patch:
+      tags: [Users]
+      summary: Update user
+      operationId: updateUser
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '200':
+          description: User updated
+
+  /api/users/{userId}/sites:
+    post:
+      tags: [Users]
+      summary: Assign sites to user
+      operationId: assignUserSites
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site_accesses:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      site_id:
+                        type: string
+                        format: uuid
+                      grade:
+                        type: string
+                        enum: [level_0, level_1, level_2, level_3]
+      responses:
+        '200':
+          description: Sites assigned
+
+  /api/users/{userId}/reset-password:
+    post:
+      tags: [Users]
+      summary: Reset user password
+      operationId: resetUserPassword
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        '200':
+          description: New password generated
+
+  /api/sites:
+    get:
+      tags: [Sites]
+      summary: List sites
+      operationId: listSites
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Site list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Site'
+    post:
+      tags: [Sites]
+      summary: Create site
+      operationId: createSite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteRequest'
+      responses:
+        '201':
+          description: Site created
+
+  /api/sites/{siteId}:
+    get:
+      tags: [Sites]
+      summary: Get site by ID
+      operationId: getSite
+      parameters:
+        - $ref: '#/components/parameters/siteId'
+      responses:
+        '200':
+          description: Site detail
+    put:
+      tags: [Sites]
+      summary: Update site
+      operationId: updateSite
+      parameters:
+        - $ref: '#/components/parameters/siteId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteRequest'
+      responses:
+        '200':
+          description: Site updated
+
+  /api/sites/{siteId}/status:
+    patch:
+      tags: [Sites]
+      summary: Toggle site active status
+      operationId: toggleSiteStatus
+      parameters:
+        - $ref: '#/components/parameters/siteId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Status updated
+
+  /api/categories:
+    get:
+      tags: [Sites]
+      summary: List CSR categories
+      operationId: listCategories
+      responses:
+        '200':
+          description: Category list
+    post:
+      tags: [Sites]
+      summary: Create category
+      operationId: createCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Category created
+
+  /api/csr-plans:
+    get:
+      tags: [CSR Plans]
+      summary: List CSR plans
+      operationId: listCsrPlans
+      parameters:
+        - name: site_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PlanStatus'
+        - name: plan_type
+          in: query
+          schema:
+            type: string
+            enum: [planned, realized]
+        - name: include_plan_kpis
+          in: query
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: Plan list
+    post:
+      tags: [CSR Plans]
+      summary: Create CSR plan
+      operationId: createCsrPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      responses:
+        '201':
+          description: Plan created
+
+  /api/csr-plans/{planId}:
+    get:
+      tags: [CSR Plans]
+      summary: Get plan detail
+      operationId: getCsrPlan
+      parameters:
+        - $ref: '#/components/parameters/planId'
+      responses:
+        '200':
+          description: Plan with activities and KPIs
+    patch:
+      tags: [CSR Plans]
+      summary: Update plan
+      operationId: updateCsrPlan
+      parameters:
+        - $ref: '#/components/parameters/planId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      responses:
+        '200':
+          description: Plan updated
+    delete:
+      tags: [CSR Plans]
+      summary: Delete plan
+      operationId: deleteCsrPlan
+      parameters:
+        - $ref: '#/components/parameters/planId'
+      responses:
+        '200':
+          description: Plan deleted
+
+  /api/csr-plans/{planId}/submit:
+    patch:
+      tags: [CSR Plans]
+      summary: Submit plan for validation
+      operationId: submitCsrPlan
+      parameters:
+        - $ref: '#/components/parameters/planId'
+      responses:
+        '200':
+          description: Plan submitted
+
+  /api/csr-plans/{planId}/approve:
+    patch:
+      tags: [CSR Plans]
+      summary: Approve plan
+      operationId: approveCsrPlan
+      parameters:
+        - $ref: '#/components/parameters/planId'
+      responses:
+        '200':
+          description: Plan approved
+
+  /api/csr-plans/{planId}/reject:
+    patch:
+      tags: [CSR Plans]
+      summary: Reject plan
+      operationId: rejectCsrPlan
+      parameters:
+        - $ref: '#/components/parameters/planId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+                activity_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Plan rejected
+
+  /api/csr-plans/import-excel-preview:
+    post:
+      tags: [CSR Plans]
+      summary: Preview Excel import
+      operationId: importExcelPreview
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                site_id:
+                  type: string
+                year:
+                  type: integer
+      responses:
+        '200':
+          description: Preview rows and errors
+
+  /api/csr-activities:
+    get:
+      tags: [Activities]
+      summary: List planned activities
+      operationId: listActivities
+      parameters:
+        - name: plan_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: exclude_realized
+          in: query
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: Activity list
+    post:
+      tags: [Activities]
+      summary: Create planned activity
+      operationId: createActivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateActivityRequest'
+      responses:
+        '201':
+          description: Activity created
+
+  /api/csr-activities/{activityId}:
+    get:
+      tags: [Activities]
+      summary: Get activity detail
+      operationId: getActivity
+      parameters:
+        - $ref: '#/components/parameters/activityId'
+      responses:
+        '200':
+          description: Activity detail
+    put:
+      tags: [Activities]
+      summary: Update activity
+      operationId: updateActivity
+      parameters:
+        - $ref: '#/components/parameters/activityId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateActivityRequest'
+      responses:
+        '200':
+          description: Activity updated
+    delete:
+      tags: [Activities]
+      summary: Delete activity
+      operationId: deleteActivity
+      parameters:
+        - $ref: '#/components/parameters/activityId'
+      responses:
+        '200':
+          description: Activity deleted
+
+  /api/realized-csr:
+    get:
+      tags: [Activities]
+      summary: List realized activities
+      operationId: listRealized
+      parameters:
+        - name: activity_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Realized list
+    post:
+      tags: [Activities]
+      summary: Create realization
+      operationId: createRealized
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRealizedRequest'
+      responses:
+        '201':
+          description: Realization created
+
+  /api/realized-csr/{realizedId}:
+    get:
+      tags: [Activities]
+      summary: Get realization detail
+      operationId: getRealized
+      parameters:
+        - name: realizedId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Realization detail
+    put:
+      tags: [Activities]
+      summary: Update realization
+      operationId: updateRealized
+      parameters:
+        - name: realizedId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRealizedRequest'
+      responses:
+        '200':
+          description: Realization updated
+
+  /api/change-requests:
+    get:
+      tags: [Change Requests]
+      summary: List change requests
+      operationId: listChangeRequests
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+      responses:
+        '200':
+          description: Change request list
+    post:
+      tags: [Change Requests]
+      summary: Create change request
+      operationId: createChangeRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChangeRequest'
+      responses:
+        '201':
+          description: Change request created
+
+  /api/change-requests/{crId}/approve:
+    post:
+      tags: [Change Requests]
+      summary: Approve change request
+      operationId: approveChangeRequest
+      parameters:
+        - name: crId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Approved
+
+  /api/change-requests/{crId}/reject:
+    post:
+      tags: [Change Requests]
+      summary: Reject change request
+      operationId: rejectChangeRequest
+      parameters:
+        - name: crId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Rejected
+
+  /api/documents:
+    get:
+      tags: [Documents]
+      summary: List documents
+      operationId: listDocuments
+      parameters:
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: entity_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document list
+    post:
+      tags: [Documents]
+      summary: Create document record
+      operationId: createDocument
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site_id:
+                  type: string
+                file_name:
+                  type: string
+                file_path:
+                  type: string
+      responses:
+        '201':
+          description: Document created
+
+  /api/documents/upload:
+    post:
+      tags: [Documents]
+      summary: Upload file
+      operationId: uploadDocument
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                site_id:
+                  type: string
+                entity_type:
+                  type: string
+                entity_id:
+                  type: string
+      responses:
+        '201':
+          description: File uploaded
+
+  /api/documents/{docId}:
+    delete:
+      tags: [Documents]
+      summary: Delete document
+      operationId: deleteDocument
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document deleted
+
+  /api/audit/logs:
+    get:
+      tags: [Audit]
+      summary: List audit logs
+      operationId: listAuditLogs
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: site_id
+          in: query
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Audit log entries
+
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      operationId: listNotifications
+      responses:
+        '200':
+          description: Notification list
+
+  /api/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread count
+      operationId: getUnreadCount
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /api/tasks:
+    get:
+      tags: [Tasks]
+      summary: List actionable tasks
+      operationId: listTasks
+      responses:
+        '200':
+          description: Task inbox
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+
+  /api/dashboard/kpis:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard KPIs
+      operationId: getDashboardKpis
+      parameters:
+        - name: site_id
+          in: query
+          schema:
+            type: string
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: KPI data
+
+  /api/chatbot/chat:
+    post:
+      tags: [Chatbot]
+      summary: Chat with AI assistant
+      operationId: chatbotChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt:
+                  type: string
+                model:
+                  type: string
+                  example: phi3:mini
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model:
+                    type: string
+                  response:
+                    type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    userId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    siteId:
+      name: siteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    planId:
+      name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    activityId:
+      name: activityId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Invalid or missing token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserMinimal'
+        permissions:
+          type: array
+          items:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    UserMinimal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+          enum: [SITE_USER, CORPORATE_USER]
+        first_name:
+          type: string
+        last_name:
+          type: string
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/UserMinimal'
+        - type: object
+          properties:
+            phone:
+              type: string
+            language:
+              type: string
+            theme:
+              type: string
+            sites:
+              type: array
+              items:
+                $ref: '#/components/schemas/Site'
+
+    User:
+      allOf:
+        - $ref: '#/components/schemas/UserMinimal'
+        - type: object
+          properties:
+            is_active:
+              type: boolean
+            is_corporate_global:
+              type: boolean
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        language:
+          type: string
+          enum: [en, fr]
+        theme:
+          type: string
+          enum: [light, dark]
+
+    CreateUserRequest:
+      type: object
+      required: [email, password, first_name, last_name]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum: [SITE_USER, CORPORATE_USER]
+        permissions:
+          type: array
+          items:
+            type: string
+
+    Site:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        region:
+          type: string
+        country:
+          type: string
+        is_active:
+          type: boolean
+
+    CreateSiteRequest:
+      type: object
+      required: [name, code]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        region:
+          type: string
+        country:
+          type: string
+        location:
+          type: string
+        description:
+          type: string
+
+    PlanStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, VALIDATED, REJECTED, LOCKED]
+
+    CreatePlanRequest:
+      type: object
+      required: [site_id, year]
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        year:
+          type: integer
+        validation_mode:
+          type: string
+          enum: ['101', '111']
+        total_hc:
+          type: integer
+
+    CreateActivityRequest:
+      type: object
+      required: [plan_id, title, category_id]
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        activity_number:
+          type: string
+        planned_budget:
+          type: number
+        collaboration_nature:
+          type: string
+        organization:
+          type: string
+        contract_type:
+          type: string
+        planned_objectives:
+          type: array
+          items:
+            type: string
+        draft:
+          type: boolean
+
+    CreateRealizedRequest:
+      type: object
+      required: [activity_id]
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        realized_budget:
+          type: number
+        employees_actual:
+          type: integer
+        realization_date:
+          type: string
+          format: date
+        completed_objectives:
+          type: array
+          items:
+            type: string
+        beneficiaries_count:
+          type: integer
+        comments:
+          type: string
+
+    CreateChangeRequest:
+      type: object
+      required: [reason]
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        activity_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        requested_duration:
+          type: integer
+        validation_mode:
+          type: string
+
+security:
+  - bearerAuth: []
