@@ -1,23 +1,40 @@
-# NotificationManagement
+# Notification Management
 
-Alertes et rappels configurables.
+In-app notifications with real-time delivery via Socket.IO.
 
-## Scope
+---
 
-- Alertes email pour soumission, validation ou rejet
-- Rappels pour activités en retard ou modifications nécessaires
-- Notifications configurables selon rôle et site
+## Components (not routed — embedded in MainLayout)
+
+| Component | File | API |
+|-----------|------|-----|
+| Notification bell | `notification-bell/notification-bell.ts` | `GET /api/notifications`, Socket.IO `notification` |
+
+User notification preferences are edited on `/account/profile`.
+
+---
 
 ## Structure
 
-- `models/` – Notification, UserNotification, NotificationSettings
-- `api/` – notifications-api
+```
+notification-management/
+├── notification-bell/
+├── api/notifications-api.ts
+└── models/
+```
 
-## À développer
+---
 
-- [ ] **Notifications API** – List, mark read, get settings
-- [ ] **Bell/Inbox** – Composant cloche + liste notifications non lues
-- [ ] **Mark read** – Marquer comme lu (user_notifications)
-- [ ] **Settings** – Page préférences (email_enabled par site)
-- [ ] **Types** – Gestion des types (soumission, validation, rappel)
-- [ ] **WebSocket/polling** – Rafraîchissement temps réel (optionnel)
+## Implemented
+
+- [x] Notifications API — list, unread count, mark read, mark all read
+- [x] Notification bell with unread badge
+- [x] Real-time push via Socket.IO (`notification-socket.service.ts`)
+- [x] Profile notification preferences (`users.notify_*` columns)
+
+---
+
+## Roadmap
+
+- [ ] Email delivery for critical notifications
+- [ ] Per-site notification settings UI

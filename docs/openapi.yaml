@@ -22,8 +22,6 @@ info:
 servers:
   - url: http://localhost:5001
     description: Local development
-  - url: https://your-backend.onrender.com
-    description: Production (Render)
 
 tags:
   - name: Health

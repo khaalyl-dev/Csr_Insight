@@ -1,6 +1,6 @@
-# Backend (Flask) – CSR Insight
+# Backend (Flask) — CSR Insight
 
-Flask REST API for the CSR Insight platform. Manages CSR plans, activities, validations, documents, and notifications.
+Flask REST API for the CSR Insight platform. Manages CSR plans, activities, validations, documents, notifications, and real-time events.
 
 ---
 
@@ -8,35 +8,20 @@ Flask REST API for the CSR Insight platform. Manages CSR plans, activities, vali
 
 ```
 backend/
-├── app.py              # Entry point – factory, CORS, blueprint registration
-├── config.py           # Configuration (DB, SECRET_KEY, MEDIA_FOLDER)
-├── init_db.py          # Fresh DB setup – tables, categories, users, sites
+├── app.py              # Entry point — factory, CORS, blueprints, Socket.IO
+├── config.py           # Configuration (DB, SECRET_KEY, MEDIA_FOLDER, Ollama/RAG)
+├── init_db.py          # Fresh DB setup — tables, categories, users, sites
 ├── requirements.txt    # Python dependencies
-│
-├── core/               # Shared layer
-│   ├── db.py           # SQLAlchemy instance
-│   ├── jwt_utils.py    # JWT generation/verification, @token_required, @role_required
-│   └── __init__.py
-│
-├── models/             # SQLAlchemy models (users, sites, csr_plans, etc.)
-│   └── README.md
-│
-└── features/           # Business modules (blueprints)
-    ├── user_management/
-    ├── site_management/
-    ├── csr_plan_management/
-    ├── planned_activity_management/
-    ├── realized_activity_management/
-    ├── validation_workflow_management/
-    ├── change_request_management/
-    ├── dashboard_analytics/
-    ├── file_management/
-    ├── audit_history_management/
-    ├── notification_management/
-    ├── powerbi_integration/
-    ├── chatbot_assistant/
-    └── health/
+├── core/               # Shared layer (db, JWT, permissions, schema patches)
+├── models/             # 22 SQLAlchemy models
+├── features/           # Flask blueprints (domain modules)
+├── rag_corpus/         # Chatbot knowledge base (markdown)
+├── data/chroma/        # ChromaDB vector index (default)
+├── tests/
+└── docs/               # Chatbot architecture notes
 ```
+
+Full API reference: [`../docs/API.md`](../docs/API.md) · Database: [`../Database/README.md`](../Database/README.md)
 
 ---
 
@@ -44,9 +29,10 @@ backend/
 
 | File | Purpose |
 |------|---------|
-| **app.py** | Creates Flask app, loads config, initializes DB, registers blueprints. Runs server on port 5001. |
-| **config.py** | Reads env vars (.env): `DB_*`, `SECRET_KEY`, `MEDIA_FOLDER`, optional `OLLAMA_*` for the local chatbot. `get_media_folder()` returns upload path (default `frontend/src/media`). |
-| **init_db.py** | `db.create_all()` creates tables. Adds CSR categories, users, and test sites. Run once for a fresh DB. |
+| **app.py** | Creates Flask app, loads config, `db.create_all()` + schema patches, registers blueprints, runs Socket.IO on port 5001. |
+| **config.py** | Reads `.env`: `DB_*`, `SECRET_KEY`, `MEDIA_FOLDER`, `FRONTEND_ORIGINS`, optional `OLLAMA_*` / `RAG_*`. |
+| **init_db.py** | Creates tables and seed data. Run once for a fresh database. |
+| **core/schema_patches.py** | Additive MySQL patches for existing databases on startup. |
 
 ---
 
@@ -55,14 +41,14 @@ backend/
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate.bat ou Activate.ps1
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-**Python 3.10+** requis. Le fichier `requirements.txt` utilise **mysql-connector-python 9.x** pour rester compatible avec **chromadb** (RAG) sur les versions récentes de Python ; l’API utilisée par le projet reste la même.
+**Python 3.10+** required. `requirements.txt` uses **mysql-connector-python 9.x** for ChromaDB (RAG) compatibility.
 
-Create `.env` at `backend/` root:
+Create `.env` at `backend/` root (see `.env.example`):
 
 ```env
 DB_HOST=localhost
@@ -73,15 +59,7 @@ DB_NAME=csr_db
 SECRET_KEY=change-me-in-production
 ```
 
-Optional — **local chatbot (Ollama)**:
-
-1. Install and start Ollama, then keep it running: `ollama serve` (default `http://127.0.0.1:11434`).
-2. Pull a model if needed: `ollama pull phi3:mini` (or any model you prefer; check with `ollama list`).
-3. In `.env`, set `OLLAMA_MODEL` to that name (defaults to `phi3:mini` if unset). Use `OLLAMA_BASE_URL` only if Ollama listens on another host/port on your LAN (must stay on localhost or a private IP; the API rejects public URLs).
-
-See `backend/.env.example` for variable names.
-
-Initialize DB:
+Initialize database:
 
 ```bash
 python3 init_db.py
@@ -93,32 +71,62 @@ Start server:
 python3 app.py
 ```
 
-→ `http://localhost:5001`
+→ `http://localhost:5001` · Health: `GET /api/health`
+
+### Optional — Chatbot (Ollama)
+
+1. Install and run Ollama: `ollama serve`
+2. Pull a model: `ollama pull phi3:mini`
+3. Set `OLLAMA_MODEL=phi3:mini` in `.env`
 
 ---
 
 ## Test accounts
 
 | Email | Password | Role |
-|-------|--------------|------|
+|-------|----------|------|
 | user@test.com | password123 | Site |
 | admin@test.com | admin123 | Corporate |
 | john@example.com | john123 | Site |
 
 ---
 
-## Main endpoints
+## Blueprint modules
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| POST | /api/auth/login | Login, returns JWT |
-| POST | /api/auth/logout | Logout |
-| GET | /api/auth/profile | User profile |
-| GET | /api/dashboard/* | Dashboards, KPIs |
-| GET | /api/sites | Sites (corporate) |
-| GET | /api/csr-plans | Annual CSR plans |
-| GET | /api/documents | Documents |
-| GET | /api/health | Health check |
-| POST | /api/chatbot/chat | Local Ollama chat (JWT required). Each request attaches a DB snapshot filtered by the user’s role, permissions, and sites — the model must ground answers in that snapshot. |
+| Prefix | Module | Purpose |
+|--------|--------|---------|
+| `/api/auth`, `/api/users` | user_management | Auth, profile, user CRUD |
+| `/api/sites`, `/api/categories` | site_management | Sites, categories |
+| `/api/csr-plans` | csr_plan_management | Plans + Excel import |
+| `/api/csr-activities` | planned_activity_management | Planned activities |
+| `/api/realized-csr` | realized_activity_management | Realization reports |
+| `/api/change-requests` | change_request_management | Unlock requests |
+| `/api/documents` | file_management | File upload/download |
+| `/api/audit` | audit_history_management | Audit trail |
+| `/api/notifications` | notification_management | Notifications + Socket.IO |
+| `/api/tasks` | task_management | Aggregated task inbox |
+| `/api/dashboard` | dashboard_analytics | KPIs (legacy — Power BI used in frontend) |
+| `/api/chatbot` | chatbot_assistant | AI assistant (Ollama + RAG) |
+| `/api/health` | health | Health check |
 
-All `/api/*` routes (except login) require: `Authorization: Bearer <token>`.
+**Stubs (registered, no routes yet):** `/api/validations`, `/api/powerbi`, `/api/external-partners`
+
+---
+
+## Authentication
+
+All `/api/*` routes except `POST /api/auth/login` and `GET /api/health` require:
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+---
+
+## Production
+
+```bash
+gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 -b 0.0.0.0:5001 app:app
+```
+
+See [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) for full deployment guide.

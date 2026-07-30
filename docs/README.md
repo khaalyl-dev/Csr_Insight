@@ -2,15 +2,17 @@
 
 Professional documentation for the CSR Insight platform (COFICAB CSR Management System).
 
+> Project overview: [`../README.md`](../README.md) · Database schema (FR): [`../Database/README.md`](../Database/README.md)
+
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture, tech stack, module structure |
 | [API.md](./API.md) | REST API reference with endpoints, auth, and examples |
-| [DATABASE.md](./DATABASE.md) | MySQL schema, tables, relationships, setup |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Local, staging, and production deployment guide |
-| [index.html](./index.html) | Interactive HTML reference (API ↔ UI ↔ files ↔ screenshots) |
+| [DATABASE.md](./DATABASE.md) | MySQL schema overview (English) |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) | Local development and self-hosted production |
+| [index.html](./index.html) | Interactive reference (API ↔ UI ↔ files ↔ screenshots) |
 | [openapi.yaml](./openapi.yaml) | OpenAPI 3.0 spec (Swagger-compatible) |
-| [swagger.html](./swagger.html) | Swagger UI viewer for the OpenAPI spec |
+| [swagger.html](./swagger.html) | Swagger UI viewer |
 
 ## Quick Start
 
@@ -28,9 +30,17 @@ Open [http://localhost:4200](http://localhost:4200) — API at [http://localhost
 
 ## View Swagger UI
 
-Open `docs/swagger.html` in a browser, or serve the docs folder:
-
 ```bash
 cd docs && python3 -m http.server 8080
 # → http://localhost:8080/swagger.html
+# → http://localhost:8080/index.html
 ```
+
+## Module READMEs
+
+| Area | Path |
+|------|------|
+| Backend features | `backend/features/*/README.md` |
+| Backend models | `backend/models/README.md` |
+| Frontend features | `frontend/src/features/*/README.md` |
+| Frontend core/shared | `frontend/src/core/README.md`, `frontend/src/shared/README.md` |

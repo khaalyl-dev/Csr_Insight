@@ -1,24 +1,49 @@
-# FileManagement
+# File Management
 
-Upload et gestion de fichiers liés aux activités et plans.
+Document library — upload, download, pin, filter by site and entity.
 
-## Scope
+---
 
-- Formats supportés : Excel, PDF, Word, images
-- Limite de taille et prévisualisation des documents
-- Stockage sécurisé et lié aux activités ou plans spécifiques
+## Routes
+
+| Route | Component | Permission |
+|-------|-----------|------------|
+| `/documents` | `DocumentsListComponent` | `document.read` |
+
+Documents are also attached from plan/activity/change-request screens.
+
+---
 
 ## Structure
 
-- `models/` – Document
-- `api/` – documents-api
+```
+file-management/
+├── documents-list/
+├── api/documents-api.ts
+└── models/
+```
 
-## À développer
+Storage: backend `MEDIA_FOLDER` (default `frontend/src/media/`)
 
-- [ ] **Documents API** – Upload, list, delete (entity_type, entity_id)
-- [ ] **Upload component** – Composant réutilisable upload (drag & drop, sélection)
-- [ ] **Formats** – Validation Excel, PDF, Word, images (mime_type)
-- [ ] **Taille max** – Limite de taille configurable
-- [ ] **Liste documents** – Affichage fichiers liés à un plan/activité
-- [ ] **Prévisualisation** – Prévisualisation PDF/images dans modal
-- [ ] **Téléchargement** – Lien téléchargement sécurisé
+---
+
+## API (`/api/documents`)
+
+`GET`, `POST /upload`, `PUT`, `DELETE`, `PATCH /pin`, `GET /download/:path`, `GET /serve/:path`
+
+---
+
+## Implemented
+
+- [x] Documents API — upload, list, delete, update, pin
+- [x] Documents list page with site filter
+- [x] Download and inline serve URLs
+- [x] Upload from activity/plan/change-request forms
+
+---
+
+## Roadmap
+
+- [ ] Drag-and-drop upload component
+- [ ] PDF/image preview modal
+- [ ] Configurable max file size validation (frontend)

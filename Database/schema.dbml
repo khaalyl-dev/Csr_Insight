@@ -26,6 +26,8 @@ Enum activity_status {
   COMPLETED
   CANCELLED
   VALIDATED
+  SUBMITTED
+  REJECTED
 }
 
 Enum validation_status {
@@ -123,10 +125,11 @@ Table user_sites {
   id uuid [pk]
   user_id uuid
   site_id uuid
-  grade varchar [null, note: 'level_0, level_1, level_2']
+  grade varchar [null, note: 'level_0, level_1, level_2, level_3']
   is_active boolean [default: true]
   granted_by uuid [null]
   granted_at timestamp [null]
+  access_types_json text [null, note: 'Types d''accès accordés (JSON array)']
 }
 
 Ref: user_sites.user_id > users.id
@@ -197,6 +200,7 @@ Table csr_plans {
   rejected_activity_ids text [null, note: 'JSON array of activity UUIDs']
   validation_step int [null]
   validated_at timestamp [null]
+  realization_report_submitted_at timestamp [null, note: 'Soumission du rapport CSR consolidé']
   unlock_until timestamp [null, note: 'Date limite modification après demande approuvée']
   unlock_since timestamp [null]
   created_by uuid [null]
@@ -223,6 +227,7 @@ Table planned_activity {
   plan_id uuid
   category_id uuid
   external_partner_id uuid [null]
+  nb_of_external_partner int [default: 0, note: 'Nombre de partenaires externes']
   activity_number varchar
   title varchar
   organization varchar [null]
@@ -270,7 +275,7 @@ Table realized_activity {
   participants int [null]
   corporate_image_improved boolean [null]
   incidents_number int [null]
-  total_hc int [null]
+  contact_department varchar [null]
   realized_budget decimal [null]
   action_impact_actual decimal [null]
   action_impact_unit varchar [null]
@@ -281,7 +286,6 @@ Table realized_activity {
   comment text [null]
   contact_name varchar [null]
   contact_email varchar [null]
-  contact_department varchar [null]
   created_by uuid [null]
   created_at timestamp
   updated_at timestamp
@@ -320,6 +324,30 @@ Table csr_attachments {
 }
 
 Ref: csr_attachments.activity_id > planned_activity.id
+
+Table activity_kpis {
+  id uuid [pk]
+  plan_id uuid
+  activity_id uuid [unique]
+  incidents_count int [null]
+  participants_actual_sum int [null]
+  employees_planned int [null]
+  involvement_rate decimal [null]
+  announced_objectives_count int [null]
+  completed_objectives_count int [null]
+  action_delivery_rate decimal [null]
+  realized_budget_sum decimal [null]
+  planned_budget_amount decimal [null]
+  budget_control_rate decimal [null]
+  plan_total_hc int [null]
+  participants_vs_total_hc_rate decimal [null]
+  lifecycle_status varchar [null, note: 'DRAFT | PLANNED | PENDING | COMPLETED']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Ref: activity_kpis.plan_id > csr_plans.id
+Ref: activity_kpis.activity_id > planned_activity.id
 
 //////////////////////////////////////////////////////
 //////////////// VALIDATION WORKFLOW /////////////////

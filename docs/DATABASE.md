@@ -1,5 +1,7 @@
 # Database — CSR Insight
 
+> **Source de vérité détaillée (FR) :** [`../Database/`](../Database/) — `TABLES_ET_COLONNES.md`, `schema.dbml`, `MIGRATIONS.md`
+
 ## Overview
 
 | Property | Value |

@@ -8,5 +8,5 @@ Site and corporate dashboards.
 
 | File | Purpose |
 |------|---------|
-| **dashboard_routes.py** | Blueprint `/api/dashboard`. KPIs, charts, filters. Site summary, activities chart, categories, monthly timeline, top activities, notifications. |
+| **dashboard_routes.py** | Blueprint `/api/dashboard`. KPIs, charts, filters. **Note:** frontend currently embeds Power BI instead of calling these endpoints. |
 | **__init__.py** | Exports `dashboard_bp`. |

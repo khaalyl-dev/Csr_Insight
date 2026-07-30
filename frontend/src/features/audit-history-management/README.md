@@ -1,23 +1,46 @@
-# AuditAndHistoryManagement
+# Audit History Management
 
-Historisation des modifications de plans et activités.
+Corporate audit trail — filterable log of user actions on plans, activities, and documents.
 
-## Scope
+---
 
-- Suivi des validations et actions de changement
-- Traçabilité complète pour audit interne
-- Analyse de tendances année après année
+## Routes
+
+| Route | Component | Access |
+|-------|-----------|--------|
+| `/admin/audit` | `AuditListComponent` | Corporate, `audit_log.read` |
+
+---
 
 ## Structure
 
-- `models/` – AuditLog, EntityHistory
-- `api/` – audit-api
+```
+audit-history-management/
+├── audit-list/
+├── api/audit-api.ts
+└── models/
+```
 
-## À développer
+---
 
-- [ ] **Audit API** – Lecture audit_logs, entity_history (filtres site, entity, date)
-- [ ] **Audit list** – Page liste des logs (action, user, entity, date)
-- [ ] **Entity history** – Affichage diff old_data vs new_data par modification
-- [ ] **Filtres** – Par site, entity_type, période, user
-- [ ] **Export** – Export logs pour audit
-- [ ] **Tendances** – Vue year-over-year (analyse évolution)
+## API
+
+`GET /api/audit/logs` — filters: `action`, `entity_type`, `site_id`, `user_id`, `date_from`, `date_to`, `limit`
+
+Entity history (`entity_history` table) is written by backend helpers; diff UI not yet exposed in frontend.
+
+---
+
+## Implemented
+
+- [x] Audit API integration
+- [x] Audit list page with filters (site, action, date range)
+- [x] Site filter dropdown
+
+---
+
+## Roadmap
+
+- [ ] Entity history diff view (old_data vs new_data)
+- [ ] Export audit logs to CSV/Excel
+- [ ] Year-over-year trend analysis

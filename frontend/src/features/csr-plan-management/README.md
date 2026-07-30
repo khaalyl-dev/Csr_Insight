@@ -1,30 +1,57 @@
-# CSRPlanManagement
+# CSR Plan Management
 
-Création et édition des plans annuels CSR par site.
+Annual CSR plans per site/year — create, submit, validate, Excel import.
 
-## Scope
+---
 
-- Import/export Excel et PDF
-- Catégorisation des activités (Environnement, Social, Gouvernance)
-- Assignation des budgets, KPI et responsables
-- Workflow de validation multi-niveaux (site → corporate)
+## Routes
+
+| Route | Component | Permission |
+|-------|-----------|------------|
+| `/csr-plans` | `AnnualPlansComponent` | `plan.read` |
+| `/csr-plans/:id` | `PlanDetailComponent` | `plan.read` |
+| `/csr-plans/:id/edit` | `PlanEditComponent` | — |
+| `/annual-plans/validation` | `PlanValidationComponent` | `plan.validate`, `activity.validate` |
+
+---
 
 ## Structure
 
-- `annual-plans/` – Liste et pilotage des plans annuels
-- `plan-detail/`, `plan-edit/`, `plan-validation/` – Fiche plan, édition, validation
-- `plan-create-sidebar/`, `plan-edit-sidebar/` – Création / édition plan en panneau
-- `models/` – CsrPlan
-- `api/` – csr-plans-api
+```
+csr-plan-management/
+├── annual-plans/              # List, bulk submit/delete, Excel import
+├── plan-detail/               # Plan + activities + KPIs + actions
+├── plan-edit/                 # Edit plan metadata
+├── plan-validation/           # Corporate validation queue
+├── plan-create-sidebar/       # Create plan (sidebar)
+├── plan-edit-sidebar/         # Edit plan (sidebar)
+├── api/csr-plans-api.ts       # HTTP client
+└── models/
+```
 
-Les activités planifiées (CRUD, hors plan, sidebars) sont dans **`planned-activity-management`**.
+Planned activities live in **`planned-activity-management`**.
 
-## À développer
+---
 
-- [ ] **CSR Plans API** – CRUD csr_plans (create, list, get, update, submit)
-- [ ] **CSR Activities API** – CRUD csr_activities, activity_kpis
-- [ ] **Plan create/edit** – Formulaire plan annuel (year, allocated_budget, status)
-- [ ] **Activity create/edit** – Formulaire activité (title, category, budget, KPI, dates, organization_type, contract_type)
-- [ ] **Import Excel** – Import plan/activités depuis Excel
-- [ ] **Export Excel/PDF** – Export plan annuel
-- [ ] **Validation workflow** – Boutons soumettre/valider/rejeter (via csr-plans-api)
+## API (`/api/csr-plans`)
+
+`GET`, `POST`, `PATCH`, `DELETE`, `submit`, `approve`, `reject`, `bulk-submit`, `bulk-delete`, Excel import endpoints.
+
+Full reference: [`../../../docs/API.md`](../../../docs/API.md)
+
+---
+
+## Implemented
+
+- [x] CSR Plans API — full CRUD + workflow
+- [x] Plan create/edit (sidebar + full page)
+- [x] Plan detail with activities and validation actions
+- [x] Excel import (preview, conflicts, validate, commit)
+- [x] Bulk submit and delete
+- [x] Plan validation page (corporate)
+
+---
+
+## Roadmap
+
+- [ ] Export plan to Excel/PDF

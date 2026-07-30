@@ -1,5 +1,32 @@
 # Colonnes de chaque fichier Excel
 
+Mapping des formulaires Excel COFICAB vers les champs applicatifs (`planned_activity`, `realized_activity`, `csr_plans`, `sites`).
+
+Voir aussi : [TABLES_ET_COLONNES.md](./TABLES_ET_COLONNES.md) pour le schéma MySQL complet.
+
+## Correspondance Excel → base de données (résumé)
+
+| Colonne Excel | Table / colonne MySQL |
+|---------------|----------------------|
+| COFICAB Entity / Plant | `sites.code` ou `sites.name` |
+| Category | `categories.name` → `planned_activity.category_id` |
+| Activity description / Title | `planned_activity.title`, `description` |
+| Organization | `planned_activity.organization` |
+| Name of external entity | `external_partners.name` → `planned_activity.external_partner_id` |
+| Cost (EUR) / Budget in € | `planned_activity.planned_budget` / `realized_activity.realized_budget` |
+| Contract type | `planned_activity.contract_type` |
+| Periodicity | `planned_activity.periodicity` |
+| Number of internal volunteers | `planned_activity.employees_planned` / `realized_activity.participants` |
+| Action impact (In numbers) | `planned_activity.action_impact_target` / `realized_activity.action_impact_actual` |
+| Action impact – Unit | `planned_activity.action_impact_unit` |
+| Nature of collaboration | `planned_activity.collaboration_nature` |
+| Total HC | `csr_plans.total_hc` |
+| Activity N | `planned_activity.activity_number` |
+| Region / country | `sites.region`, `sites.country` |
+| Year | `csr_plans.year` |
+
+---
+
 ## 1. 10.30.13.09-01 Annual CSR Plan updated (1).xlsx
 
 ### Feuille « Annual CSR Plan_Report » (plan annuel CSR)

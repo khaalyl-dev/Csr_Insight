@@ -7,13 +7,13 @@ CSR Insight is a full-stack web application for managing Corporate Social Respon
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         Browser (Angular SPA)                           │
-│  Port 4200 (dev) │ Vercel (prod)                                        │
+│  Port 4200 (dev)                                                        │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │ HTTP /api/*  +  WebSocket /socket.io
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    Flask REST API + Socket.IO                           │
-│  Port 5001 (dev) │ Render.com + Gunicorn (prod)                         │
+│  Port 5001 (dev)                                                        │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │ SQLAlchemy ORM
                                 ▼
@@ -43,9 +43,7 @@ External integrations:
 | Auth | JWT (PyJWT) + bcrypt | — |
 | Real-time (server) | Flask-SocketIO | 5.4 |
 | AI Chatbot | Ollama + ChromaDB RAG | Optional |
-| Production server | Gunicorn + GeventWebSocketWorker | — |
-| Frontend hosting | Vercel | — |
-| Backend hosting | Render.com | — |
+| Production server | Gunicorn + GeventWebSocketWorker (optional) | — |
 
 ---
 
@@ -58,7 +56,6 @@ Csr_Insight/
 │   ├── config.py               # Environment-based configuration
 │   ├── init_db.py              # Database initialization + seed data
 │   ├── requirements.txt
-│   ├── render.yaml             # Render.com deployment manifest
 │   ├── core/                   # Shared: db, JWT, permissions, schema patches
 │   ├── models/                 # 22 SQLAlchemy models
 │   ├── features/               # 17 Flask blueprints (domain modules)
@@ -76,7 +73,6 @@ Csr_Insight/
 │   │   └── media/              # Uploaded files (default MEDIA_FOLDER)
 │   ├── public/i18n/            # Translation files (en.json, fr.json)
 │   ├── proxy.conf.json         # Dev proxy → localhost:5001
-│   └── vercel.json             # Production API rewrites
 │
 ├── Database/                   # Schema documentation (DBML, column reference)
 ├── screenshot/                 # UI screenshots for documentation
@@ -153,7 +149,7 @@ Routes (app.routes.ts)
 ### Key Patterns
 
 - **Standalone components only** — no NgModules except `TranslateModule.forRoot`
-- **No environment files** — API base is always relative `/api`; dev proxy and Vercel rewrites handle routing
+- **No environment files** — API base is always relative `/api`; dev proxy handles routing during local development
 - **Feature-based folders** — each domain has components, models, and an API client
 - **MainLayout shell** — sidebar, notification bell, tasks bell, chatbot widget
 
@@ -258,8 +254,8 @@ Dashboard routes (`/dashboard`, `/dashboard/corporate`, `/dashboard/site`) embed
 
 | Decision | Rationale |
 |----------|-----------|
-| No Docker | Deployed via Render (backend) + Vercel (frontend) |
+| No Docker | Local development setup; production hosting is team-defined |
 | No Alembic/Flyway | Schema via `db.create_all()` + manual patches |
-| Relative API paths | Simplifies dev/prod switching via proxy/rewrites |
+| Relative API paths | Same API paths in dev; configure reverse proxy in production if needed |
 | File storage on disk | Simple deployment; `MEDIA_FOLDER` configurable |
 | Feature blueprints | Clear domain boundaries, easy to extend |

@@ -119,6 +119,8 @@ Le mapping `CORPORATE_USER` → `corporate`, `SITE_USER` → `site` est fait dan
 
 ## Endpoints backend utilisés
 
+See full API reference: [`../../../docs/API.md`](../../../docs/API.md)
+
 ### Auth (`/api/auth`)
 - `POST /login` – Connexion
 - `POST /logout` – Déconnexion

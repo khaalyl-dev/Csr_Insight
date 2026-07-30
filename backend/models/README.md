@@ -2,37 +2,44 @@
 
 SQLAlchemy models matching MySQL tables. Each file defines one table via `db.Model`.
 
+**22 tables** — see [`../../Database/TABLES_ET_COLONNES.md`](../../Database/TABLES_ET_COLONNES.md) for full column reference.
+
 ---
 
 ## Files and tables
 
-| File | Table | Purpose |
-|------|-------|---------|
-| **user.py** | users | Users (auth, profile, notification preferences) |
-| **user_session.py** | user_sessions | Sessions, refresh tokens |
-| **user_site.py** | user_sites | User–site association (access, grade) |
-| **site.py** | sites | COFICAB sites/entities |
-| **category.py** | categories | CSR categories (Environment, Social, etc.) |
-| **external_partner.py** | external_partners | External partners |
-| **csr_plan.py** | csr_plans | Annual CSR plans |
-| **csr_activity.py** | csr_activities | Planned activities |
-| **realized_csr.py** | realized_csr | Realized activities |
-| **validation.py** | validations | Plan/activity validations |
-| **change_request.py** | change_requests | Change requests |
-| **document.py** | documents | Attachments (photos, Excel, PDF) |
-| **notification.py** | notifications | User notifications |
-| **audit_log.py** | audit_logs | Action log |
-| **entity_history.py** | entity_history | Modification history |
-| **csr_snapshot.py** | csr_snapshots | Power BI snapshots |
-| **chatbot_log.py** | chatbot_logs | Chatbot history |
+| File | Table | Model class | Purpose |
+|------|-------|-------------|---------|
+| **user.py** | users | `User` | Users (auth, profile, notification prefs) |
+| **user_session.py** | user_sessions | `UserSession` | JWT sessions |
+| **user_permission.py** | user_permissions | `UserPermission` | RBAC permissions |
+| **user_site.py** | user_sites | `UserSite` | User–site access (grade, access types) |
+| **site.py** | sites | `Site` | COFICAB sites/plants |
+| **category.py** | categories | `Category` | CSR categories |
+| **external_partner.py** | external_partners | `ExternalPartner` | External partners |
+| **csr_plan.py** | csr_plans | `CsrPlan` | Annual CSR plans |
+| **planned_activity.py** | planned_activity | `CsrActivity` | Planned activities |
+| **realized_activity.py** | realized_activity | `RealizedCsr` | Realization reports |
+| **csr_objective.py** | csr_objectives | `CsrObjective` | Planned objectives |
+| **csr_completed_objective.py** | csr_completed_objectives | `CsrCompletedObjective` | Completed objectives |
+| **csr_attachment.py** | csr_attachments | `CsrAttachment` | Activity attachments |
+| **activity_kpi.py** | activity_kpis | `ActivityKpi` | Computed KPIs |
+| **validation.py** | validations | `Validation` | Validation workflow records |
+| **change_request.py** | change_requests | `ChangeRequest` | Unlock/modification requests |
+| **document.py** | documents | `Document` | File metadata |
+| **notification.py** | notifications | `Notification` | User notifications |
+| **audit_log.py** | audit_logs | `AuditLog` | Action audit trail |
+| **entity_history.py** | entity_history | `EntityHistory` | JSON change snapshots |
+| **csr_snapshot.py** | csr_snapshots | `CsrSnapshot` | Power BI monthly snapshots |
+| **chatbot_log.py** | chatbot_logs | `ChatbotLog` | Chatbot query history |
 
 ---
 
 ## Usage
 
 ```python
-from models import User, Site, CsrPlan
+from models import User, Site, CsrPlan, CsrActivity
 user = User.query.filter_by(email="admin@test.com").first()
 ```
 
-`__init__.py` exports all models for `db.create_all()` and imports in features.
+`__init__.py` exports all models for `db.create_all()` and feature imports.

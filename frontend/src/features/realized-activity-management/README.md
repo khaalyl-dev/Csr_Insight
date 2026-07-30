@@ -1,24 +1,47 @@
-# RealizedActivityManagement
+# Realized Activity Management
 
-Saisie des activités réalisées (planifiées ou hors plan).
+CSR realization reports — track actual budget, participants, impact, and objectives.
 
-## Scope
+---
 
-- Suivi des coûts, participants, impact et heures de volontariat
-- Gestion des fichiers joints (photos, documents)
-- Statut des activités (En cours, Complétée, Annulée)
-- Notifications liées aux activités
+## Routes
+
+| Route | Component | Permission |
+|-------|-----------|------------|
+| `/realized-csr` | `RealizedListComponent` | `realized_activity.read` |
+| `/realized-csr/:id` | `RealizedDetailComponent` | — |
+| `/realized-csr/:id/edit` | `RealizedEditComponent` | — |
+
+---
 
 ## Structure
 
-- `models/` – RealizedCsr
-- `api/` – realized-csr-api
+```
+realized-activity-management/
+├── realized-list/             # Plans with realization KPIs
+├── realized-detail/           # Single realization view
+├── realized-edit/             # Edit realization
+├── realized-create-sidebar/   # Create realization (sidebar)
+├── api/realized-csr-api.ts
+├── api/categories-api.ts      # Re-export for forms
+└── models/realized-csr.model.ts
+```
 
-## À développer
+Table: `realized_activity` · API prefix: `/api/realized-csr`
 
-- [ ] **Realized CSR API** – CRUD realized_csr (create, list, get, update)
-- [ ] **Realized list** – Page liste des réalisations par activité/site
-- [ ] **Realized form** – Formulaire saisie (realized_budget, participants, volunteer_hours, impact_description, realization_date, etc.)
-- [ ] **Documents** – Intégration file-management pour pièces jointes
-- [ ] **Statuts** – Gestion statuts (DRAFT, IN_PROGRESS, COMPLETED, CANCELLED, VALIDATED)
-- [ ] **Lien activité** – Sélection activité (planifiée ou hors plan)
+---
+
+## Implemented
+
+- [x] Realized CSR API — CRUD (`GET`, `POST`, `PUT`, `DELETE`)
+- [x] Realized list (by plan with KPIs)
+- [x] Realized detail and edit forms
+- [x] Document attachments (via `file-management`)
+- [x] Status management (DRAFT, IN_PROGRESS, COMPLETED, etc.)
+- [x] Link to planned activity
+
+---
+
+## Roadmap
+
+- [ ] Volunteer hours field (if required by business)

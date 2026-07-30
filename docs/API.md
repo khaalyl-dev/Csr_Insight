@@ -1,6 +1,6 @@
 # API Reference — CSR Insight
 
-Base URL: `http://localhost:5001` (development) or your Render backend URL (production).
+Base URL: `http://localhost:5001`
 
 All endpoints under `/api/*` require authentication unless noted otherwise.
 
@@ -149,7 +149,7 @@ Upload profile avatar.
 
 **Response:** `{ "status": "ok" }`
 
-**Purpose:** Load balancer health check (used by Render).
+**Purpose:** Service health check for monitoring and load balancers.
 
 ---
 

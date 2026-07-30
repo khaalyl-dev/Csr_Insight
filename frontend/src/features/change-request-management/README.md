@@ -1,25 +1,47 @@
-# ChangeRequestManagement
+# Change Request Management
 
-Soumission de demandes de modification pour périodes clôturées.
+Request temporary unlock of validated or locked plans/activities for modification.
 
-## Scope
+---
 
-- Justification, pièces justificatives et type de modification
-- Workflow de review et approbation/rejet par le corporate
-- Réouverture temporaire de la période pour modification si approuvé
-- Archivage complet des demandes et décisions
+## Routes
+
+| Route | Component | Permission |
+|-------|-----------|------------|
+| `/changes` | `ChangeRequestsListComponent` | `change_request.read` |
+| `/changes/create` | `ChangeRequestCreateComponent` | `change_request.create` |
+| `/changes/pending` | `ChangeRequestsPendingComponent` | `change_request.review` |
+| `/changes/history` | `ChangeRequestsHistoryComponent` | Corporate, `change_request.history` |
+| `/changes/:id` | `ChangeRequestDetailComponent` | — |
+
+---
 
 ## Structure
 
-- `models/` – ChangeRequest
-- `api/` – change-requests-api
+```
+change-request-management/
+├── change-requests-list/
+├── change-request-create/
+├── change-requests-pending/
+├── change-requests-history/
+├── change-request-detail/
+├── api/change-requests-api.ts
+└── models/
+```
 
-## À développer
+---
 
-- [ ] **Change Requests API** – CRUD change_requests
-- [ ] **My requests** – Page « Mes Demandes » (site user)
-- [ ] **Request form** – Formulaire (entity_type, entity_id, year, reason) + pièces jointes
-- [ ] **Pending requests** – Page « Demandes en Attente » (corporate)
-- [ ] **Review form** – Boutons Approuver/Rejeter + commentaire
-- [ ] **History** – Page « Historique » des demandes (archivage)
-- [ ] **Documents** – Intégration file-management pour pièces justificatives
+## Implemented
+
+- [x] Change Requests API — create, list, get, approve, reject
+- [x] My requests list
+- [x] Create form with reason + document attachments
+- [x] Pending review page (approve/reject)
+- [x] History page (corporate)
+- [x] Detail view with document preview
+
+---
+
+## Roadmap
+
+- [ ] Email notification on approve/reject

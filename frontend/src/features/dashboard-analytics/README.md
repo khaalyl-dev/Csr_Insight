@@ -1,40 +1,56 @@
-# DashboardAndAnalytics
+# Dashboard Analytics
 
-Tableau de bord consolidé par site et global.
+Executive CSR dashboards via embedded Power BI reports.
 
-## Scope
+---
 
-- Filtres avancés (site, catégorie, type, période, statut)
-- Visualisation des KPI : taux de réalisation, écarts budgétaires, top activités
-- Graphiques interactifs : courbes, camemberts, barres
-- Export Excel/PDF et drill-down par site
+## Routes
+
+| Route | Component | Access |
+|-------|-----------|--------|
+| `/dashboard` | `Dashboard` | Authenticated |
+| `/dashboard/corporate` | `Dashboard` | Corporate |
+| `/dashboard/site` | `Dashboard` | Site user |
+
+---
 
 ## Structure
 
-- `dashboard/` – Dashboard site avec métriques et graphique activités (Chart.js)
-- `models/` – (snapshots dans powerbi-integration)
+```
+dashboard-analytics/
+├── dashboard/
+│   ├── dashboard.ts           # Power BI iframe embed
+│   ├── dashboard.html
+│   ├── power-bi.config.ts     # Report IDs, zoom, embed URLs
+│   └── dashboard-api.ts       # Legacy /api/dashboard client (unused)
+└── README.md
+```
 
-## Power BI (iframe)
+---
 
-Les liens de partage `https://app.powerbi.com/links/...` **ne fonctionnent pas** en iframe (erreur « refused to connect »).
+## Power BI setup
 
-1. Ouvrir le rapport dans Power BI Service → **Fichier** → **Intégrer le rapport** → **Site web ou portail**
-2. Copier le `src` de l’iframe (`reportEmbed?reportId=...&autoAuth=true`)
-3. Mettre à jour `dashboard/power-bi.config.ts` (`POWER_BI_REPORT_ID`, etc.)
+Share links (`https://app.powerbi.com/links/...`) **do not work** in iframes.
 
-### Zoom
+1. Open report in Power BI Service → **Embed** → **Website or portal**
+2. Copy iframe `src` (`reportEmbed?reportId=...&autoAuth=true`)
+3. Update `power-bi.config.ts`
 
-- `POWER_BI_ZOOM_LEVEL` : zoom CSS sur l’iframe (`0.5` = 50 %) — **fonctionne** avec autoAuth.
-- `settings.zoomLevel` dans l’URL **est ignoré** sans jeton d’accès / SDK.
-- `setZoom()` via powerbi-client nécessite un **access token** backend (Azure AD).
+See [Microsoft embed docs](https://learn.microsoft.com/en-us/power-bi/collaborate-share/service-embed-secure).
 
-Doc : [Embed a report in a secure portal](https://learn.microsoft.com/en-us/power-bi/collaborate-share/service-embed-secure)
+Screenshots: [`../../../screenshot/PowerBI/`](../../../screenshot/PowerBI/)
 
-## À développer
+---
 
-- [ ] **Filtres avancés** – Filtres par site, catégorie, période, statut
-- [ ] **Vue corporate** – Dashboard consolidé tous sites
-- [ ] **Graphiques supplémentaires** – Camemberts (par catégorie), courbes (tendance), barres comparatives
-- [ ] **KPI cards** – Taux de réalisation, écarts budgétaires, top activités
-- [ ] **Export Excel/PDF** – Export du tableau de bord
-- [ ] **Drill-down** – Clic sur une métrique → liste détaillée
+## Implemented
+
+- [x] Power BI iframe embed (performance, budget, impact dashboards)
+- [x] Corporate vs site dashboard routes
+
+---
+
+## Roadmap
+
+- [ ] Re-enable native KPI dashboard via `/api/dashboard/*` (backend already implemented)
+- [ ] Advanced filters (site, category, period)
+- [ ] Export Excel/PDF from dashboard views

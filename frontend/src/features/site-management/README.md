@@ -1,21 +1,46 @@
-# SiteManagement
+# Site Management
 
-Gestion des informations propres à chaque site.
+Corporate administration of COFICAB sites, site users, and CSR categories.
 
-## Scope
+---
 
-- Isolation des données par site
-- Suivi des plans et activités spécifiques au site
-- Interface pour consulter les activités et plans liés au site
+## Routes
+
+| Route | Component | Access |
+|-------|-----------|--------|
+| `/sites` | `SitesListComponent` | Corporate, `site.read` |
+| `/sites/create` | `SiteFormComponent` | Corporate |
+| `/sites/edit/:id` | `EditSiteComponent` | Corporate |
+| `/sites/:id/users` | `SiteUsersComponent` | Corporate |
+| `/categories` | `CategoriesListComponent` | Corporate, `category.read` |
+
+---
 
 ## Structure
 
-- `sites-list/` – Liste des sites avec filtres
-- `models/` – Site, Category
-- `api/` – sites-api, categories-api
+```
+site-management/
+├── sites-list/
+├── site-form/
+├── edit-site/
+├── site-users/
+├── categories-list/
+├── api/sites-api.ts
+├── api/categories-api.ts
+└── models/
+```
 
-## À développer
-- [ ] **Site detail** – Page détail d’un site (infos, plans, activités liées)
-- [ ] **Site create/edit** – Formulaire création/édition site (corporate)
-- [ ] **Categories API** – CRUD catégories (Environment, Social, Governance, etc.)
-- [ ] **Categories list/form** – Interface gestion des catégories
+---
+
+## Implemented
+
+- [x] Sites list with active/inactive toggle
+- [x] Site create and edit forms
+- [x] Site users assignment (grade, access)
+- [x] Categories list, create, delete with reassignment
+
+---
+
+## Roadmap
+
+- [ ] Dedicated site detail page (plans + activities summary)

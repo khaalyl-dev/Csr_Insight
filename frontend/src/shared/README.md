@@ -1,18 +1,38 @@
 # Shared
 
-Composants et layouts réutilisables.
+Reusable layouts and UI components used across features.
+
+---
 
 ## Structure
 
-- `layouts/main-layout/` – Layout principal avec sidebar
-- `components/sidebar/` – Menu de navigation (role-based)
-- `components/button/` – Bouton réutilisable
-- `components/spinner/` – Spinner de chargement
+```
+shared/
+├── layouts/main-layout/       # Shell: sidebar, notification bell, tasks bell, chatbot
+├── components/
+│   ├── sidebar/               # Navigation (nav-config.ts)
+│   ├── chatbot-widget/        # AI assistant widget
+│   ├── button/
+│   ├── spinner/
+│   └── user-avatar-name/
+```
 
-## À développer
+Path alias: `@shared/*` → `src/shared/*`
 
-- [ ] **Data table** – Tableau réutilisable (tri, pagination, filtres)
-- [ ] **Modal** – Composant modal réutilisable
-- [ ] **Form field** – Input/select/textarea avec label et erreur
-- [ ] **Confirmation dialog** – Dialog confirmation avant action
-- [ ] **Toast/snackbar** – Messages de succès/erreur
+---
+
+## Implemented
+
+- [x] **MainLayout** — authenticated app shell with router outlet
+- [x] **Sidebar** — role/permission-based navigation
+- [x] **Notification bell** — real-time via Socket.IO
+- [x] **Tasks bell** — aggregated actionable tasks
+- [x] **Chatbot widget** — `POST /api/chatbot/chat`
+- [x] **Error toasts** — via `error-toast.interceptor.ts` (core)
+
+---
+
+## Roadmap
+
+- [ ] **Reusable data table** — sort, pagination, filters
+- [ ] **Confirmation dialog** — shared confirm-before-action component

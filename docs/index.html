@@ -290,9 +290,8 @@
     <h2>CSR Insight — Technical Reference</h2>
     <p>Complete deployment and development reference mapping frontend interfaces to backend API endpoints, source files, and screenshots.</p>
     <div class="hero-meta">
-      <span><strong>Frontend:</strong> Angular 21 + Tailwind + PrimeNG</span>
       <span><strong>Backend:</strong> Flask 3 + MySQL 8</span>
-      <span><strong>Hosting:</strong> Vercel + Render</span>
+      <span><strong>Frontend:</strong> Angular 21 + Tailwind + PrimeNG</span>
     </div>
     <div class="doc-links" style="margin-top:1.5rem;margin-bottom:0">
       <a href="ARCHITECTURE.md">Architecture</a>
@@ -309,26 +308,24 @@
     <h2>Project Structure</h2>
     <p>Monorepo layout for the CSR Insight platform. Deployment teams should configure each layer independently.</p>
     <div class="file-tree"><span class="dir">Csr_Insight/</span>
-├── <span class="dir">backend/</span>                    <span style="color:#6a737d"># Flask REST API (Render.com)</span>
+├── <span class="dir">backend/</span>                    <span style="color:#6a737d"># Flask REST API</span>
 │   ├── app.py                  <span style="color:#6a737d"># Entry point, blueprint registration</span>
 │   ├── config.py               <span style="color:#6a737d"># Environment configuration</span>
 │   ├── init_db.py              <span style="color:#6a737d"># DB init + seed data</span>
-│   ├── render.yaml             <span style="color:#6a737d"># Render deployment manifest</span>
 │   ├── requirements.txt
 │   ├── <span class="dir">core/</span>                   <span style="color:#6a737d"># JWT, permissions, schema patches</span>
 │   ├── <span class="dir">models/</span>                 <span style="color:#6a737d"># 22 SQLAlchemy models</span>
 │   ├── <span class="dir">features/</span>               <span style="color:#6a737d"># 17 Flask blueprints</span>
 │   ├── <span class="dir">rag_corpus/</span>             <span style="color:#6a737d"># Chatbot knowledge base</span>
 │   └── <span class="dir">tests/</span>
-├── <span class="dir">frontend/</span>                   <span style="color:#6a737d"># Angular SPA (Vercel)</span>
+├── <span class="dir">frontend/</span>                   <span style="color:#6a737d"># Angular SPA</span>
 │   ├── src/app.routes.ts       <span style="color:#6a737d"># All route definitions</span>
 │   ├── src/app.config.ts       <span style="color:#6a737d"># Interceptors, i18n, session</span>
 │   ├── <span class="dir">src/core/</span>               <span style="color:#6a737d"># Guards, interceptors, services</span>
 │   ├── <span class="dir">src/features/</span>           <span style="color:#6a737d"># Domain screens + API clients</span>
 │   ├── <span class="dir">src/shared/</span>             <span style="color:#6a737d"># Layout, sidebar, widgets</span>
 │   ├── <span class="dir">src/media/</span>              <span style="color:#6a737d"># Uploaded files (MEDIA_FOLDER)</span>
-│   ├── proxy.conf.json         <span style="color:#6a737d"># Dev proxy → localhost:5001</span>
-│   └── vercel.json             <span style="color:#6a737d"># Production API rewrites</span>
+│   └── proxy.conf.json         <span style="color:#6a737d"># Dev proxy → localhost:5001</span>
 ├── <span class="dir">Database/</span>                   <span style="color:#6a737d"># DBML schema, column reference</span>
 ├── <span class="dir">screenshot/</span>                 <span style="color:#6a737d"># UI screenshots</span>
 └── <span class="dir">docs/</span>                       <span style="color:#6a737d"># This documentation</span></div>
@@ -343,9 +340,9 @@
         <tr><td>Backend (local)</td><td><code>cd backend && python3 app.py</code></td><td>:5001</td></tr>
         <tr><td>Frontend (local)</td><td><code>cd frontend && npm start</code></td><td>:4200</td></tr>
         <tr><td>DB init</td><td><code>cd backend && python3 init_db.py</code></td><td>MySQL :3306</td></tr>
-        <tr><td>Health check</td><td><code>GET /api/health</code></td><td>Render healthCheckPath</td></tr>
-        <tr><td>Backend (prod)</td><td>Gunicorn via render.yaml</td><td>Render URL</td></tr>
-        <tr><td>Frontend (prod)</td><td>Vercel build → dist/csr-management/browser</td><td>Vercel URL</td></tr>
+        <tr><td>Health check</td><td><code>GET /api/health</code></td><td>Monitoring / load balancer</td></tr>
+        <tr><td>Backend (prod)</td><td><code>gunicorn ... app:app</code></td><td>Self-hosted WSGI</td></tr>
+        <tr><td>Frontend (prod)</td><td><code>npm run build</code></td><td>dist/csr-management/browser</td></tr>
       </tbody>
     </table>
     <h3>Required Environment Variables</h3>
@@ -354,9 +351,9 @@
       <tbody>
         <tr><td><code>DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME</code></td><td>Backend</td><td>MySQL connection</td></tr>
         <tr><td><code>SECRET_KEY</code></td><td>Backend</td><td>JWT signing (change in prod)</td></tr>
-        <tr><td><code>FRONTEND_ORIGINS</code></td><td>Backend</td><td>CORS — Vercel URL(s)</td></tr>
+        <tr><td><code>FRONTEND_ORIGINS</code></td><td>Backend</td><td>CORS — production frontend URL(s)</td></tr>
         <tr><td><code>MEDIA_FOLDER</code></td><td>Backend</td><td>File upload directory</td></tr>
-        <tr><td>vercel.json rewrites</td><td>Frontend</td><td>Proxy /api → Render backend</td></tr>
+        <tr><td>Reverse proxy</td><td>Server</td><td>Route /api and /socket.io to backend</td></tr>
       </tbody>
     </table>
   </section>
