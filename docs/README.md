@@ -23,7 +23,7 @@ pip install -r requirements.txt && cp .env.example .env
 python3 init_db.py && python3 app.py
 
 # Frontend
-cd frontend && npm ci && npm start
+cd frontend && npm ci && ng serve
 ```
 
 Open [http://localhost:4200](http://localhost:4200) — API at [http://localhost:5001/api/health](http://localhost:5001/api/health).
@@ -35,6 +35,8 @@ cd docs && python3 -m http.server 8080
 # → http://localhost:8080/swagger.html
 # → http://localhost:8080/index.html
 ```
+
+Screenshots are served via a `docs/screenshot` symlink to `../screenshot/` so images load when the server root is `docs/`.
 
 ## Module READMEs
 

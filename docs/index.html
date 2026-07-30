@@ -6,18 +6,18 @@
   <title>CSR Insight — Technical Reference</title>
   <style>
     :root {
-      --bg: #0f1419;
-      --surface: #1a2332;
-      --surface2: #243044;
-      --border: #2d3a4f;
-      --text: #e8edf4;
-      --text-muted: #8b9cb3;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --green: #22c55e;
-      --orange: #f59e0b;
-      --red: #ef4444;
-      --purple: #a855f7;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --green: #16a34a;
+      --orange: #d97706;
+      --red: #dc2626;
+      --purple: #9333ea;
       --sidebar-w: 280px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,6 +39,7 @@
       height: 100vh;
       background: var(--surface);
       border-right: 1px solid var(--border);
+      box-shadow: 1px 0 4px rgba(15, 23, 42, 0.04);
       overflow-y: auto;
       z-index: 100;
       padding: 1.5rem 0;
@@ -59,7 +60,7 @@
       transition: all 0.15s;
     }
     nav.sidebar a:hover, nav.sidebar a.active {
-      color: var(--text);
+      color: var(--accent);
       background: var(--surface2);
       border-left: 3px solid var(--accent);
     }
@@ -100,6 +101,7 @@
       border-radius: 8px;
       padding: 1.25rem;
       margin-bottom: 1rem;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .card-header {
       display: flex;
@@ -119,13 +121,13 @@
       font-family: monospace;
       letter-spacing: 0.03em;
     }
-    .badge-get { background: #065f46; color: #6ee7b7; }
-    .badge-post { background: #1e3a5f; color: #93c5fd; }
-    .badge-put { background: #713f12; color: #fcd34d; }
-    .badge-patch { background: #581c87; color: #d8b4fe; }
-    .badge-delete { background: #7f1d1d; color: #fca5a5; }
-    .badge-route { background: var(--surface2); color: var(--text); font-size: 0.8rem; }
-    .badge-auth { background: #374151; color: #d1d5db; font-size: 0.65rem; }
+    .badge-get { background: #dcfce7; color: #166534; }
+    .badge-post { background: #dbeafe; color: #1e40af; }
+    .badge-put { background: #fef3c7; color: #92400e; }
+    .badge-patch { background: #f3e8ff; color: #6b21a8; }
+    .badge-delete { background: #fee2e2; color: #991b1b; }
+    .badge-route { background: var(--surface2); color: var(--text); font-size: 0.8rem; border: 1px solid var(--border); }
+    .badge-auth { background: #f1f5f9; color: #475569; font-size: 0.65rem; border: 1px solid var(--border); }
 
     /* Code */
     code, pre {
@@ -136,16 +138,17 @@
       background: var(--surface2);
       padding: 0.15rem 0.4rem;
       border-radius: 3px;
-      color: #93c5fd;
+      color: #0969da;
+      border: 1px solid var(--border);
     }
     pre {
-      background: #0d1117;
+      background: #f6f8fa;
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 1rem;
       overflow-x: auto;
       margin: 0.75rem 0;
-      color: #c9d1d9;
+      color: #24292f;
     }
 
     /* Tables */
@@ -162,7 +165,7 @@
     }
     th { background: var(--surface2); color: var(--text); font-weight: 600; }
     td { color: var(--text-muted); }
-    tr:hover td { background: rgba(59,130,246,0.05); }
+    tr:hover td { background: rgba(37, 99, 235, 0.06); }
 
     /* Screenshots */
     .screenshots {
@@ -191,19 +194,19 @@
 
     /* File tree */
     .file-tree {
-      background: #0d1117;
+      background: #f6f8fa;
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 1rem 1.25rem;
       font-family: monospace;
       font-size: 0.8rem;
       line-height: 1.8;
-      color: #8b949e;
+      color: #57606a;
       white-space: pre;
       overflow-x: auto;
     }
-    .file-tree .dir { color: #58a6ff; }
-    .file-tree .file { color: #c9d1d9; }
+    .file-tree .dir { color: #0550ae; }
+    .file-tree .file { color: #24292f; }
 
     /* Module block */
     .module-block {
@@ -233,11 +236,12 @@
 
     /* Hero */
     .hero {
-      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 2rem;
       margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
     }
     .hero h2 { border: none; font-size: 2rem; margin-bottom: 0.5rem; }
     .hero-meta { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
@@ -308,27 +312,27 @@
     <h2>Project Structure</h2>
     <p>Monorepo layout for the CSR Insight platform. Deployment teams should configure each layer independently.</p>
     <div class="file-tree"><span class="dir">Csr_Insight/</span>
-├── <span class="dir">backend/</span>                    <span style="color:#6a737d"># Flask REST API</span>
-│   ├── app.py                  <span style="color:#6a737d"># Entry point, blueprint registration</span>
-│   ├── config.py               <span style="color:#6a737d"># Environment configuration</span>
-│   ├── init_db.py              <span style="color:#6a737d"># DB init + seed data</span>
+├── <span class="dir">backend/</span>                    <span <style="color:#656d76"># Flask REST API</span>
+│   ├── app.py                  <span <style="color:#656d76"># Entry point, blueprint registration</span>
+│   ├── config.py               <span <style="color:#656d76"># Environment configuration</span>
+│   ├── init_db.py              <span <style="color:#656d76"># DB init + seed data</span>
 │   ├── requirements.txt
-│   ├── <span class="dir">core/</span>                   <span style="color:#6a737d"># JWT, permissions, schema patches</span>
-│   ├── <span class="dir">models/</span>                 <span style="color:#6a737d"># 22 SQLAlchemy models</span>
-│   ├── <span class="dir">features/</span>               <span style="color:#6a737d"># 17 Flask blueprints</span>
-│   ├── <span class="dir">rag_corpus/</span>             <span style="color:#6a737d"># Chatbot knowledge base</span>
+│   ├── <span class="dir">core/</span>                   <span <style="color:#656d76"># JWT, permissions, schema patches</span>
+│   ├── <span class="dir">models/</span>                 <span <style="color:#656d76"># 22 SQLAlchemy models</span>
+│   ├── <span class="dir">features/</span>               <span <style="color:#656d76"># 17 Flask blueprints</span>
+│   ├── <span class="dir">rag_corpus/</span>             <span <style="color:#656d76"># Chatbot knowledge base</span>
 │   └── <span class="dir">tests/</span>
-├── <span class="dir">frontend/</span>                   <span style="color:#6a737d"># Angular SPA</span>
-│   ├── src/app.routes.ts       <span style="color:#6a737d"># All route definitions</span>
-│   ├── src/app.config.ts       <span style="color:#6a737d"># Interceptors, i18n, session</span>
-│   ├── <span class="dir">src/core/</span>               <span style="color:#6a737d"># Guards, interceptors, services</span>
-│   ├── <span class="dir">src/features/</span>           <span style="color:#6a737d"># Domain screens + API clients</span>
-│   ├── <span class="dir">src/shared/</span>             <span style="color:#6a737d"># Layout, sidebar, widgets</span>
-│   ├── <span class="dir">src/media/</span>              <span style="color:#6a737d"># Uploaded files (MEDIA_FOLDER)</span>
-│   └── proxy.conf.json         <span style="color:#6a737d"># Dev proxy → localhost:5001</span>
-├── <span class="dir">Database/</span>                   <span style="color:#6a737d"># DBML schema, column reference</span>
-├── <span class="dir">screenshot/</span>                 <span style="color:#6a737d"># UI screenshots</span>
-└── <span class="dir">docs/</span>                       <span style="color:#6a737d"># This documentation</span></div>
+├── <span class="dir">frontend/</span>                   <span <style="color:#656d76"># Angular SPA</span>
+│   ├── src/app.routes.ts       <span <style="color:#656d76"># All route definitions</span>
+│   ├── src/app.config.ts       <span <style="color:#656d76"># Interceptors, i18n, session</span>
+│   ├── <span class="dir">src/core/</span>               <span <style="color:#656d76"># Guards, interceptors, services</span>
+│   ├── <span class="dir">src/features/</span>           <span <style="color:#656d76"># Domain screens + API clients</span>
+│   ├── <span class="dir">src/shared/</span>             <span <style="color:#656d76"># Layout, sidebar, widgets</span>
+│   ├── <span class="dir">src/media/</span>              <span <style="color:#656d76"># Uploaded files (MEDIA_FOLDER)</span>
+│   └── proxy.conf.json         <span <style="color:#656d76"># Dev proxy → localhost:5001</span>
+├── <span class="dir">Database/</span>                   <span <style="color:#656d76"># DBML schema, column reference</span>
+├── <span class="dir">screenshot/</span>                 <span <style="color:#656d76"># UI screenshots</span>
+└── <span class="dir">docs/</span>                       <span <style="color:#656d76"># This documentation</span></div>
   </section>
 
   <!-- DEPLOYMENT QUICK REF -->
@@ -377,15 +381,19 @@
       </table>
       <div class="screenshots">
         <figure class="screenshot-item">
-          <img src="../screenshot/PowerBI/dashboard-csr-performance-overview.png" alt="Performance Overview">
+          <img src="screenshot/dashboard/interface-dashboard.png" alt="Dashboard Shell">
+          <figcaption>Dashboard — App Shell &amp; Navigation</figcaption>
+        </figure>
+        <figure class="screenshot-item">
+          <img src="screenshot/PowerBI/dashboard-csr-performance-overview.png" alt="Performance Overview">
           <figcaption>Performance Overview Dashboard</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/PowerBI/dashboard-csr-budget-analytics.png" alt="Budget Analytics">
+          <img src="screenshot/PowerBI/dashboard-csr-budget-analytics.png" alt="Budget Analytics">
           <figcaption>Budget Analytics Dashboard</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/PowerBI/dashboard-csr-impact-analytics.png" alt="Impact Analytics">
+          <img src="screenshot/PowerBI/dashboard-csr-impact-analytics.png" alt="Impact Analytics">
           <figcaption>Impact Analytics Dashboard</figcaption>
         </figure>
       </div>
@@ -450,7 +458,7 @@
 
       <div class="screenshots">
         <figure class="screenshot-item">
-          <img src="../screenshot/plan/interface annual plan.png" alt="Annual Plans List">
+          <img src="screenshot/plan/interface%20annual%20plan.png" alt="Annual Plans List">
           <figcaption>Annual Plans — List Interface</figcaption>
         </figure>
       </div>
@@ -465,11 +473,11 @@
       </table>
       <div class="screenshots">
         <figure class="screenshot-item">
-          <img src="../screenshot/plan/plan-details-1.png" alt="Plan Detail 1">
+          <img src="screenshot/plan/plan-details-1.png" alt="Plan Detail 1">
           <figcaption>Plan Detail — Overview &amp; Activities</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/plan/plan-details-2.png" alt="Plan Detail 2">
+          <img src="screenshot/plan/plan-details-2.png" alt="Plan Detail 2">
           <figcaption>Plan Detail — KPIs &amp; Actions</figcaption>
         </figure>
       </div>
@@ -481,6 +489,12 @@
         <tr><td><strong>API</strong></td><td><code>GET /api/csr-plans?status=SUBMITTED</code>, <code>PATCH .../approve</code>, <code>PATCH .../reject</code></td></tr>
         <tr><td><strong>Reason</strong></td><td>Corporate validators review and approve/reject submitted plans.</td></tr>
       </table>
+      <div class="screenshots">
+        <figure class="screenshot-item">
+          <img src="screenshot/plan/interface-plan-validation.png" alt="Plan Validation">
+          <figcaption>Annual Plan Validation Queue</figcaption>
+        </figure>
+      </div>
     </div>
   </section>
 
@@ -541,15 +555,15 @@
 
       <div class="screenshots">
         <figure class="screenshot-item">
-          <img src="../screenshot/all-activities/interface activities.png" alt="Activities List">
+          <img src="screenshot/all-activities/interface%20activities.png" alt="Activities List">
           <figcaption>All Activities — List Interface</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/activities-details/planned-activity-details-1.png" alt="Activity Detail 1">
+          <img src="screenshot/activities-details/planned-activity-details-1.png" alt="Activity Detail 1">
           <figcaption>Planned Activity — Detail View</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/activities-details/planned-activity-details-2.png" alt="Activity Detail 2">
+          <img src="screenshot/activities-details/planned-activity-details-2.png" alt="Activity Detail 2">
           <figcaption>Planned Activity — Objectives &amp; Budget</figcaption>
         </figure>
       </div>
@@ -603,19 +617,19 @@
 
       <div class="screenshots">
         <figure class="screenshot-item">
-          <img src="../screenshot/report/interface reports.png" alt="Reports List">
+          <img src="screenshot/report/interface%20reports.png" alt="Reports List">
           <figcaption>CSR Reports — List Interface</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/report/report-details-1.png" alt="Report Detail 1">
+          <img src="screenshot/report/report-details-1.png" alt="Report Detail 1">
           <figcaption>Report Detail — Overview</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/report/report-details-2.png" alt="Report Detail 2">
+          <img src="screenshot/report/report-details-2.png" alt="Report Detail 2">
           <figcaption>Report Detail — Realization Data</figcaption>
         </figure>
         <figure class="screenshot-item">
-          <img src="../screenshot/activities-details/report-activity-details.png" alt="Report Activity">
+          <img src="screenshot/activities-details/report-activity-details.png" alt="Report Activity">
           <figcaption>Report Activity — Detail View</figcaption>
         </figure>
       </div>
@@ -662,7 +676,7 @@
 
       <div class="screenshots">
         <figure class="screenshot-item">
-          <img src="../screenshot/document/interface documents.png" alt="Documents">
+          <img src="screenshot/document/interface%20documents.png" alt="Documents">
           <figcaption>Documents — Library Interface</figcaption>
         </figure>
       </div>
@@ -702,10 +716,23 @@
         </div>
         <p><strong>Purpose:</strong> Approve unlock (L1 step or corporate final approval).</p>
       </div>
+
+      <div class="screenshots">
+        <figure class="screenshot-item">
+          <img src="screenshot/changes/interface-changes.png" alt="Change Requests">
+          <figcaption>Change Requests — My Requests</figcaption>
+        </figure>
+        <figure class="screenshot-item">
+          <img src="screenshot/changes/interface-changes-pending.png" alt="Pending Changes">
+          <figcaption>Pending Review Queue</figcaption>
+        </figure>
+        <figure class="screenshot-item">
+          <img src="screenshot/changes/interface-changes-history.png" alt="Changes History">
+          <figcaption>Change Requests History</figcaption>
+        </figure>
+      </div>
     </div>
   </section>
-
-  <!-- SITES -->
   <section id="sites">
     <h2>Sites &amp; Categories</h2>
     <div class="module-block">
@@ -729,6 +756,17 @@
         <div class="card-header"><span class="badge badge-get">GET</span><code class="badge badge-route">/api/categories</code></div>
         <p><strong>Purpose:</strong> List CSR activity categories (Environment, Social, etc.).</p>
       </div>
+
+      <div class="screenshots">
+        <figure class="screenshot-item">
+          <img src="screenshot/sites/interface-sites.png" alt="Sites List">
+          <figcaption>Sites Management</figcaption>
+        </figure>
+        <figure class="screenshot-item">
+          <img src="screenshot/categories/interface-categories.png" alt="Categories">
+          <figcaption>CSR Categories</figcaption>
+        </figure>
+      </div>
     </div>
   </section>
 
@@ -743,6 +781,12 @@
         <tr><td><strong>API</strong></td><td><code>POST /api/auth/login</code> — no auth required</td></tr>
       </table>
       <pre>{ "email": "user@test.com", "password": "password123" }</pre>
+      <div class="screenshots">
+        <figure class="screenshot-item">
+          <img src="screenshot/auth/interface-login.png" alt="Login">
+          <figcaption>Login Page</figcaption>
+        </figure>
+      </div>
 
       <h3>User Admin (Corporate)</h3>
       <table>
@@ -750,12 +794,24 @@
         <tr><td><strong>Files</strong></td><td><code>frontend/src/features/user-management/</code>, <code>backend/features/user_management/users_routes.py</code></td></tr>
         <tr><td><strong>API</strong></td><td><code>GET/POST/PATCH /api/users</code>, site assignment, password reset</td></tr>
       </table>
+      <div class="screenshots">
+        <figure class="screenshot-item">
+          <img src="screenshot/admin/interface-users.png" alt="Users Admin">
+          <figcaption>User Management (Corporate)</figcaption>
+        </figure>
+      </div>
 
       <h3>Profile Settings</h3>
       <table>
         <tr><td><strong>Route</strong></td><td><code>/account/profile</code></td></tr>
         <tr><td><strong>API</strong></td><td><code>GET/PUT /api/auth/profile</code>, <code>PUT /api/auth/change-password</code>, <code>POST /api/auth/profile-photo</code></td></tr>
       </table>
+      <div class="screenshots">
+        <figure class="screenshot-item">
+          <img src="screenshot/profile/interface-profile.png" alt="Profile Settings">
+          <figcaption>Profile &amp; Settings</figcaption>
+        </figure>
+      </div>
     </div>
   </section>
 
@@ -769,6 +825,12 @@
         <tr><td><strong>API</strong></td><td><code>GET /api/audit/logs?action=&amp;site_id=&amp;date_from=&amp;date_to=</code></td></tr>
         <tr><td><strong>Reason</strong></td><td>Compliance audit trail — track all user actions on plans, activities, documents.</td></tr>
       </table>
+      <div class="screenshots">
+        <figure class="screenshot-item">
+          <img src="screenshot/admin/interface-audit.png" alt="Audit Log">
+          <figcaption>Audit Log (Corporate)</figcaption>
+        </figure>
+      </div>
     </div>
   </section>
 

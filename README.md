@@ -46,7 +46,7 @@ python3 app.py
 ```bash
 cd frontend
 npm ci
-npm start
+ng serve
 ```
 
 → App: http://localhost:4200 (proxies `/api` to backend)

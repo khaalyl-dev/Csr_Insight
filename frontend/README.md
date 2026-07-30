@@ -24,12 +24,12 @@ Node.js **≥ 20.19.0** required.
 ```bash
 cd frontend
 npm ci
-npm start
+ng serve
 ```
 
 → http://localhost:4200
 
-Dev server proxies `/api` and `/socket.io` to `http://localhost:5001` via `proxy.conf.json`.
+With proxy (recommended): `ng serve --proxy-config proxy.conf.json` — proxies `/api` and `/socket.io` to `http://localhost:5001`.
 
 Production build:
 
